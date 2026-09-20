@@ -41,21 +41,34 @@
               <button type="button" id="menu-export" class="more-menu-item" role="menuitem" tabindex="-1">내보내기</button>
               <button type="button" id="menu-import" class="more-menu-item" role="menuitem" tabindex="-1">가져오기</button>
               <button type="button" id="menu-clear-completed" class="more-menu-item" role="menuitem" tabindex="-1">완료 항목 모두 삭제</button>
+              <button type="button" id="menu-shortcuts" class="more-menu-item" role="menuitem" tabindex="-1">단축키 보기</button>
             </div>
           </div>
         </div>
       </div>
     </header>
 
-    <input type="file" id="import-file-input" accept=".json" hidden>
+    <input type="file" id="import-file-input" accept=".json" hidden aria-label="가져올 파일 선택">
 
-    <dialog id="import-dialog" class="import-dialog">
+    <dialog id="import-dialog" class="app-dialog">
       <p id="import-dialog-message"></p>
       <div class="import-dialog-actions">
         <button type="button" id="import-merge-btn" class="btn-secondary">현재 목록에 추가</button>
         <button type="button" id="import-replace-btn" class="btn-secondary">현재 목록 대체</button>
         <button type="button" id="import-cancel-btn" class="btn-secondary">취소</button>
       </div>
+    </dialog>
+
+    <dialog id="shortcuts-dialog" class="app-dialog shortcuts-dialog">
+      <h2>단축키</h2>
+      <dl class="shortcuts-list">
+        <div class="shortcuts-row"><dt>N</dt><dd>새 할 일 입력창 포커스</dd></div>
+        <div class="shortcuts-row"><dt>/</dt><dd>검색창 포커스</dd></div>
+        <div class="shortcuts-row"><dt>?</dt><dd>이 도움말 열기</dd></div>
+        <div class="shortcuts-row"><dt>Esc</dt><dd>열린 메뉴/창 닫기</dd></div>
+        <div class="shortcuts-row"><dt>Alt + ↑ / ↓</dt><dd>드래그 핸들에서 순서 바꾸기</dd></div>
+      </dl>
+      <button type="button" id="shortcuts-close-btn" class="btn-secondary">닫기</button>
     </dialog>
 
     <!-- 오늘의 격언 카드: app.js의 renderQuote()가 채운다 -->
@@ -66,13 +79,13 @@
     </section>
 
     <!-- 진행률 카드: app.js의 buildProgressSkeleton()/updateProgress()가 채운다 -->
-    <section id="progress" class="card progress-card"></section>
+    <section id="progress" class="card progress-card" aria-live="polite"></section>
 
     <!-- 할 일 입력 카드 -->
     <section class="card input-card">
       <form id="todo-form" class="todo-form">
         <div class="todo-form-row">
-          <input type="text" id="todo-input" class="todo-input" placeholder="할 일을 입력하세요" maxlength="100">
+          <input type="text" id="todo-input" class="todo-input" placeholder="할 일을 입력하세요" maxlength="100" aria-label="새 할 일">
           <button type="submit" class="btn-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             <span>추가</span>
@@ -89,6 +102,7 @@
           <input type="radio" name="category" id="category-study" class="chip-input" value="study">
           <label for="category-study" class="chip chip-study">공부</label>
         </div>
+        <p id="auto-classify-label" class="auto-classify-label" aria-live="polite" hidden></p>
       </form>
     </section>
 
@@ -107,7 +121,7 @@
       <div class="list-controls-row">
         <div class="search-box">
           <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="text" id="search-input" class="search-input" placeholder="검색">
+          <input type="text" id="search-input" class="search-input" placeholder="검색" aria-label="검색">
           <button type="button" id="search-clear" class="icon-button search-clear" aria-label="검색어 지우기" hidden>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
@@ -130,7 +144,7 @@
     </section>
 
     <!-- 안내 배너 영역: app.js가 필요할 때 배너를 추가/제거한다 (여러 개가 동시에 쌓일 수 있다) -->
-    <div id="banner" class="banner-stack"></div>
+    <div id="banner" class="banner-stack" aria-live="polite"></div>
   </main>
 
   <script src="app.js" defer></script>

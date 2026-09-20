@@ -125,7 +125,7 @@ select {
 .quote-card,
 .quote-mark,
 .more-menu,
-.import-dialog,
+.app-dialog,
 .banner {
   transition: background-color var(--transition-theme), color var(--transition-theme), border-color var(--transition-theme), box-shadow var(--transition-theme);
 }
@@ -333,8 +333,8 @@ select {
   cursor: pointer;
 }
 
-/* ===== 가져오기 확인 dialog ===== */
-.import-dialog {
+/* ===== dialog 공용 (가져오기 확인, 단축키 도움말) ===== */
+.app-dialog {
   width: calc(100% - var(--space-32));
   max-width: 360px;
   border: none;
@@ -345,11 +345,11 @@ select {
   box-shadow: var(--shadow);
 }
 
-.import-dialog::backdrop {
+.app-dialog::backdrop {
   background: rgba(0, 0, 0, 0.45);
 }
 
-.import-dialog p {
+.app-dialog p {
   margin: 0 0 var(--space-16);
   font-size: 15px;
 }
@@ -358,6 +358,44 @@ select {
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
+}
+
+.shortcuts-dialog h2 {
+  margin: 0 0 var(--space-16);
+  font-size: 18px;
+}
+
+.shortcuts-list {
+  margin: 0 0 var(--space-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.shortcuts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+
+.shortcuts-row dt {
+  flex-shrink: 0;
+  margin: 0;
+  padding: var(--space-4) var(--space-8);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.shortcuts-row dd {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-align: right;
 }
 
 /* ===== 오늘의 격언 카드 ===== */
@@ -640,6 +678,29 @@ select {
 .chip-input:focus-visible + .chip {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+
+.auto-classify-label {
+  margin: calc(-1 * var(--space-4)) 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* 자동 분류로 카테고리 칩이 바뀔 때 살짝 강조하는 효과 */
+@keyframes chip-flash {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.chip-flash {
+  animation: chip-flash 0.2s ease;
 }
 
 /* ===== 필터 탭 (세그먼트 컨트롤) ===== */
