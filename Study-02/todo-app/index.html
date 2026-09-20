@@ -69,8 +69,37 @@
       </form>
     </section>
 
-    <!-- 필터 탭 영역: app.js의 renderFilterTabs()가 채운다 -->
+    <!-- 카테고리 필터 탭: app.js의 renderFilterTabs()가 채운다 -->
     <div id="filter-tabs" class="filter-tabs"></div>
+
+    <!-- 상태 필터/검색/정렬/중요만: 검색창과 정렬 select는 여기서 한 번만 만들어 render()가 건드리지 않는다 -->
+    <section class="card list-controls">
+      <div class="list-controls-row">
+        <div id="status-tabs" class="status-tabs"></div>
+        <button type="button" id="important-only-toggle" class="chip important-only-chip" aria-pressed="false">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span>중요만</span>
+        </button>
+      </div>
+      <div class="list-controls-row">
+        <div class="search-box">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="search-input" class="search-input" placeholder="검색">
+          <button type="button" id="search-clear" class="icon-button search-clear" aria-label="검색어 지우기" hidden>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <select id="sort-select" class="sort-select" aria-label="정렬 방식">
+          <option value="custom">내 순서</option>
+          <option value="newest">최신순</option>
+          <option value="oldest">오래된순</option>
+          <option value="category">카테고리순</option>
+          <option value="important">중요 먼저</option>
+          <option value="incomplete">미완료 먼저</option>
+          <option value="alphabetical">가나다순</option>
+        </select>
+      </div>
+    </section>
 
     <!-- 할 일 목록 카드 -->
     <section class="card list-card">

@@ -1,16 +1,18 @@
 // ===== state =====
-// 앱 전체 상태: 할 일 목록과 현재 필터
+// 앱 전체 상태: 할 일 목록, 필터/검색, 정렬
 const state = {
   todos: [],
-  filter: { category: "all", status: "all" },
+  filter: { category: "all", status: "all", search: "", importantOnly: false },
+  sort: "custom", // init()에서 저장된 설정 값으로 덮어쓴다
 };
 
 // ===== storage =====
 const STORAGE_KEY = "todo-app:v1"; // 정상 데이터를 저장할 localStorage 키
 const CORRUPT_KEY = "todo-app:v1:corrupt"; // 손상된 데이터를 옮겨둘 키
-const SETTINGS_KEY = "todo-app:settings"; // 테마 등 앱 설정을 저장할 키 (할 일 데이터와 분리)
+const SETTINGS_KEY = "todo-app:settings"; // 테마/정렬 등 앱 설정을 저장할 키 (할 일 데이터와 분리)
 
 // localStorage에 저장된 todos 배열을 불러온다 (없거나 손상됐으면 빈 배열)
+// v1 데이터나 important가 없는 항목은 important: false를 채워서 그대로 불러온다
 function load() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return [];
@@ -18,7 +20,7 @@ function load() {
   try {
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.todos)) return [];
-    return parsed.todos;
+    return parsed.todos.map((todo) => ({ important: false, ...todo }));
   } catch (error) {
     localStorage.setItem(CORRUPT_KEY, raw); // 손상된 원본은 따로 보관해 둔다
     return [];
@@ -28,7 +30,7 @@ function load() {
 // todos 배열을 localStorage에 저장한다 (성공하면 true, 실패하면 false)
 function save(todos) {
   try {
-    const data = { version: 1, todos };
+    const data = { version: 2, todos };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     return true;
   } catch (error) {
@@ -78,6 +80,7 @@ function addTodo(text, category) {
     text: trimmed,
     category,
     done: false,
+    important: false,
     createdAt: Date.now(),
     completedAt: null,
   };
@@ -108,10 +111,68 @@ function toggleTodo(id) {
   render();
 }
 
+// 중요 표시를 토글한다
+function toggleImportant(id) {
+  const todo = state.todos.find((item) => item.id === id);
+  if (!todo) return;
+
+  todo.important = !todo.important;
+  save(state.todos);
+  render();
+}
+
 // 할 일을 목록에서 삭제한다
 function deleteTodo(id) {
   state.todos = state.todos.filter((item) => item.id !== id);
   save(state.todos);
+  render();
+}
+
+// sourceId 항목을 targetId 항목 앞/뒤로 옮긴다 ("내 순서"인 state.todos 배열 자체를 바꾼다)
+function reorderTodo(sourceId, targetId, insertAfter) {
+  const sourceIndex = state.todos.findIndex((todo) => todo.id === sourceId);
+  if (sourceIndex === -1) return;
+
+  const [moved] = state.todos.splice(sourceIndex, 1);
+  let targetIndex = state.todos.findIndex((todo) => todo.id === targetId);
+
+  if (targetIndex === -1) {
+    state.todos.push(moved);
+  } else {
+    if (insertAfter) targetIndex += 1;
+    state.todos.splice(targetIndex, 0, moved);
+  }
+
+  save(state.todos);
+  render();
+}
+
+// 항목을 한 칸 위(-1) 또는 아래(+1)로 옮긴다 (키보드 Alt+화살표용)
+function moveTodoBy(id, direction) {
+  const index = state.todos.findIndex((todo) => todo.id === id);
+  if (index === -1) return;
+
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= state.todos.length) return;
+
+  const [moved] = state.todos.splice(index, 1);
+  state.todos.splice(newIndex, 0, moved);
+
+  save(state.todos);
+  render();
+
+  // 이동한 뒤에도 그 항목의 핸들에 포커스가 남아 있게 한다
+  const listEl = document.getElementById("todo-list");
+  const handle = listEl.querySelector(`.todo-item[data-id="${CSS.escape(id)}"] .drag-handle`);
+  if (handle) handle.focus();
+}
+
+// 정렬 방식을 바꾸고 저장한다 (할 일 데이터와 별개인 설정 키를 쓴다)
+function setSort(sort) {
+  state.sort = sort;
+  const settings = loadSettings();
+  settings.sort = sort;
+  saveSettings(settings);
   render();
 }
 
@@ -125,13 +186,63 @@ function setTheme(theme) {
 }
 
 // ===== selectors =====
-// 화면에 그릴 todos 목록을 고른다 (필터의 카테고리에 맞는 항목만 반환)
+// 지금 필터/검색 조건에 맞는 todos만 골라, state.sort에 맞게 정렬한 사본을 돌려준다.
+// state.todos 자체(내 순서)는 절대 바꾸지 않는다.
 function getVisibleTodos() {
-  if (state.filter.category === "all") return state.todos;
-  return state.todos.filter((todo) => todo.category === state.filter.category);
+  const todos = state.todos.filter((todo) => {
+    if (state.filter.category !== "all" && todo.category !== state.filter.category) return false;
+    if (state.filter.status === "active" && todo.done) return false;
+    if (state.filter.status === "done" && !todo.done) return false;
+    if (state.filter.importantOnly && !todo.important) return false;
+    if (state.filter.search && !todo.text.toLowerCase().includes(state.filter.search.toLowerCase())) return false;
+    return true;
+  });
+
+  return sortTodos(todos, state.sort);
 }
 
-// 전체와 카테고리별(work/personal/study) 완료 진행률을 계산한다
+// todos 배열의 정렬된 사본을 만든다 (원본 순서는 값이 같을 때의 동점 처리 기준으로 그대로 유지된다)
+function sortTodos(todos, sort) {
+  const copy = [...todos];
+  const categoryRank = (todo) => CATEGORY_ORDER.indexOf(todo.category);
+
+  switch (sort) {
+    case "newest":
+      copy.sort((a, b) => b.createdAt - a.createdAt);
+      break;
+    case "oldest":
+      copy.sort((a, b) => a.createdAt - b.createdAt);
+      break;
+    case "category":
+      copy.sort((a, b) => categoryRank(a) - categoryRank(b));
+      break;
+    case "important":
+      copy.sort((a, b) => Number(b.important) - Number(a.important));
+      break;
+    case "incomplete":
+      copy.sort((a, b) => Number(a.done) - Number(b.done));
+      break;
+    case "alphabetical":
+      copy.sort((a, b) => a.text.localeCompare(b.text, "ko"));
+      break;
+    default:
+      // "custom": 정렬하지 않고 내 순서를 그대로 쓴다
+      break;
+  }
+
+  return copy;
+}
+
+// 지금 드래그/키보드로 순서를 바꿀 수 있는 상태인지: 정렬이 "내 순서"이고 모든 필터/검색이 꺼져 있어야 한다
+function canReorder() {
+  return state.sort === "custom"
+    && state.filter.category === "all"
+    && state.filter.status === "all"
+    && !state.filter.search
+    && !state.filter.importantOnly;
+}
+
+// 전체와 카테고리별(work/personal/study) 완료 진행률을 계산한다 (필터/검색과 무관하게 항상 전체 기준)
 function getProgress() {
   const buildProgress = (todos) => {
     const total = todos.length;
@@ -174,6 +285,11 @@ const FILTER_TABS = [
   { value: "personal", label: "개인" },
   { value: "study", label: "공부" },
 ];
+const STATUS_TABS = [
+  { value: "all", label: "전체" },
+  { value: "active", label: "진행 중" },
+  { value: "done", label: "완료" },
+];
 
 // 오늘 시작, 꾸준함, 집중, 휴식에 관한 짧은 격언 30개. 말한 사람이 확실하지 않으면 "속담"/"작자 미상"으로 적는다.
 const QUOTES = [
@@ -209,7 +325,7 @@ const QUOTES = [
   { text: "작은 성취가 모여 큰 자신감이 된다", author: "작자 미상" },
 ];
 
-// 수정/삭제/추가/테마/격언 새로고침 버튼에 쓰는 인라인 SVG 아이콘 (고정된 마크업이라 innerHTML로 넣어도 안전하다)
+// 여러 아이콘 버튼에 쓰는 인라인 SVG (고정된 마크업이라 innerHTML로 넣어도 안전하다)
 const ICONS = {
   edit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   delete: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
@@ -217,13 +333,18 @@ const ICONS = {
   sun: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>',
   moon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>',
   refresh: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
+  dragHandle: '<svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="2" r="1.3"/><circle cx="7" cy="2" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="14" r="1.3"/><circle cx="7" cy="14" r="1.3"/></svg>',
+  starOutline: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  starFilled: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
 };
 
 let editingId = null; // 지금 수정 중인 할 일 id (저장되지 않는 화면 전용 상태)
 
-// 현재 state를 기준으로 필터 탭, 진행률, 할 일 목록을 다시 그린다
+// 현재 state를 기준으로 필터 탭, 목록 컨트롤, 진행률, 할 일 목록을 다시 그린다
 function render() {
   renderFilterTabs();
+  renderStatusTabs();
+  updateListControls();
   refreshProgress();
 
   const listEl = document.getElementById("todo-list");
@@ -232,9 +353,12 @@ function render() {
   const todos = getVisibleTodos();
 
   if (todos.length === 0) {
-    const message = state.todos.length === 0
-      ? "아직 할 일이 없어요. 위에서 첫 할 일을 추가해 보세요."
-      : "이 카테고리에는 할 일이 없어요.";
+    let message = "이 카테고리에는 할 일이 없어요.";
+    if (state.todos.length === 0) {
+      message = "아직 할 일이 없어요. 위에서 첫 할 일을 추가해 보세요.";
+    } else if (state.filter.search) {
+      message = "검색 결과가 없어요.";
+    }
     listEl.appendChild(createEmptyState(message));
     return;
   }
@@ -245,7 +369,7 @@ function render() {
   });
 }
 
-// 필터 탭 버튼을 그리고 현재 선택된 탭을 표시한다
+// 카테고리 필터 탭 버튼을 그리고 현재 선택된 탭을 표시한다
 function renderFilterTabs() {
   const tabsEl = document.getElementById("filter-tabs");
   tabsEl.textContent = "";
@@ -260,6 +384,34 @@ function renderFilterTabs() {
     button.textContent = tab.label;
     tabsEl.appendChild(button);
   });
+}
+
+// 상태 필터(전체/진행 중/완료) 버튼을 그리고 현재 선택된 탭을 표시한다
+function renderStatusTabs() {
+  const tabsEl = document.getElementById("status-tabs");
+  tabsEl.textContent = "";
+
+  STATUS_TABS.forEach((tab) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "status-tab";
+    if (tab.value === state.filter.status) button.classList.add("active");
+    button.setAttribute("aria-pressed", tab.value === state.filter.status ? "true" : "false");
+    button.dataset.status = tab.value;
+    button.textContent = tab.label;
+    tabsEl.appendChild(button);
+  });
+}
+
+// 검색창/정렬 select/중요만 칩처럼 한 번만 만들어진 요소의 상태(값, 활성 여부)만 갱신한다
+function updateListControls() {
+  document.getElementById("sort-select").value = state.sort;
+
+  const importantBtn = document.getElementById("important-only-toggle");
+  importantBtn.classList.toggle("active", state.filter.importantOnly);
+  importantBtn.setAttribute("aria-pressed", String(state.filter.importantOnly));
+
+  document.getElementById("search-clear").hidden = !state.filter.search;
 }
 
 // 오늘 날짜를 헤더에 표시한다 (페이지를 여는 동안 바뀌지 않으므로 처음 한 번만 호출한다)
@@ -463,12 +615,26 @@ function triggerConfetti() {
   window.setTimeout(() => container.remove(), 2000);
 }
 
-// 완료 체크박스, 내용, 카테고리 배지, 수정/삭제 아이콘 버튼이 있는 한 줄을 만든다
+// 완료 체크박스, 내용, 카테고리 배지, 중요 별, 수정/삭제 아이콘 버튼, 드래그 핸들이 있는 한 줄을 만든다
 function createTodoItem(todo) {
   const li = document.createElement("li");
   li.className = "todo-item";
   li.dataset.id = todo.id;
   if (todo.done) li.classList.add("done");
+
+  const reorderAllowed = canReorder();
+
+  const handle = document.createElement("button");
+  handle.type = "button";
+  handle.className = "drag-handle";
+  handle.innerHTML = ICONS.dragHandle;
+  handle.setAttribute("aria-label", "순서 바꾸기");
+  handle.tabIndex = 0;
+  if (!reorderAllowed) {
+    handle.classList.add("disabled");
+    handle.setAttribute("aria-disabled", "true");
+    handle.title = "정렬을 '내 순서'로, 필터를 '전체'로 바꾸면 순서를 바꿀 수 있어요";
+  }
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
@@ -483,6 +649,14 @@ function createTodoItem(todo) {
   const badge = document.createElement("span");
   badge.className = `todo-category todo-category-${todo.category}`;
   badge.textContent = CATEGORY_LABELS[todo.category] || todo.category;
+
+  const starBtn = document.createElement("button");
+  starBtn.type = "button";
+  starBtn.className = "icon-button star-toggle";
+  if (todo.important) starBtn.classList.add("active");
+  starBtn.setAttribute("aria-pressed", String(todo.important));
+  starBtn.setAttribute("aria-label", "중요 표시");
+  starBtn.innerHTML = todo.important ? ICONS.starFilled : ICONS.starOutline;
 
   const editBtn = document.createElement("button");
   editBtn.type = "button";
@@ -500,7 +674,7 @@ function createTodoItem(todo) {
   actions.className = "todo-actions";
   actions.append(editBtn, deleteBtn);
 
-  li.append(checkbox, text, badge, actions);
+  li.append(handle, checkbox, text, badge, starBtn, actions);
   return li;
 }
 
@@ -562,7 +736,7 @@ function handleFormSubmit(event) {
   inputEl.focus();
 }
 
-// 목록 클릭을 위임 처리한다: 수정 시작, 삭제 (아이콘 버튼 안쪽 클릭도 인식하도록 closest 사용)
+// 목록 클릭을 위임 처리한다: 수정 시작, 삭제, 중요 표시 토글 (아이콘 버튼 안쪽 클릭도 인식하도록 closest 사용)
 function handleListClick(event) {
   const li = event.target.closest("li[data-id]");
   if (!li) return;
@@ -572,6 +746,8 @@ function handleListClick(event) {
     deleteTodo(id);
   } else if (event.target.closest(".todo-edit")) {
     enterEditMode(id);
+  } else if (event.target.closest(".star-toggle")) {
+    toggleImportant(id);
   }
 }
 
@@ -591,12 +767,46 @@ function handleListChange(event) {
   toggleTodo(li.dataset.id);
 }
 
-// 필터 탭 클릭을 위임 처리한다: 선택한 카테고리를 state.filter에 반영한다
+// 카테고리 필터 탭 클릭을 위임 처리한다
 function handleFilterClick(event) {
   const button = event.target.closest(".filter-tab");
   if (!button) return;
   state.filter.category = button.dataset.category;
   render();
+}
+
+// 상태 필터 탭 클릭을 위임 처리한다
+function handleStatusClick(event) {
+  const button = event.target.closest(".status-tab");
+  if (!button) return;
+  state.filter.status = button.dataset.status;
+  render();
+}
+
+// "중요만" 칩 클릭을 처리한다
+function handleImportantOnlyClick() {
+  state.filter.importantOnly = !state.filter.importantOnly;
+  render();
+}
+
+// 검색어 입력을 처리한다 (검색창은 render()가 다시 만들지 않는 요소라 포커스가 유지된다)
+function handleSearchInput(event) {
+  state.filter.search = event.target.value;
+  render();
+}
+
+// 검색어 지우기(X) 버튼을 처리한다
+function handleSearchClear() {
+  state.filter.search = "";
+  const inputEl = document.getElementById("search-input");
+  inputEl.value = "";
+  inputEl.focus();
+  render();
+}
+
+// 정렬 select 변경을 처리한다
+function handleSortChange(event) {
+  setSort(event.target.value);
 }
 
 // 테마 버튼 클릭을 처리한다: 라이트/다크를 서로 바꾼다
@@ -626,6 +836,23 @@ function handleListKeydown(event) {
     event.preventDefault();
     isCancelingEdit = true;
     event.target.blur(); // 실제 취소는 focusout에서 처리한다
+  }
+}
+
+// 드래그 핸들에 포커스가 있을 때 Alt+위/아래 화살표로 순서를 바꾼다
+function handleDragHandleKeydown(event) {
+  if (!event.target.classList.contains("drag-handle")) return;
+  if (!event.altKey || !canReorder()) return;
+
+  const li = event.target.closest("li[data-id]");
+  if (!li) return;
+
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    moveTodoBy(li.dataset.id, -1);
+  } else if (event.key === "ArrowDown") {
+    event.preventDefault();
+    moveTodoBy(li.dataset.id, 1);
   }
 }
 
@@ -662,13 +889,101 @@ function commitEdit(inputEl) {
   updateTodo(id, { text: trimmed, category: selectEl.value });
 }
 
-// 페이지 로드 시 저장된 데이터를 불러와 상태에 채우고 화면을 그린다
+// 드래그 핸들을 누르는 순간에만 그 항목(li)을 draggable로 만든다 (핸들 밖에서 시작하는 드래그는 막는다)
+function handleListMouseDown(event) {
+  const handle = event.target.closest(".drag-handle");
+  if (!handle || handle.classList.contains("disabled")) return;
+  const li = handle.closest("li[data-id]");
+  if (li) li.draggable = true;
+}
+
+let dragSourceId = null; // 지금 드래그 중인 항목의 id
+let dropTargetEl = null; // 드롭 위치 표시선이 걸려 있는 요소
+
+// 드롭 위치 표시선을 목표 li 위/아래에 보여준다
+function showDropIndicator(li, isAfter) {
+  if (dropTargetEl && dropTargetEl !== li) {
+    dropTargetEl.classList.remove("drop-before", "drop-after");
+  }
+  li.classList.toggle("drop-before", !isAfter);
+  li.classList.toggle("drop-after", isAfter);
+  dropTargetEl = li;
+}
+
+// 드롭 위치 표시선을 지운다
+function clearDropIndicator() {
+  if (dropTargetEl) {
+    dropTargetEl.classList.remove("drop-before", "drop-after");
+    dropTargetEl = null;
+  }
+}
+
+// 드래그를 시작한다 (순서를 바꿀 수 없는 상태면 막는다)
+function handleListDragStart(event) {
+  const li = event.target.closest("li[data-id]");
+  if (!li || !canReorder()) {
+    event.preventDefault();
+    return;
+  }
+  dragSourceId = li.dataset.id;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", li.dataset.id);
+  requestAnimationFrame(() => li.classList.add("dragging"));
+}
+
+// 드래그 중인 항목이 다른 항목 위를 지날 때 놓을 위치(위/아래)를 계산해 표시선을 그린다
+function handleListDragOver(event) {
+  if (!dragSourceId) return;
+  event.preventDefault(); // 이걸 해야 drop 이벤트가 발생한다
+
+  const li = event.target.closest("li[data-id]");
+  if (!li || li.dataset.id === dragSourceId) {
+    clearDropIndicator();
+    return;
+  }
+
+  const rect = li.getBoundingClientRect();
+  const isAfter = event.clientY > rect.top + rect.height / 2;
+  showDropIndicator(li, isAfter);
+}
+
+// 항목을 놓으면 실제로 순서를 바꾼다
+function handleListDrop(event) {
+  if (!dragSourceId) return;
+  event.preventDefault();
+
+  const li = event.target.closest("li[data-id]");
+  clearDropIndicator();
+
+  if (li && li.dataset.id !== dragSourceId) {
+    const rect = li.getBoundingClientRect();
+    const isAfter = event.clientY > rect.top + rect.height / 2;
+    reorderTodo(dragSourceId, li.dataset.id, isAfter);
+  }
+
+  dragSourceId = null;
+}
+
+// 드래그가 끝나면(성공/취소 모두) 시각 효과와 상태를 정리한다
+function handleListDragEnd(event) {
+  const li = event.target.closest("li[data-id]");
+  if (li) {
+    li.draggable = false;
+    li.classList.remove("dragging");
+  }
+  clearDropIndicator();
+  dragSourceId = null;
+}
+
+// 페이지 로드 시 저장된 데이터/설정을 불러와 상태에 채우고 화면을 그린다
 function init() {
   renderDate();
   renderQuote();
   document.getElementById("quote-next").innerHTML = ICONS.refresh;
   updateThemeToggleIcon(getCurrentTheme());
 
+  const settings = loadSettings();
+  state.sort = settings.sort || "custom";
   state.todos = load();
 
   buildProgressSkeleton();
@@ -682,10 +997,20 @@ function init() {
   listEl.addEventListener("dblclick", handleListDblClick);
   listEl.addEventListener("change", handleListChange);
   listEl.addEventListener("keydown", handleListKeydown);
+  listEl.addEventListener("keydown", handleDragHandleKeydown);
   listEl.addEventListener("focusout", handleListFocusout);
+  listEl.addEventListener("mousedown", handleListMouseDown);
+  listEl.addEventListener("dragstart", handleListDragStart);
+  listEl.addEventListener("dragover", handleListDragOver);
+  listEl.addEventListener("drop", handleListDrop);
+  listEl.addEventListener("dragend", handleListDragEnd);
 
-  const tabsEl = document.getElementById("filter-tabs");
-  tabsEl.addEventListener("click", handleFilterClick);
+  document.getElementById("filter-tabs").addEventListener("click", handleFilterClick);
+  document.getElementById("status-tabs").addEventListener("click", handleStatusClick);
+  document.getElementById("important-only-toggle").addEventListener("click", handleImportantOnlyClick);
+  document.getElementById("search-input").addEventListener("input", handleSearchInput);
+  document.getElementById("search-clear").addEventListener("click", handleSearchClear);
+  document.getElementById("sort-select").addEventListener("change", handleSortChange);
 
   document.getElementById("theme-toggle").addEventListener("click", handleThemeToggleClick);
   document.getElementById("quote-next").addEventListener("click", showNextQuote);
