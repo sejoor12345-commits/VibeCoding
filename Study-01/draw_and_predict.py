@@ -61,4 +61,6 @@ demo = gr.Interface(
 )
 
 if __name__ == "__main__":
-    demo.launch()
+    # inbrowser=True automatically opens your default web browser to the
+    # app, so double-clicking the .bat file feels like launching a program
+    demo.launch(inbrowser=True)
