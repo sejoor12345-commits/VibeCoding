@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-Personal study repository for working through "혼자 공부하는 바이브코딩 with 클로드 코드". Each chapter's
-exercise lives in its own `Study-NN/` folder. `Study-01/` is a handwritten digit recognizer built with
-scikit-learn and Gradio, currently the only exercise in the repo. Expect additional `Study-NN/` folders
-to be added as the book progresses — do not assume `Study-01/` is the only or final one.
+This folder (`Study-01/`) is one chapter's exercise in the personal study repository for working through
+"혼자 공부하는 바이브코딩 with 클로드 코드" (repo root: `VibeCoding/`). Each chapter lives in its own
+`Study-NN/` folder at the repo root, each with its own `CLAUDE.md`; this is the handwritten digit
+recognizer built with scikit-learn and Gradio.
 
 ## Commands
 
-Run all commands from inside `Study-01/` (or the relevant `Study-NN/` folder).
+Run all commands from inside this folder.
 
 ```bash
 pip install -r requirements.txt   # install dependencies
@@ -34,7 +34,7 @@ There is no lint, test, or build command configured in this repo yet.
 
 ## Architecture
 
-### `Study-01/digit_recognition.py` — single-file app
+### `digit_recognition.py` — single-file app
 
 One script does three jobs in sequence at import time (not gated behind `if __name__`), so importing the
 module has side effects (loads/trains a model immediately):
@@ -57,13 +57,15 @@ next to the script). `MODEL_PATH` and `DATA_PATH` are both derived from `BASE_DI
 data file the script reads at runtime, it needs the same `BASE_DIR` treatment and a matching `--add-data`
 entry in the workflow below.
 
-### `.github/workflows/build_windows_exe.yml` — standalone .exe build
+### `../.github/workflows/build_windows_exe.yml` — standalone .exe build
 
-Builds `DigitRecognizer.exe` via PyInstaller on a `windows-latest` runner (a real .exe must be built on
-Windows) and uploads it as a build artifact. Triggers automatically on push to the
-`claude/friendly-curie-nz960w` branch when `Study-01/digit_recognition.py`, `Study-01/mnist_model.joblib`,
-or `Study-01/requirements.txt` change — the branch name is hardcoded in the `paths` trigger, so update it
-if the working branch changes. Also triggerable manually via `workflow_dispatch`. Gradio's frontend assets
+Lives at the repo root (`.github/workflows/` must be at the repo root for GitHub Actions to find it — it
+cannot live inside `Study-01/`), but it only builds this folder's app. Builds `DigitRecognizer.exe` via
+PyInstaller on a `windows-latest` runner (a real .exe must be built on Windows) and uploads it as a build
+artifact. Triggers automatically on push to the `claude/friendly-curie-nz960w` branch when
+`Study-01/digit_recognition.py`, `Study-01/mnist_model.joblib`, or `Study-01/requirements.txt` change —
+the branch name and `Study-01/` paths are hardcoded in the `paths` trigger, so update them if the working
+branch changes or this folder is renamed. Also triggerable manually via `workflow_dispatch`. Gradio's frontend assets
 aren't picked up by PyInstaller's default import analysis, hence the `--collect-all gradio` /
 `gradio_client` / `safehttpx` / `groovy` flags — if the build fails with missing Gradio assets/templates,
 that flag list is the first place to extend.
