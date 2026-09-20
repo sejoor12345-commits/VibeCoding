@@ -9,7 +9,10 @@ const state = {
 // ===== storage =====
 const STORAGE_KEY = "todo-app:v1"; // 정상 데이터를 저장할 localStorage 키
 const CORRUPT_KEY = "todo-app:v1:corrupt"; // 손상된 데이터를 옮겨둘 키
+const BACKUP_KEY = "todo-app:v1:backup"; // 가져오기로 목록을 대체하기 전 백업해 두는 키
 const SETTINGS_KEY = "todo-app:settings"; // 테마/정렬 등 앱 설정을 저장할 키 (할 일 데이터와 분리)
+
+let hadCorruptData = false; // load()에서 손상된 데이터를 만났는지 (init()이 배너를 띄울지 판단하는 데 쓴다)
 
 // localStorage에 저장된 todos 배열을 불러온다 (없거나 손상됐으면 빈 배열)
 // v1 데이터나 important가 없는 항목은 important: false를 채워서 그대로 불러온다
@@ -19,21 +22,25 @@ function load() {
 
   try {
     const parsed = JSON.parse(raw);
-    if (!parsed || !Array.isArray(parsed.todos)) return [];
+    if (!parsed || !Array.isArray(parsed.todos)) {
+      throw new Error("invalid shape");
+    }
     return parsed.todos.map((todo) => ({ important: false, ...todo }));
   } catch (error) {
     localStorage.setItem(CORRUPT_KEY, raw); // 손상된 원본은 따로 보관해 둔다
+    hadCorruptData = true;
     return [];
   }
 }
 
-// todos 배열을 localStorage에 저장한다 (성공하면 true, 실패하면 false)
+// todos 배열을 localStorage에 저장한다 (성공하면 true, 실패하면 배너를 띄우고 false)
 function save(todos) {
   try {
     const data = { version: 2, todos };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     return true;
   } catch (error) {
+    showSaveFailedBanner();
     return false;
   }
 }
@@ -70,9 +77,9 @@ function createId() {
   return `id-${Date.now()}`;
 }
 
-// 새 할 일을 추가한다 (앞뒤 공백을 지운 뒤 비어 있으면 무시한다)
+// 새 할 일을 추가한다 (앞뒤 공백을 지우고 100자로 자른 뒤 비어 있으면 무시한다)
 function addTodo(text, category) {
-  const trimmed = text.trim();
+  const trimmed = text.trim().slice(0, 100);
   if (!trimmed) return;
 
   const todo = {
@@ -90,12 +97,17 @@ function addTodo(text, category) {
   render();
 }
 
-// 할 일의 텍스트/카테고리를 수정한다
+// 할 일의 텍스트/카테고리를 수정한다 (text가 있으면 100자로 잘라 저장한다)
 function updateTodo(id, changes) {
   const todo = state.todos.find((item) => item.id === id);
   if (!todo) return;
 
-  Object.assign(todo, changes);
+  const safeChanges = { ...changes };
+  if (typeof safeChanges.text === "string") {
+    safeChanges.text = safeChanges.text.slice(0, 100);
+  }
+
+  Object.assign(todo, safeChanges);
   save(state.todos);
   render();
 }
@@ -121,11 +133,53 @@ function toggleImportant(id) {
   render();
 }
 
-// 할 일을 목록에서 삭제한다
-function deleteTodo(id) {
-  state.todos = state.todos.filter((item) => item.id !== id);
+// id 목록에 해당하는 항목들을 한 번에 지우고, 실행 취소 토스트를 보여준다
+// (개수와 상관없이 이 호출 전체가 "한 번의 삭제 동작"이며, 되살리면 원래 위치로 되돌아간다)
+function deleteTodosWithUndo(ids) {
+  const idSet = new Set(ids);
+  const removed = [];
+  state.todos.forEach((todo, index) => {
+    if (idSet.has(todo.id)) removed.push({ todo, index });
+  });
+  if (removed.length === 0) return;
+
+  state.todos = state.todos.filter((todo) => !idSet.has(todo.id));
   save(state.todos);
   render();
+
+  showToast({
+    message: "삭제했어요.",
+    actionLabel: "실행 취소",
+    onAction: () => restoreDeleted(removed),
+    duration: 5000,
+  });
+}
+
+// deleteTodosWithUndo가 지운 항목들을 원래 있던 위치 그대로 되살린다
+function restoreDeleted(removed) {
+  removed.forEach(({ todo, index }) => {
+    const insertAt = Math.min(index, state.todos.length);
+    state.todos.splice(insertAt, 0, todo);
+  });
+  save(state.todos);
+  render();
+}
+
+// 항목 하나를 삭제한다 (실행 취소 가능)
+function deleteTodo(id) {
+  deleteTodosWithUndo([id]);
+}
+
+// 완료된 항목을 모두 삭제한다 (실행 취소 가능)
+function deleteCompletedTodos() {
+  const ids = state.todos.filter((todo) => todo.done).map((todo) => todo.id);
+  deleteTodosWithUndo(ids);
+}
+
+// 오늘 0시 이전에 완료된("어제까지 끝낸") 항목을 모두 삭제한다 (실행 취소 가능)
+function cleanupStaleCompleted() {
+  const ids = getStaleCompletedTodos().map((todo) => todo.id);
+  deleteTodosWithUndo(ids);
 }
 
 // sourceId 항목을 targetId 항목 앞/뒤로 옮긴다 ("내 순서"인 state.todos 배열 자체를 바꾼다)
@@ -183,6 +237,53 @@ function setTheme(theme) {
   settings.theme = theme;
   saveSettings(settings);
   updateThemeToggleIcon(theme);
+}
+
+// 지금 데이터를 JSON 파일로 내려받는다 (서버로 보내지 않는다)
+function exportTodos() {
+  const data = {
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    todos: state.todos,
+  };
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `todo-backup-${getTodayDateString()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+
+  showToast({ message: `${state.todos.length}개를 내보냈어요` });
+}
+
+// 가져온 항목 중 id가 같은 것은 건너뛰고 나머지를 현재 목록 뒤에 추가한다
+function mergeImportedTodos(importedTodos) {
+  const existingIds = new Set(state.todos.map((todo) => todo.id));
+  const toAdd = importedTodos.filter((todo) => !existingIds.has(todo.id));
+
+  state.todos = [...state.todos, ...toAdd];
+  save(state.todos);
+  render();
+
+  return toAdd.length;
+}
+
+// 현재 목록을 가져온 목록으로 완전히 바꾼다 (바꾸기 전 현재 데이터를 백업 키에 남긴다)
+function replaceAllTodos(importedTodos) {
+  try {
+    localStorage.setItem(BACKUP_KEY, JSON.stringify({ version: 2, todos: state.todos }));
+  } catch (error) {
+    // 백업이 실패해도 사용자가 대체를 선택했으므로 계속 진행한다
+  }
+
+  state.todos = importedTodos;
+  save(state.todos);
+  render();
 }
 
 // ===== selectors =====
@@ -257,6 +358,58 @@ function getProgress() {
   });
 
   return progress;
+}
+
+// 오늘 0시 이전에 완료된("어제까지 끝낸") 항목을 찾는다
+function getStaleCompletedTodos() {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const cutoff = todayStart.getTime();
+
+  return state.todos.filter((todo) => todo.done && typeof todo.completedAt === "number" && todo.completedAt < cutoff);
+}
+
+// 오늘 날짜를 "YYYY-MM-DD" 문자열로 돌려준다 (파일 이름, 하루 정리 건너뛰기 저장에 쓴다)
+function getTodayDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// 가져온 todos 배열에서 형식이 맞는 항목만 골라 안전한 형태로 만든다
+function validateImportedTodos(rawTodos) {
+  const validTodos = [];
+  let skippedCount = 0;
+
+  rawTodos.forEach((item) => {
+    const isValid = item
+      && typeof item === "object"
+      && typeof item.id === "string"
+      && typeof item.text === "string"
+      && CATEGORY_ORDER.includes(item.category)
+      && typeof item.done === "boolean"
+      && typeof item.createdAt === "number"
+      && (item.completedAt === null || typeof item.completedAt === "number");
+
+    if (!isValid) {
+      skippedCount += 1;
+      return;
+    }
+
+    validTodos.push({
+      id: item.id,
+      text: item.text.slice(0, 100),
+      category: item.category,
+      done: item.done,
+      important: typeof item.important === "boolean" ? item.important : false,
+      createdAt: item.createdAt,
+      completedAt: item.completedAt,
+    });
+  });
+
+  return { validTodos, skippedCount };
 }
 
 // 지금 적용된 테마를 읽는다 (head의 인라인 스크립트가 이미 정해 둔 값)
@@ -336,6 +489,7 @@ const ICONS = {
   dragHandle: '<svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="2" r="1.3"/><circle cx="7" cy="2" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="14" r="1.3"/><circle cx="7" cy="14" r="1.3"/></svg>',
   starOutline: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
   starFilled: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  close: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
 };
 
 let editingId = null; // 지금 수정 중인 할 일 id (저장되지 않는 화면 전용 상태)
@@ -345,6 +499,7 @@ function render() {
   renderFilterTabs();
   renderStatusTabs();
   updateListControls();
+  updateMoreMenuState();
   refreshProgress();
 
   const listEl = document.getElementById("todo-list");
@@ -412,6 +567,12 @@ function updateListControls() {
   importantBtn.setAttribute("aria-pressed", String(state.filter.importantOnly));
 
   document.getElementById("search-clear").hidden = !state.filter.search;
+}
+
+// 더보기 메뉴의 "완료 항목 모두 삭제"를 완료 항목이 있을 때만 눌리게 한다
+function updateMoreMenuState() {
+  const hasCompleted = state.todos.some((todo) => todo.done);
+  document.getElementById("menu-clear-completed").disabled = !hasCompleted;
 }
 
 // 오늘 날짜를 헤더에 표시한다 (페이지를 여는 동안 바뀌지 않으므로 처음 한 번만 호출한다)
@@ -720,6 +881,180 @@ function createEmptyState(message) {
   return li;
 }
 
+// ----- 토스트 (삭제 실행 취소, 내보내기/가져오기 알림 등에 공용으로 쓴다) -----
+let toastEl = null; // 페이지에 하나만 두고 재사용한다
+let toastTimeoutId = null;
+
+function ensureToastEl() {
+  if (toastEl) return toastEl;
+  toastEl = document.createElement("div");
+  toastEl.className = "toast";
+  toastEl.setAttribute("role", "status");
+  toastEl.setAttribute("aria-live", "polite");
+  document.body.appendChild(toastEl);
+  return toastEl;
+}
+
+// 토스트를 보여준다. actionLabel/onAction을 주면 클릭 가능한 버튼이 함께 뜬다.
+// 이미 다른 토스트가 떠 있으면 그 토스트(와 실행 취소 기회)는 사라지고 이번 토스트로 바뀐다.
+function showToast({ message, actionLabel, onAction, duration = 3000 }) {
+  const el = ensureToastEl();
+  if (toastTimeoutId) {
+    clearTimeout(toastTimeoutId);
+    toastTimeoutId = null;
+  }
+
+  el.textContent = "";
+  const messageSpan = document.createElement("span");
+  messageSpan.textContent = message;
+  el.appendChild(messageSpan);
+
+  if (actionLabel && onAction) {
+    const actionBtn = document.createElement("button");
+    actionBtn.type = "button";
+    actionBtn.className = "toast-action";
+    actionBtn.textContent = actionLabel;
+    actionBtn.addEventListener("click", () => {
+      hideToast();
+      onAction();
+    });
+    el.appendChild(actionBtn);
+  }
+
+  // 연속으로 뜰 때도 슬라이드업 애니메이션이 처음부터 재생되도록 클래스를 뗐다 붙인다
+  el.classList.remove("visible");
+  void el.offsetWidth; // 강제로 리플로우를 일으켜 transition이 다시 걸리게 한다
+  el.classList.add("visible");
+
+  toastTimeoutId = window.setTimeout(hideToast, duration);
+}
+
+function hideToast() {
+  if (toastTimeoutId) {
+    clearTimeout(toastTimeoutId);
+    toastTimeoutId = null;
+  }
+  if (toastEl) toastEl.classList.remove("visible");
+}
+
+// ----- 배너 (손상된 데이터, 저장 실패, 하루 정리 제안) -----
+// 같은 id의 배너가 이미 떠 있으면 새로 만들지 않는다
+function showDismissibleBanner(id, message) {
+  if (document.getElementById(id)) return;
+
+  const banner = document.createElement("div");
+  banner.className = "banner banner-warning";
+  banner.id = id;
+
+  const text = document.createElement("p");
+  text.textContent = message;
+
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "icon-button";
+  closeBtn.setAttribute("aria-label", "닫기");
+  closeBtn.innerHTML = ICONS.close;
+  closeBtn.addEventListener("click", () => banner.remove());
+
+  banner.append(text, closeBtn);
+  document.getElementById("banner").appendChild(banner);
+}
+
+function showCorruptDataBanner() {
+  showDismissibleBanner(
+    "corrupt-data-banner",
+    "저장된 데이터를 읽지 못해 빈 목록으로 시작했어요. 원본은 브라우저에 보관되어 있어요."
+  );
+}
+
+function showSaveFailedBanner() {
+  showDismissibleBanner(
+    "save-failed-banner",
+    "지금은 새로고침하면 데이터가 사라져요. 내보내기로 백업해 두세요."
+  );
+}
+
+// 어제까지 끝낸 할 일을 정리할지 묻는 배너를 보여준다
+function showCleanupBanner(count) {
+  if (document.getElementById("cleanup-banner")) return;
+
+  const banner = document.createElement("div");
+  banner.className = "banner banner-info";
+  banner.id = "cleanup-banner";
+
+  const text = document.createElement("p");
+  text.textContent = `어제까지 끝낸 할 일이 ${count}개 있어요. 정리할까요?`;
+
+  const actions = document.createElement("div");
+  actions.className = "banner-actions";
+
+  const cleanupBtn = document.createElement("button");
+  cleanupBtn.type = "button";
+  cleanupBtn.className = "btn-primary";
+  cleanupBtn.textContent = "정리하기";
+  cleanupBtn.addEventListener("click", () => {
+    banner.remove();
+    cleanupStaleCompleted();
+  });
+
+  const laterBtn = document.createElement("button");
+  laterBtn.type = "button";
+  laterBtn.className = "btn-secondary";
+  laterBtn.textContent = "나중에";
+  laterBtn.addEventListener("click", () => {
+    banner.remove();
+    const settings = loadSettings();
+    settings.snoozeDate = getTodayDateString();
+    saveSettings(settings);
+  });
+
+  actions.append(cleanupBtn, laterBtn);
+  banner.append(text, actions);
+  document.getElementById("banner").appendChild(banner);
+}
+
+// 앱을 열 때 어제까지 끝낸 완료 항목이 있으면(그리고 오늘 이미 "나중에"를 누르지 않았으면) 정리 배너를 띄운다
+function checkDayCleanup() {
+  const settings = loadSettings();
+  if (settings.snoozeDate === getTodayDateString()) return;
+
+  const staleTodos = getStaleCompletedTodos();
+  if (staleTodos.length === 0) return;
+
+  showCleanupBanner(staleTodos.length);
+}
+
+// ----- 더보기 메뉴 -----
+function openMoreMenu() {
+  const menu = document.getElementById("more-menu");
+  menu.hidden = false;
+  document.getElementById("more-menu-toggle").setAttribute("aria-expanded", "true");
+
+  const firstItem = menu.querySelector(".more-menu-item:not(:disabled)");
+  if (firstItem) firstItem.focus();
+}
+
+function closeMoreMenu() {
+  const menu = document.getElementById("more-menu");
+  if (menu.hidden) return;
+  menu.hidden = true;
+  document.getElementById("more-menu-toggle").setAttribute("aria-expanded", "false");
+}
+
+// ----- 가져오기 확인 dialog -----
+let pendingImport = null; // { validTodos, skippedCount } - 검증을 통과해 dialog에서 확인을 기다리는 가져오기
+
+function openImportDialog(validTodos, skippedCount) {
+  pendingImport = validTodos;
+
+  let message = `${validTodos.length}개를 가져올게요`;
+  if (skippedCount > 0) {
+    message += ` (형식이 맞지 않는 ${skippedCount}개는 건너뛰어요)`;
+  }
+  document.getElementById("import-dialog-message").textContent = message;
+  document.getElementById("import-dialog").showModal();
+}
+
 // ===== events =====
 let isCancelingEdit = false; // Esc로 취소할 때 뒤이은 focusout이 다시 저장하지 않도록 막는 플래그
 
@@ -812,6 +1147,117 @@ function handleSortChange(event) {
 // 테마 버튼 클릭을 처리한다: 라이트/다크를 서로 바꾼다
 function handleThemeToggleClick() {
   setTheme(getCurrentTheme() === "dark" ? "light" : "dark");
+}
+
+// 더보기 버튼 클릭을 처리한다: 메뉴를 열거나 닫는다
+function handleMoreMenuToggleClick() {
+  const menu = document.getElementById("more-menu");
+  if (menu.hidden) openMoreMenu();
+  else closeMoreMenu();
+}
+
+// 메뉴 바깥을 누르면 메뉴를 닫는다
+function handleDocumentClick(event) {
+  const wrapper = document.querySelector(".more-menu-wrapper");
+  if (wrapper && !wrapper.contains(event.target)) closeMoreMenu();
+}
+
+// 메뉴가 열려 있을 때 Esc로 닫거나 위/아래 화살표로 항목 사이를 이동한다
+function handleMoreMenuKeydown(event) {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeMoreMenu();
+    document.getElementById("more-menu-toggle").focus();
+    return;
+  }
+
+  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+  event.preventDefault();
+
+  const items = Array.from(document.querySelectorAll(".more-menu-item:not(:disabled)"));
+  if (items.length === 0) return;
+  const currentIndex = items.indexOf(document.activeElement);
+  const step = event.key === "ArrowDown" ? 1 : -1;
+  const nextIndex = (currentIndex + step + items.length) % items.length;
+  items[nextIndex].focus();
+}
+
+// "내보내기" 메뉴 클릭을 처리한다
+function handleMenuExportClick() {
+  closeMoreMenu();
+  exportTodos();
+}
+
+// "가져오기" 메뉴 클릭을 처리한다: 숨겨진 파일 선택창을 연다
+function handleMenuImportClick() {
+  closeMoreMenu();
+  document.getElementById("import-file-input").click();
+}
+
+// "완료 항목 모두 삭제" 메뉴 클릭을 처리한다
+function handleMenuClearCompletedClick() {
+  closeMoreMenu();
+  const completedCount = state.todos.filter((todo) => todo.done).length;
+  if (completedCount === 0) return;
+  if (window.confirm(`완료된 ${completedCount}개를 삭제할까요?`)) {
+    deleteCompletedTodos();
+  }
+}
+
+// 가져오기 파일을 선택하면 읽어서 검증한다
+function handleImportFileChange(event) {
+  const file = event.target.files[0];
+  event.target.value = ""; // 같은 파일을 다시 골라도 change가 발생하도록 비운다
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    let parsed;
+    try {
+      parsed = JSON.parse(reader.result);
+    } catch (error) {
+      showToast({ message: "가져올 수 없는 파일이에요" });
+      return;
+    }
+
+    if (!parsed || !Array.isArray(parsed.todos)) {
+      showToast({ message: "가져올 수 없는 파일이에요" });
+      return;
+    }
+
+    const { validTodos, skippedCount } = validateImportedTodos(parsed.todos);
+    if (validTodos.length === 0) {
+      showToast({ message: "가져올 수 없는 파일이에요" });
+      return;
+    }
+
+    openImportDialog(validTodos, skippedCount);
+  };
+  reader.onerror = () => {
+    showToast({ message: "가져올 수 없는 파일이에요" });
+  };
+  reader.readAsText(file);
+}
+
+// 가져오기 dialog의 "현재 목록에 추가" 버튼을 처리한다
+function handleImportMergeClick() {
+  if (!pendingImport) return;
+  const addedCount = mergeImportedTodos(pendingImport);
+  document.getElementById("import-dialog").close();
+  showToast({ message: `${addedCount}개를 추가했어요` });
+}
+
+// 가져오기 dialog의 "현재 목록 대체" 버튼을 처리한다
+function handleImportReplaceClick() {
+  if (!pendingImport) return;
+  replaceAllTodos(pendingImport);
+  document.getElementById("import-dialog").close();
+  showToast({ message: `${state.todos.length}개로 대체했어요` });
+}
+
+// 가져오기 dialog의 "취소" 버튼을 처리한다
+function handleImportCancelClick() {
+  document.getElementById("import-dialog").close();
 }
 
 // 수정 모드로 전환하고 입력창에 포커스를 준다
@@ -986,6 +1432,9 @@ function init() {
   state.sort = settings.sort || "custom";
   state.todos = load();
 
+  if (hadCorruptData) showCorruptDataBanner();
+  checkDayCleanup();
+
   buildProgressSkeleton();
   render();
 
@@ -1014,6 +1463,20 @@ function init() {
 
   document.getElementById("theme-toggle").addEventListener("click", handleThemeToggleClick);
   document.getElementById("quote-next").addEventListener("click", showNextQuote);
+
+  document.getElementById("more-menu-toggle").addEventListener("click", handleMoreMenuToggleClick);
+  document.getElementById("more-menu").addEventListener("keydown", handleMoreMenuKeydown);
+  document.addEventListener("click", handleDocumentClick);
+
+  document.getElementById("menu-export").addEventListener("click", handleMenuExportClick);
+  document.getElementById("menu-import").addEventListener("click", handleMenuImportClick);
+  document.getElementById("menu-clear-completed").addEventListener("click", handleMenuClearCompletedClick);
+  document.getElementById("import-file-input").addEventListener("change", handleImportFileChange);
+
+  document.getElementById("import-merge-btn").addEventListener("click", handleImportMergeClick);
+  document.getElementById("import-replace-btn").addEventListener("click", handleImportReplaceClick);
+  document.getElementById("import-cancel-btn").addEventListener("click", handleImportCancelClick);
+  document.getElementById("import-dialog").addEventListener("close", () => { pendingImport = null; });
 }
 
 document.addEventListener("DOMContentLoaded", init);
