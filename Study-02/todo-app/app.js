@@ -92,18 +92,46 @@ function deleteTodo(id) {
 }
 
 // ===== selectors =====
-// 화면에 그릴 todos 목록을 고른다 (지금은 필터 없이 전체를 그대로 반환)
+// 화면에 그릴 todos 목록을 고른다 (필터의 카테고리에 맞는 항목만 반환)
 function getVisibleTodos() {
-  return state.todos;
+  if (state.filter.category === "all") return state.todos;
+  return state.todos.filter((todo) => todo.category === state.filter.category);
+}
+
+// 전체와 카테고리별(work/personal/study) 완료 진행률을 계산한다
+function getProgress() {
+  const buildProgress = (todos) => {
+    const total = todos.length;
+    const done = todos.filter((todo) => todo.done).length;
+    const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+    return { done, total, percent };
+  };
+
+  const progress = { all: buildProgress(state.todos) };
+  CATEGORY_ORDER.forEach((category) => {
+    progress[category] = buildProgress(state.todos.filter((todo) => todo.category === category));
+  });
+
+  return progress;
 }
 
 // ===== render =====
 const CATEGORY_LABELS = { work: "업무", personal: "개인", study: "공부" }; // 카테고리 값을 화면 표시용 텍스트로 변환
+const CATEGORY_ORDER = ["work", "personal", "study"]; // 카테고리를 항상 같은 순서로 다루기 위한 목록
+const FILTER_TABS = [
+  { value: "all", label: "전체" },
+  { value: "work", label: "업무" },
+  { value: "personal", label: "개인" },
+  { value: "study", label: "공부" },
+];
 
 let editingId = null; // 지금 수정 중인 할 일 id (저장되지 않는 화면 전용 상태)
 
-// 현재 state를 기준으로 할 일 목록을 다시 그린다
+// 현재 state를 기준으로 필터 탭, 진행률, 할 일 목록을 다시 그린다
 function render() {
+  renderFilterTabs();
+  renderProgress();
+
   const listEl = document.getElementById("todo-list");
   listEl.textContent = ""; // 기존 목록을 비운 뒤 새로 그린다
 
@@ -112,7 +140,9 @@ function render() {
   if (todos.length === 0) {
     const emptyLi = document.createElement("li");
     emptyLi.className = "empty-message";
-    emptyLi.textContent = "아직 할 일이 없어요. 위에서 첫 할 일을 추가해 보세요.";
+    emptyLi.textContent = state.todos.length === 0
+      ? "아직 할 일이 없어요. 위에서 첫 할 일을 추가해 보세요."
+      : "이 카테고리에는 할 일이 없어요.";
     listEl.appendChild(emptyLi);
     return;
   }
@@ -121,6 +151,57 @@ function render() {
     const li = todo.id === editingId ? createEditItem(todo) : createTodoItem(todo);
     listEl.appendChild(li);
   });
+}
+
+// 필터 탭 버튼을 그리고 현재 선택된 탭을 표시한다
+function renderFilterTabs() {
+  const tabsEl = document.getElementById("filter-tabs");
+  tabsEl.textContent = "";
+
+  FILTER_TABS.forEach((tab) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "filter-tab";
+    if (tab.value === state.filter.category) button.classList.add("active");
+    button.dataset.category = tab.value;
+    button.textContent = tab.label;
+    tabsEl.appendChild(button);
+  });
+}
+
+// 전체 진행률 바/텍스트와 카테고리별 진행 상황을 그린다 (필터와 무관하게 항상 전체 기준)
+function renderProgress() {
+  const progressEl = document.getElementById("progress");
+  progressEl.textContent = "";
+
+  const progress = getProgress();
+  const { done, total, percent } = progress.all;
+
+  const track = document.createElement("div");
+  track.className = "progress-track";
+  const fill = document.createElement("div");
+  fill.className = "progress-fill";
+  fill.style.width = `${percent}%`;
+  track.appendChild(fill);
+
+  const summary = document.createElement("p");
+  summary.className = "progress-summary";
+  summary.textContent = `${done}/${total} 완료 (${percent}%)`;
+
+  const byCategory = document.createElement("p");
+  byCategory.className = "progress-by-category";
+  byCategory.textContent = CATEGORY_ORDER
+    .map((category) => `${CATEGORY_LABELS[category]} ${progress[category].done}/${progress[category].total}`)
+    .join(" · ");
+
+  progressEl.append(track, summary, byCategory);
+
+  if (total > 0 && done === total) {
+    const completeMsg = document.createElement("p");
+    completeMsg.className = "progress-complete";
+    completeMsg.textContent = "오늘 할 일을 모두 끝냈어요";
+    progressEl.appendChild(completeMsg);
+  }
 }
 
 // 완료 체크박스, 카테고리 배지, 수정/삭제 버튼이 있는 한 줄을 만든다
@@ -226,6 +307,14 @@ function handleListChange(event) {
   toggleTodo(li.dataset.id);
 }
 
+// 필터 탭 클릭을 위임 처리한다: 선택한 카테고리를 state.filter에 반영한다
+function handleFilterClick(event) {
+  const button = event.target.closest(".filter-tab");
+  if (!button) return;
+  state.filter.category = button.dataset.category;
+  render();
+}
+
 // 수정 모드로 전환하고 입력창에 포커스를 준다
 function enterEditMode(id) {
   isCancelingEdit = false; // 이전에 남아 있을 수 있는 취소 플래그를 초기화
@@ -298,6 +387,9 @@ function init() {
   listEl.addEventListener("change", handleListChange);
   listEl.addEventListener("keydown", handleListKeydown);
   listEl.addEventListener("focusout", handleListFocusout);
+
+  const tabsEl = document.getElementById("filter-tabs");
+  tabsEl.addEventListener("click", handleFilterClick);
 }
 
 document.addEventListener("DOMContentLoaded", init);

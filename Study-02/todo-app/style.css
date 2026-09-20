@@ -15,6 +15,62 @@ form {
   flex: 1;
 }
 
+#progress {
+  margin-bottom: 16px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 12px;
+  background: #eee;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: #4caf50;
+  transition: width 0.3s ease;
+}
+
+.progress-summary {
+  margin: 8px 0 4px;
+  font-weight: bold;
+}
+
+.progress-by-category {
+  margin: 0;
+  font-size: 0.85em;
+  color: #666;
+}
+
+.progress-complete {
+  margin: 8px 0 0;
+  color: #2e7d32;
+  font-weight: bold;
+}
+
+#filter-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filter-tab {
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.filter-tab.active {
+  border-color: #1a73e8;
+  color: #1a73e8;
+  font-weight: bold;
+}
+
 #todo-list {
   list-style: none;
   padding: 0;
