@@ -125,6 +125,13 @@ const FILTER_TABS = [
   { value: "study", label: "공부" },
 ];
 
+// 수정/삭제/추가 버튼에 쓰는 인라인 SVG 아이콘 (고정된 마크업이라 innerHTML로 넣어도 안전하다)
+const ICONS = {
+  edit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  delete: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
+  emptyState: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="m9 13 2 2 4-4"/></svg>',
+};
+
 let editingId = null; // 지금 수정 중인 할 일 id (저장되지 않는 화면 전용 상태)
 
 // 현재 state를 기준으로 필터 탭, 진행률, 할 일 목록을 다시 그린다
@@ -138,12 +145,10 @@ function render() {
   const todos = getVisibleTodos();
 
   if (todos.length === 0) {
-    const emptyLi = document.createElement("li");
-    emptyLi.className = "empty-message";
-    emptyLi.textContent = state.todos.length === 0
+    const message = state.todos.length === 0
       ? "아직 할 일이 없어요. 위에서 첫 할 일을 추가해 보세요."
       : "이 카테고리에는 할 일이 없어요.";
-    listEl.appendChild(emptyLi);
+    listEl.appendChild(createEmptyState(message));
     return;
   }
 
@@ -163,40 +168,84 @@ function renderFilterTabs() {
     button.type = "button";
     button.className = "filter-tab";
     if (tab.value === state.filter.category) button.classList.add("active");
+    button.setAttribute("aria-pressed", tab.value === state.filter.category ? "true" : "false");
     button.dataset.category = tab.value;
     button.textContent = tab.label;
     tabsEl.appendChild(button);
   });
 }
 
-// 전체 진행률 바/텍스트와 카테고리별 진행 상황을 그린다 (필터와 무관하게 항상 전체 기준)
+// 오늘 날짜를 헤더에 표시한다 (페이지를 여는 동안 바뀌지 않으므로 처음 한 번만 호출한다)
+function renderDate() {
+  const dateEl = document.getElementById("today-date");
+  dateEl.textContent = new Date().toLocaleDateString("ko-KR", {
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+  });
+}
+
+// 전체 진행률 바/숫자와 카테고리별 진행 상황을 그린다 (필터와 무관하게 항상 전체 기준)
 function renderProgress() {
   const progressEl = document.getElementById("progress");
   progressEl.textContent = "";
 
   const progress = getProgress();
   const { done, total, percent } = progress.all;
+  const allDone = total > 0 && done === total;
+
+  const summary = document.createElement("div");
+  summary.className = "progress-summary";
+
+  const percentEl = document.createElement("div");
+  percentEl.className = "progress-percent";
+  if (allDone) percentEl.classList.add("complete");
+  percentEl.textContent = `${percent}%`;
+
+  const countEl = document.createElement("div");
+  countEl.className = "progress-count";
+  countEl.textContent = `${done}/${total} 완료`;
+
+  summary.append(percentEl, countEl);
 
   const track = document.createElement("div");
   track.className = "progress-track";
+  if (allDone) track.classList.add("complete");
   const fill = document.createElement("div");
   fill.className = "progress-fill";
   fill.style.width = `${percent}%`;
   track.appendChild(fill);
 
-  const summary = document.createElement("p");
-  summary.className = "progress-summary";
-  summary.textContent = `${done}/${total} 완료 (${percent}%)`;
+  const categories = document.createElement("div");
+  categories.className = "progress-categories";
+  CATEGORY_ORDER.forEach((category) => {
+    const item = progress[category];
 
-  const byCategory = document.createElement("p");
-  byCategory.className = "progress-by-category";
-  byCategory.textContent = CATEGORY_ORDER
-    .map((category) => `${CATEGORY_LABELS[category]} ${progress[category].done}/${progress[category].total}`)
-    .join(" · ");
+    const col = document.createElement("div");
+    col.className = "progress-category-item";
 
-  progressEl.append(track, summary, byCategory);
+    const label = document.createElement("span");
+    label.className = "progress-category-label";
+    label.textContent = CATEGORY_LABELS[category];
 
-  if (total > 0 && done === total) {
+    const count = document.createElement("span");
+    count.className = "progress-category-count";
+    count.textContent = `${item.done}/${item.total}`;
+
+    const miniTrack = document.createElement("div");
+    miniTrack.className = "progress-mini-track";
+    const miniFill = document.createElement("div");
+    miniFill.className = "progress-mini-fill";
+    miniFill.style.width = `${item.percent}%`;
+    miniTrack.appendChild(miniFill);
+
+    col.append(label, count, miniTrack);
+    categories.appendChild(col);
+  });
+
+  progressEl.append(summary, track, categories);
+
+  if (allDone) {
     const completeMsg = document.createElement("p");
     completeMsg.className = "progress-complete";
     completeMsg.textContent = "오늘 할 일을 모두 끝냈어요";
@@ -204,42 +253,51 @@ function renderProgress() {
   }
 }
 
-// 완료 체크박스, 카테고리 배지, 수정/삭제 버튼이 있는 한 줄을 만든다
+// 완료 체크박스, 내용, 카테고리 배지, 수정/삭제 아이콘 버튼이 있는 한 줄을 만든다
 function createTodoItem(todo) {
   const li = document.createElement("li");
+  li.className = "todo-item";
   li.dataset.id = todo.id;
-  if (todo.done) li.className = "done";
+  if (todo.done) li.classList.add("done");
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
   checkbox.className = "todo-toggle";
   checkbox.checked = todo.done;
-
-  const badge = document.createElement("span");
-  badge.className = "todo-category";
-  badge.textContent = CATEGORY_LABELS[todo.category] || todo.category;
+  checkbox.setAttribute("aria-label", "완료 체크");
 
   const text = document.createElement("span");
   text.className = "todo-text";
   text.textContent = todo.text;
 
+  const badge = document.createElement("span");
+  badge.className = `todo-category todo-category-${todo.category}`;
+  badge.textContent = CATEGORY_LABELS[todo.category] || todo.category;
+
   const editBtn = document.createElement("button");
   editBtn.type = "button";
-  editBtn.className = "todo-edit";
-  editBtn.textContent = "수정";
+  editBtn.className = "icon-button todo-edit";
+  editBtn.setAttribute("aria-label", "수정");
+  editBtn.innerHTML = ICONS.edit;
 
   const deleteBtn = document.createElement("button");
   deleteBtn.type = "button";
-  deleteBtn.className = "todo-delete";
-  deleteBtn.textContent = "삭제";
+  deleteBtn.className = "icon-button todo-delete";
+  deleteBtn.setAttribute("aria-label", "삭제");
+  deleteBtn.innerHTML = ICONS.delete;
 
-  li.append(checkbox, badge, text, editBtn, deleteBtn);
+  const actions = document.createElement("div");
+  actions.className = "todo-actions";
+  actions.append(editBtn, deleteBtn);
+
+  li.append(checkbox, text, badge, actions);
   return li;
 }
 
 // 수정 중인 할 일을 입력창 + 카테고리 select로 보여준다
 function createEditItem(todo) {
   const li = document.createElement("li");
+  li.className = "todo-item editing";
   li.dataset.id = todo.id;
 
   const input = document.createElement("input");
@@ -250,15 +308,31 @@ function createEditItem(todo) {
 
   const select = document.createElement("select");
   select.className = "todo-edit-category";
-  Object.entries(CATEGORY_LABELS).forEach(([value, label]) => {
+  CATEGORY_ORDER.forEach((category) => {
     const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    if (value === todo.category) option.selected = true;
+    option.value = category;
+    option.textContent = CATEGORY_LABELS[category];
+    if (category === todo.category) option.selected = true;
     select.appendChild(option);
   });
 
   li.append(input, select);
+  return li;
+}
+
+// 목록이 비어 있을 때 아이콘과 안내 문구를 보여준다
+function createEmptyState(message) {
+  const li = document.createElement("li");
+  li.className = "empty-message";
+
+  const icon = document.createElement("div");
+  icon.className = "empty-icon";
+  icon.innerHTML = ICONS.emptyState;
+
+  const text = document.createElement("p");
+  text.textContent = message;
+
+  li.append(icon, text);
   return li;
 }
 
@@ -270,23 +344,23 @@ function handleFormSubmit(event) {
   event.preventDefault();
 
   const inputEl = document.getElementById("todo-input");
-  const categoryEl = document.getElementById("todo-category");
+  const categoryInput = document.querySelector('input[name="category"]:checked');
 
-  addTodo(inputEl.value, categoryEl.value);
+  addTodo(inputEl.value, categoryInput.value);
 
   inputEl.value = "";
   inputEl.focus();
 }
 
-// 목록 클릭을 위임 처리한다: 수정 시작, 삭제
+// 목록 클릭을 위임 처리한다: 수정 시작, 삭제 (아이콘 버튼 안쪽 클릭도 인식하도록 closest 사용)
 function handleListClick(event) {
   const li = event.target.closest("li[data-id]");
   if (!li) return;
   const id = li.dataset.id;
 
-  if (event.target.classList.contains("todo-delete")) {
+  if (event.target.closest(".todo-delete")) {
     deleteTodo(id);
-  } else if (event.target.classList.contains("todo-edit")) {
+  } else if (event.target.closest(".todo-edit")) {
     enterEditMode(id);
   }
 }
@@ -375,6 +449,8 @@ function commitEdit(inputEl) {
 
 // 페이지 로드 시 저장된 데이터를 불러와 상태에 채우고 화면을 그린다
 function init() {
+  renderDate();
+
   state.todos = load();
   render();
 

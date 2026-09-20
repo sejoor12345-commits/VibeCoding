@@ -7,30 +7,50 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>할 일 관리</h1>
+  <main class="page">
+    <header class="app-header">
+      <h1>오늘의 할 일</h1>
+      <p id="today-date" class="app-date"></p>
+    </header>
 
-  <!-- 진행률 영역: app.js의 renderProgress()가 채운다 -->
-  <div id="progress"></div>
+    <!-- 진행률 카드: app.js의 renderProgress()가 채운다 -->
+    <section id="progress" class="card progress-card"></section>
 
-  <!-- 할 일 입력 폼 -->
-  <form id="todo-form">
-    <input type="text" id="todo-input" placeholder="할 일을 입력하세요" maxlength="100">
-    <select id="todo-category">
-      <option value="work">업무</option>
-      <option value="personal">개인</option>
-      <option value="study">공부</option>
-    </select>
-    <button type="submit">추가</button>
-  </form>
+    <!-- 할 일 입력 카드 -->
+    <section class="card input-card">
+      <form id="todo-form" class="todo-form">
+        <div class="todo-form-row">
+          <input type="text" id="todo-input" class="todo-input" placeholder="할 일을 입력하세요" maxlength="100">
+          <button type="submit" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <span>추가</span>
+          </button>
+        </div>
 
-  <!-- 필터 탭 영역: app.js의 renderFilterTabs()가 채운다 -->
-  <div id="filter-tabs"></div>
+        <div class="category-chips" role="radiogroup" aria-label="카테고리 선택">
+          <input type="radio" name="category" id="category-work" class="chip-input" value="work" checked>
+          <label for="category-work" class="chip chip-work">업무</label>
 
-  <!-- 할 일 목록 -->
-  <ul id="todo-list"></ul>
+          <input type="radio" name="category" id="category-personal" class="chip-input" value="personal">
+          <label for="category-personal" class="chip chip-personal">개인</label>
 
-  <!-- 안내 배너 영역: 다음 단계에서 채운다 -->
-  <div id="banner"></div>
+          <input type="radio" name="category" id="category-study" class="chip-input" value="study">
+          <label for="category-study" class="chip chip-study">공부</label>
+        </div>
+      </form>
+    </section>
+
+    <!-- 필터 탭 영역: app.js의 renderFilterTabs()가 채운다 -->
+    <div id="filter-tabs" class="filter-tabs"></div>
+
+    <!-- 할 일 목록 카드 -->
+    <section class="card list-card">
+      <ul id="todo-list" class="todo-list"></ul>
+    </section>
+
+    <!-- 안내 배너 영역: 다음 단계에서 채운다 -->
+    <div id="banner"></div>
+  </main>
 
   <script src="app.js" defer></script>
 </body>
