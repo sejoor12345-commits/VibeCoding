@@ -6,7 +6,6 @@ hand-draw a digit (0-9) and see the model's live prediction.
 """
 
 import os
-import sys
 import urllib.request
 
 import joblib
@@ -16,14 +15,7 @@ import gradio as gr
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score
 
-# When this script is bundled into a standalone .exe (with PyInstaller),
-# bundled data files are extracted to a temporary folder at sys._MEIPASS
-# instead of living next to the script, so look there when frozen.
-if getattr(sys, "frozen", False):
-    BASE_DIR = sys._MEIPASS
-else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "mnist_model.joblib")
 DATA_URL = "https://storage.googleapis.com/tensorflow/tf-keras-datasets/mnist.npz"
 DATA_PATH = os.path.join(BASE_DIR, "mnist_cache.npz")
