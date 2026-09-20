@@ -14,3 +14,41 @@ form {
 #todo-input {
   flex: 1;
 }
+
+#todo-list {
+  list-style: none;
+  padding: 0;
+}
+
+#todo-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.todo-text {
+  flex: 1;
+}
+
+.done .todo-text {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.todo-category {
+  font-size: 0.85em;
+  color: #666;
+}
+
+.todo-edit-input {
+  flex: 1;
+}
+
+.empty-message {
+  color: #888;
+  text-align: center;
+  padding: 24px 0;
+  border-bottom: none;
+}
