@@ -5,13 +5,24 @@ train_digit_model.py, shows a drawing canvas, and predicts which
 digit (0-9) you drew with your mouse.
 """
 
+import os
+import sys
+
 import joblib
 import numpy as np
 from PIL import Image
 import gradio as gr
 
-# 1. Load the model that was trained and saved by train_digit_model.py
-MODEL_PATH = "mnist_model.joblib"
+# 1. Load the model that was trained and saved by train_digit_model.py.
+#    When this script is bundled into a standalone .exe (with PyInstaller),
+#    bundled data files are extracted to a temporary folder at sys._MEIPASS
+#    instead of living next to the script, so look there when frozen.
+if getattr(sys, "frozen", False):
+    BASE_DIR = sys._MEIPASS
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+MODEL_PATH = os.path.join(BASE_DIR, "mnist_model.joblib")
 model = joblib.load(MODEL_PATH)
 
 

@@ -1,0 +1,47 @@
+name: Build Windows Digit Recognizer
+
+# Builds a standalone Windows .exe of the digit recognizer app.
+# Runs on a GitHub-hosted Windows machine, since a real Windows .exe
+# must be built on Windows. Trigger it manually from the Actions tab,
+# or it runs automatically when the app's files change.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/friendly-curie-nz960w
+    paths:
+      - "Study-01/draw_and_predict.py"
+      - "Study-01/mnist_model.joblib"
+      - "Study-01/requirements.txt"
+      - ".github/workflows/build_windows_exe.yml"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r Study-01/requirements.txt
+          pip install pyinstaller
+
+      - name: Build standalone executable
+        run: |
+          pyinstaller --onefile --name DigitRecognizer `
+            --add-data "Study-01/mnist_model.joblib;." `
+            --collect-all gradio `
+            --collect-all gradio_client `
+            --collect-all safehttpx `
+            --collect-all groovy `
+            Study-01/draw_and_predict.py
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: DigitRecognizer-windows
+          path: dist/DigitRecognizer.exe
