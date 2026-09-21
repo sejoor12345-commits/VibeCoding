@@ -41,6 +41,7 @@
               <button type="button" id="menu-export" class="more-menu-item" role="menuitem" tabindex="-1">내보내기</button>
               <button type="button" id="menu-import" class="more-menu-item" role="menuitem" tabindex="-1">가져오기</button>
               <button type="button" id="menu-clear-completed" class="more-menu-item" role="menuitem" tabindex="-1">완료 항목 모두 삭제</button>
+              <button type="button" id="menu-classify-settings" class="more-menu-item" role="menuitem" tabindex="-1">자동 분류 설정</button>
               <button type="button" id="menu-shortcuts" class="more-menu-item" role="menuitem" tabindex="-1">단축키 보기</button>
             </div>
           </div>
@@ -69,6 +70,33 @@
         <div class="shortcuts-row"><dt>Alt + ↑ / ↓</dt><dd>드래그 핸들에서 순서 바꾸기</dd></div>
       </dl>
       <button type="button" id="shortcuts-close-btn" class="btn-secondary">닫기</button>
+    </dialog>
+
+    <dialog id="classify-settings-dialog" class="app-dialog">
+      <h2>자동 분류 설정</h2>
+
+      <div class="settings-row">
+        <label for="classify-enabled-toggle">자동 분류 사용</label>
+        <input type="checkbox" id="classify-enabled-toggle" class="settings-checkbox">
+      </div>
+
+      <div class="settings-row">
+        <label for="classify-suggestion-toggle">분류 제안 표시</label>
+        <input type="checkbox" id="classify-suggestion-toggle" class="settings-checkbox">
+      </div>
+
+      <div class="settings-row">
+        <label for="classify-threshold-select">민감도(임계값)</label>
+        <select id="classify-threshold-select" class="sort-select">
+          <option value="1">낮음 (키워드 1개 이상)</option>
+          <option value="2">보통 (2개 이상)</option>
+          <option value="3">높음 (3개 이상)</option>
+        </select>
+      </div>
+
+      <p class="settings-hint">임계값을 올리면 키워드가 더 많이 겹치는 확실한 경우에만 자동으로 분류해요.</p>
+
+      <button type="button" id="classify-settings-close-btn" class="btn-secondary">닫기</button>
     </dialog>
 
     <!-- 오늘의 격언 카드: app.js의 renderQuote()가 채운다 -->

@@ -8,6 +8,7 @@
     todos: [],
     filter: { category: "all", status: "all", search: "", importantOnly: false },
     sort: "custom", // init()에서 저장된 설정 값으로 덮어쓴다
+    autoClassify: { enabled: true, showSuggestion: true, minScore: 1 }, // init()에서 저장된 설정 값으로 덮어쓴다
   };
 
   // 여기저기서 반복해서 쓰는 숫자를 이름 있는 상수로 모아 둔다
@@ -244,6 +245,14 @@
     render();
   }
 
+  // 자동 분류 설정(사용 여부/제안 표시/임계값) 중 일부를 바꾸고 저장한다
+  function setAutoClassifySetting(patch) {
+    state.autoClassify = { ...state.autoClassify, ...patch };
+    const settings = loadSettings();
+    settings.autoClassify = state.autoClassify;
+    saveSettings(settings);
+  }
+
   // 테마를 라이트/다크로 바꾸고 저장한다 (할 일 데이터와 별개인 설정 키를 쓴다)
   function setTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
@@ -471,21 +480,32 @@
     ],
   };
 
-  // 텍스트에 담긴 키워드를 세어 가장 점수가 높은 카테고리를 고른다.
+  // 텍스트에 담긴 키워드를 세어 카테고리별 점수를 매긴다 (분류 임계값 설정에서도 재사용한다)
+  function scoreCategoriesFor(text) {
+    const normalize = (value) => value.replace(/\s+/g, "").toLowerCase();
+    const normalizedText = normalize(text);
+
+    return CATEGORY_ORDER.map((category) => {
+      const score = normalizedText
+        ? KEYWORDS[category].filter((keyword) => normalizedText.includes(normalize(keyword))).length
+        : 0;
+      return { category, score };
+    });
+  }
+
+  // 텍스트를 보고 어울리는 카테고리를 키워드 점수로 고른다.
   // 상태나 화면을 건드리지 않는 순수 함수: 같은 입력이면 항상 같은 결과를 돌려준다.
   // 점수가 모두 0이거나 1등이 여럿이면(동점) null을 돌려준다.
   function classifyTodo(text) {
-    const normalize = (value) => value.replace(/\s+/g, "").toLowerCase();
-    const normalizedText = normalize(text);
-    if (!normalizedText) return null;
+    return classifyTodoWithMinScore(text, 1);
+  }
 
-    const scores = CATEGORY_ORDER.map((category) => {
-      const score = KEYWORDS[category].filter((keyword) => normalizedText.includes(normalize(keyword))).length;
-      return { category, score };
-    });
-
+  // classifyTodo와 같지만, 가장 높은 점수가 minScore보다 낮으면 null을 돌려준다
+  // (자동 분류 설정의 "민감도/임계값"에 쓴다: 값을 올릴수록 키워드가 더 많이 겹쳐야 분류한다)
+  function classifyTodoWithMinScore(text, minScore) {
+    const scores = scoreCategoriesFor(text);
     const maxScore = Math.max(...scores.map((entry) => entry.score));
-    if (maxScore === 0) return null;
+    if (maxScore === 0 || maxScore < minScore) return null;
 
     const topCategories = scores.filter((entry) => entry.score === maxScore);
     if (topCategories.length > 1) return null;
@@ -1142,6 +1162,14 @@
     document.getElementById("shortcuts-dialog").showModal();
   }
 
+  // ----- 자동 분류 설정 dialog -----
+  function openClassifySettingsDialog() {
+    document.getElementById("classify-enabled-toggle").checked = state.autoClassify.enabled;
+    document.getElementById("classify-suggestion-toggle").checked = state.autoClassify.showSuggestion;
+    document.getElementById("classify-threshold-select").value = String(state.autoClassify.minScore);
+    document.getElementById("classify-settings-dialog").showModal();
+  }
+
   // ===== events =====
   let isCancelingEdit = false; // Esc로 취소할 때 뒤이은 focusout이 다시 저장하지 않도록 막는 플래그
 
@@ -1161,8 +1189,8 @@
       classifyDebounceId = null;
     }
 
-    if (!userPickedCategory) {
-      const guessedCategory = classifyTodo(text);
+    if (state.autoClassify.enabled && !userPickedCategory) {
+      const guessedCategory = classifyTodoWithMinScore(text, state.autoClassify.minScore);
       if (guessedCategory) {
         document.getElementById(`category-${guessedCategory}`).checked = true;
       }
@@ -1206,10 +1234,17 @@
 
   // 완료 체크박스 상태 변경을 위임 처리한다
   function handleListChange(event) {
-    if (!event.target.classList.contains("todo-toggle")) return;
-    const li = event.target.closest("li[data-id]");
-    if (!li) return;
-    toggleTodo(li.dataset.id);
+    if (event.target.classList.contains("todo-toggle")) {
+      const li = event.target.closest("li[data-id]");
+      if (li) toggleTodo(li.dataset.id);
+      return;
+    }
+
+    // 수정 중 카테고리 select에서 값을 고르면 그 자리에서 바로 저장한다
+    if (event.target.classList.contains("todo-edit-category")) {
+      const li = event.target.closest("li[data-id]");
+      if (li) commitEdit(li.querySelector(".todo-edit-input"));
+    }
   }
 
   // 카테고리 필터 탭 클릭을 위임 처리한다
@@ -1312,6 +1347,29 @@
     openShortcutsDialog();
   }
 
+  // "자동 분류 설정" 메뉴 클릭을 처리한다
+  function handleMenuClassifySettingsClick() {
+    closeMoreMenu();
+    openClassifySettingsDialog();
+  }
+
+  // 자동 분류 사용 여부 체크박스를 처리한다
+  function handleClassifyEnabledChange(event) {
+    setAutoClassifySetting({ enabled: event.target.checked });
+    if (!event.target.checked) hideAutoClassifyLabel();
+  }
+
+  // 분류 제안 표시 체크박스를 처리한다
+  function handleClassifySuggestionChange(event) {
+    setAutoClassifySetting({ showSuggestion: event.target.checked });
+    if (!event.target.checked) hideAutoClassifyLabel();
+  }
+
+  // 분류 민감도(임계값) select를 처리한다
+  function handleClassifyThresholdChange(event) {
+    setAutoClassifySetting({ minScore: Number(event.target.value) });
+  }
+
   // 가져오기 파일을 선택하면 읽어서 검증한다
   function handleImportFileChange(event) {
     const file = event.target.files[0];
@@ -1381,7 +1439,9 @@
 
   // 수정 입력창에서 Enter(저장)와 Esc(취소)를 처리한다
   function handleListKeydown(event) {
-    if (!event.target.classList.contains("todo-edit-input")) return;
+    const isEditField = event.target.classList.contains("todo-edit-input")
+      || event.target.classList.contains("todo-edit-category");
+    if (!isEditField) return;
 
     if (event.key === "Enter") {
       event.preventDefault();
@@ -1412,7 +1472,17 @@
 
   // 수정 입력창에서 포커스가 빠지면 저장한다 (Esc로 취소한 경우는 건너뛴다)
   function handleListFocusout(event) {
-    if (!event.target.classList.contains("todo-edit-input")) return;
+    const isEditField = event.target.classList.contains("todo-edit-input")
+      || event.target.classList.contains("todo-edit-category");
+    if (!isEditField) return;
+
+    const li = event.target.closest("li[data-id]");
+    if (!li) return;
+
+    // 포커스가 같은 수정 행 안(입력창 <-> 카테고리 select)으로만 옮겨간 것이면 아직 저장하지 않는다
+    if (event.relatedTarget && li.contains(event.relatedTarget)) return;
+
+    const inputEl = li.querySelector(".todo-edit-input");
 
     if (isCancelingEdit) {
       isCancelingEdit = false;
@@ -1421,7 +1491,7 @@
       return;
     }
 
-    commitEdit(event.target);
+    commitEdit(inputEl);
   }
 
   // 수정 입력창의 값을 저장한다 (비어 있으면 저장하지 않고 원래 내용으로 되돌린다)
@@ -1556,11 +1626,12 @@
     label.classList.add("chip-flash");
   }
 
-  // classifyTodo 결과에 따라 카테고리 칩과 안내 표시를 갱신한다
+  // classifyTodoWithMinScore 결과에 따라 카테고리 칩과 안내 표시를 갱신한다
   function applyAutoClassify(text) {
+    if (!state.autoClassify.enabled) return; // 자동 분류 자체를 꺼 뒀으면 아무것도 하지 않는다
     if (userPickedCategory) return; // 사용자가 직접 고른 뒤에는 이번 입력이 끝날 때까지 덮어쓰지 않는다
 
-    const category = classifyTodo(text);
+    const category = classifyTodoWithMinScore(text, state.autoClassify.minScore);
     if (!category) return; // 판단할 수 없으면 현재 선택을 그대로 둔다
 
     const radio = document.getElementById(`category-${category}`);
@@ -1568,7 +1639,10 @@
       radio.checked = true;
       flashCategoryChip(category);
     }
-    showAutoClassifyLabel(category);
+
+    if (state.autoClassify.showSuggestion) {
+      showAutoClassifyLabel(category);
+    }
   }
 
   // 입력창에 쓰는 동안 250ms 디바운스로 자동 분류를 호출한다 (한글 입력 중 깜빡임 방지)
@@ -1625,6 +1699,7 @@
 
     const settings = loadSettings();
     state.sort = settings.sort || "custom";
+    state.autoClassify = { ...state.autoClassify, ...(settings.autoClassify || {}) };
     state.todos = load();
 
     if (hadCorruptData) showCorruptDataBanner();
@@ -1669,6 +1744,7 @@
     document.getElementById("menu-export").addEventListener("click", handleMenuExportClick);
     document.getElementById("menu-import").addEventListener("click", handleMenuImportClick);
     document.getElementById("menu-clear-completed").addEventListener("click", handleMenuClearCompletedClick);
+    document.getElementById("menu-classify-settings").addEventListener("click", handleMenuClassifySettingsClick);
     document.getElementById("menu-shortcuts").addEventListener("click", handleMenuShortcutsClick);
     document.getElementById("import-file-input").addEventListener("change", handleImportFileChange);
 
@@ -1679,6 +1755,13 @@
 
     document.getElementById("shortcuts-close-btn").addEventListener("click", () => {
       document.getElementById("shortcuts-dialog").close();
+    });
+
+    document.getElementById("classify-enabled-toggle").addEventListener("change", handleClassifyEnabledChange);
+    document.getElementById("classify-suggestion-toggle").addEventListener("change", handleClassifySuggestionChange);
+    document.getElementById("classify-threshold-select").addEventListener("change", handleClassifyThresholdChange);
+    document.getElementById("classify-settings-close-btn").addEventListener("click", () => {
+      document.getElementById("classify-settings-dialog").close();
     });
 
     document.addEventListener("keydown", handleGlobalKeydown);
