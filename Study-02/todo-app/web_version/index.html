@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>할 일 관리</title>
+  <meta name="color-scheme" content="light dark">
+  <!-- 화면이 깜빡이지 않도록 스타일시트보다 먼저 테마를 정한다 -->
+  <script>
+    (function () {
+      var theme = null;
+      try {
+        var settings = JSON.parse(localStorage.getItem("todo-app:settings"));
+        if (settings && settings.theme) theme = settings.theme;
+      } catch (error) {
+        theme = null;
+      }
+      if (!theme) {
+        theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="app-header">
+      <div class="app-header-row">
+        <div>
+          <h1>오늘의 할 일</h1>
+          <p id="today-date" class="app-date"></p>
+        </div>
+        <div class="header-actions">
+          <button type="button" id="theme-toggle" class="icon-button" aria-label="테마 바꾸기"></button>
+          <div class="more-menu-wrapper">
+            <button type="button" id="more-menu-toggle" class="icon-button" aria-label="더보기" aria-haspopup="true" aria-expanded="false">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+            </button>
+            <div id="more-menu" class="more-menu" role="menu" hidden>
+              <button type="button" id="menu-export" class="more-menu-item" role="menuitem" tabindex="-1">내보내기</button>
+              <button type="button" id="menu-import" class="more-menu-item" role="menuitem" tabindex="-1">가져오기</button>
+              <button type="button" id="menu-clear-completed" class="more-menu-item" role="menuitem" tabindex="-1">완료 항목 모두 삭제</button>
+              <button type="button" id="menu-classify-settings" class="more-menu-item" role="menuitem" tabindex="-1">자동 분류 설정</button>
+              <button type="button" id="menu-shortcuts" class="more-menu-item" role="menuitem" tabindex="-1">단축키 보기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <input type="file" id="import-file-input" accept=".json" hidden aria-label="가져올 파일 선택">
+
+    <dialog id="import-dialog" class="app-dialog">
+      <p id="import-dialog-message"></p>
+      <div class="import-dialog-actions">
+        <button type="button" id="import-merge-btn" class="btn-secondary">현재 목록에 추가</button>
+        <button type="button" id="import-replace-btn" class="btn-secondary">현재 목록 대체</button>
+        <button type="button" id="import-cancel-btn" class="btn-secondary">취소</button>
+      </div>
+    </dialog>
+
+    <dialog id="shortcuts-dialog" class="app-dialog shortcuts-dialog">
+      <h2>단축키</h2>
+      <dl class="shortcuts-list">
+        <div class="shortcuts-row"><dt>N</dt><dd>새 할 일 입력창 포커스</dd></div>
+        <div class="shortcuts-row"><dt>/</dt><dd>검색창 포커스</dd></div>
+        <div class="shortcuts-row"><dt>?</dt><dd>이 도움말 열기</dd></div>
+        <div class="shortcuts-row"><dt>Esc</dt><dd>열린 메뉴/창 닫기</dd></div>
+        <div class="shortcuts-row"><dt>Alt + ↑ / ↓</dt><dd>드래그 핸들에서 순서 바꾸기</dd></div>
+      </dl>
+      <button type="button" id="shortcuts-close-btn" class="btn-secondary">닫기</button>
+    </dialog>
+
+    <dialog id="classify-settings-dialog" class="app-dialog">
+      <h2>자동 분류 설정</h2>
+
+      <div class="settings-row">
+        <label for="classify-enabled-toggle">자동 분류 사용</label>
+        <input type="checkbox" id="classify-enabled-toggle" class="settings-checkbox">
+      </div>
+
+      <div class="settings-row">
+        <label for="classify-suggestion-toggle">분류 제안 표시</label>
+        <input type="checkbox" id="classify-suggestion-toggle" class="settings-checkbox">
+      </div>
+
+      <div class="settings-row">
+        <label for="classify-threshold-select">민감도(임계값)</label>
+        <select id="classify-threshold-select" class="sort-select">
+          <option value="1">낮음 (키워드 1개 이상)</option>
+          <option value="2">보통 (2개 이상)</option>
+          <option value="3">높음 (3개 이상)</option>
+        </select>
+      </div>
+
+      <p class="settings-hint">임계값을 올리면 키워드가 더 많이 겹치는 확실한 경우에만 자동으로 분류해요.</p>
+
+      <button type="button" id="classify-settings-close-btn" class="btn-secondary">닫기</button>
+    </dialog>
+
+    <!-- 오늘의 격언 카드: app.js의 renderQuote()가 채운다 -->
+    <section class="card quote-card">
+      <span class="quote-mark" aria-hidden="true">"</span>
+      <p id="quote-text" class="quote-text"></p>
+      <button type="button" id="quote-next" class="icon-button quote-next-btn" aria-label="다른 격언 보기"></button>
+    </section>
+
+    <!-- 진행률 카드: app.js의 buildProgressSkeleton()/updateProgress()가 채운다 -->
+    <section id="progress" class="card progress-card" aria-live="polite"></section>
+
+    <!-- 할 일 입력 카드 -->
+    <section class="card input-card">
+      <form id="todo-form" class="todo-form">
+        <div class="todo-form-row">
+          <input type="text" id="todo-input" class="todo-input" placeholder="할 일을 입력하세요" maxlength="100" aria-label="새 할 일">
+          <button type="submit" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <span>추가</span>
+          </button>
+        </div>
+
+        <div class="category-chips" role="radiogroup" aria-label="카테고리 선택">
+          <input type="radio" name="category" id="category-work" class="chip-input" value="work" checked>
+          <label for="category-work" class="chip chip-work">업무</label>
+
+          <input type="radio" name="category" id="category-personal" class="chip-input" value="personal">
+          <label for="category-personal" class="chip chip-personal">개인</label>
+
+          <input type="radio" name="category" id="category-study" class="chip-input" value="study">
+          <label for="category-study" class="chip chip-study">공부</label>
+        </div>
+        <p id="auto-classify-label" class="auto-classify-label" aria-live="polite" hidden></p>
+      </form>
+    </section>
+
+    <!-- 카테고리 필터 탭: app.js의 renderFilterTabs()가 채운다 -->
+    <div id="filter-tabs" class="filter-tabs"></div>
+
+    <!-- 상태 필터/검색/정렬/중요만: 검색창과 정렬 select는 여기서 한 번만 만들어 render()가 건드리지 않는다 -->
+    <section class="card list-controls">
+      <div class="list-controls-row">
+        <div id="status-tabs" class="status-tabs"></div>
+        <button type="button" id="important-only-toggle" class="chip important-only-chip" aria-pressed="false">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span>중요만</span>
+        </button>
+      </div>
+      <div class="list-controls-row">
+        <div class="search-box">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="search-input" class="search-input" placeholder="검색" aria-label="검색">
+          <button type="button" id="search-clear" class="icon-button search-clear" aria-label="검색어 지우기" hidden>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <select id="sort-select" class="sort-select" aria-label="정렬 방식">
+          <option value="custom">내 순서</option>
+          <option value="newest">최신순</option>
+          <option value="oldest">오래된순</option>
+          <option value="category">카테고리순</option>
+          <option value="important">중요 먼저</option>
+          <option value="incomplete">미완료 먼저</option>
+          <option value="alphabetical">가나다순</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- 할 일 목록 카드 -->
+    <section class="card list-card">
+      <ul id="todo-list" class="todo-list"></ul>
+    </section>
+
+    <!-- 안내 배너 영역: app.js가 필요할 때 배너를 추가/제거한다 (여러 개가 동시에 쌓일 수 있다) -->
+    <div id="banner" class="banner-stack" aria-live="polite"></div>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
