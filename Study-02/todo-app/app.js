@@ -1150,10 +1150,26 @@
     event.preventDefault();
 
     const inputEl = document.getElementById("todo-input");
-    const categoryInput = document.querySelector('input[name="category"]:checked');
-    const willAddSomething = inputEl.value.trim().length > 0;
+    const text = inputEl.value;
+    const willAddSomething = text.trim().length > 0;
 
-    addTodo(inputEl.value, categoryInput.value);
+    // 250ms 디바운스가 끝나기 전에 제출하면 칩이 아직 안 바뀐 상태일 수 있으므로,
+    // 기다리지 말고 지금 이 텍스트로 분류를 바로 확정해 칩 상태까지 맞춰 둔다
+    // (사용자가 직접 고른 경우는 덮어쓰지 않는다).
+    if (classifyDebounceId) {
+      clearTimeout(classifyDebounceId);
+      classifyDebounceId = null;
+    }
+
+    if (!userPickedCategory) {
+      const guessedCategory = classifyTodo(text);
+      if (guessedCategory) {
+        document.getElementById(`category-${guessedCategory}`).checked = true;
+      }
+    }
+
+    const category = document.querySelector('input[name="category"]:checked').value;
+    addTodo(text, category);
 
     inputEl.value = "";
     inputEl.focus();
