@@ -275,6 +275,33 @@
       color: var(--text);
     }
 
+    .choice-item.hint-hidden {
+      display: none;
+    }
+
+    .hint-btn {
+      margin-top: 14px;
+      background: none;
+      border: 1px dashed var(--primary);
+      color: var(--primary);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .hint-btn:hover {
+      background: #eef2ff;
+    }
+
+    .hint-btn:disabled {
+      border-color: var(--border);
+      color: var(--muted);
+      cursor: not-allowed;
+      background: none;
+    }
+
     .quiz-footer {
       margin-top: 24px;
       display: flex;
@@ -321,6 +348,12 @@
     .result-detail {
       color: var(--muted);
       font-size: 15px;
+      margin: 0 0 8px;
+    }
+
+    .result-stats {
+      color: var(--muted);
+      font-size: 13px;
       margin: 0 0 28px;
     }
 
@@ -513,6 +546,7 @@
         <span id="difficulty-tag" class="difficulty-tag"></span>
         <p id="question-text" class="question-text"></p>
         <ul id="choice-list" class="choice-list"></ul>
+        <button type="button" id="hint-btn" class="hint-btn" hidden>힌트 보기 (오답 하나 제거, 보너스 3점 사라짐)</button>
         <div id="answer-banner" class="answer-banner" hidden></div>
         <p id="explanation-text" class="explanation-text" hidden></p>
       </div>
@@ -527,6 +561,7 @@
       <div class="result-card">
         <p id="result-score" class="result-score"></p>
         <p id="result-detail" class="result-detail"></p>
+        <p id="result-stats" class="result-stats"></p>
 
         <div id="nickname-section" class="nickname-section">
           <p class="nickname-label">닉네임을 입력하면 기록이 저장돼요 (같은 닉네임+카테고리+난이도면 최고 점수만 남아요)</p>
@@ -577,7 +612,14 @@
     ];
 
     const AUTO_ADVANCE_MS = 2500;
-    const POINTS_PER_QUESTION = 10;
+    const BASE_SCORE = 10;
+    // 난이도 배수: 상위 난이도일수록 문제당 기본 점수가 더 높다.
+    const DIFFICULTY_MULTIPLIER = { 하: 1.0, 중: 1.2, 상: 1.5, 최상: 2.0 };
+    const DEFAULT_TIME_LIMIT_SECONDS = 10; // 문제에 timeLimit이 없을 때 쓰는 기본 제한시간
+    const TIME_BONUS_POINTS = 5;
+    const HINT_BONUS_POINTS = 3;
+    const COMBO_STREAK = 3; // 연속 정답이 이 배수에 도달할 때마다 콤보 보너스
+    const COMBO_BONUS_POINTS = 5;
     const LEADERBOARD_SIZE = 10;
     const STORAGE_KEYS = { lastNickname: "quiz:lastNickname", records: "quiz:records" };
     const LEADERBOARD_FILTERS = ["전체", ...CATEGORIES];
@@ -592,6 +634,12 @@
       autoAdvanceTimer: null,
       lastResult: null,
       leaderboardFilter: "전체",
+      totalScore: 0,
+      combo: 0,
+      maxCombo: 0,
+      hintsUsedCount: 0,
+      hintUsedThisQuestion: false,
+      questionStartTime: 0,
     };
 
     const screenStart = document.getElementById("screen-start");
@@ -608,12 +656,14 @@
     const difficultyTag = document.getElementById("difficulty-tag");
     const questionText = document.getElementById("question-text");
     const choiceList = document.getElementById("choice-list");
+    const hintBtn = document.getElementById("hint-btn");
     const answerBanner = document.getElementById("answer-banner");
     const explanationText = document.getElementById("explanation-text");
     const nextBtn = document.getElementById("next-btn");
     const backBtn = document.getElementById("back-btn");
     const resultScore = document.getElementById("result-score");
     const resultDetail = document.getElementById("result-detail");
+    const resultStats = document.getElementById("result-stats");
     const retryBtn = document.getElementById("retry-btn");
     const resultBackBtn = document.getElementById("result-back-btn");
     const nicknameSection = document.getElementById("nickname-section");
@@ -732,6 +782,10 @@
       state.list = questions.filter((q) => q.category === category && q.difficulty === difficulty);
       state.index = 0;
       state.correctCount = 0;
+      state.totalScore = 0;
+      state.combo = 0;
+      state.maxCombo = 0;
+      state.hintsUsedCount = 0;
       showScreen("quiz");
       renderQuestion();
     }
@@ -741,11 +795,13 @@
       const current = state.list[state.index];
 
       state.answered = false;
+      state.hintUsedThisQuestion = false;
+      state.questionStartTime = Date.now();
       clearTimeout(state.autoAdvanceTimer);
 
       progressText.textContent = `${state.index + 1} / ${total}`;
       categoryTag.textContent = current.category;
-      difficultyTag.textContent = `난이도: ${current.difficulty}`;
+      difficultyTag.textContent = `난이도: ${current.difficulty} (x${DIFFICULTY_MULTIPLIER[current.difficulty]})`;
       questionText.textContent = current.question;
 
       choiceList.innerHTML = "";
@@ -757,10 +813,55 @@
         choiceList.appendChild(li);
       });
 
+      hintBtn.hidden = !current.hasHint;
+      hintBtn.disabled = false;
+      hintBtn.textContent = "힌트 보기 (오답 하나 제거, 보너스 3점 사라짐)";
+
       answerBanner.hidden = true;
       explanationText.hidden = true;
       nextBtn.disabled = true;
       nextBtn.textContent = state.index === total - 1 ? "결과 보기" : "다음 문제";
+    }
+
+    function useHint(current) {
+      if (state.answered || state.hintUsedThisQuestion) return;
+
+      const choiceItems = choiceList.querySelectorAll(".choice-item");
+      for (let i = 0; i < current.choices.length; i++) {
+        if (i !== current.answerIndex && !choiceItems[i].classList.contains("hint-hidden")) {
+          choiceItems[i].classList.add("hint-hidden");
+          break;
+        }
+      }
+
+      state.hintUsedThisQuestion = true;
+      state.hintsUsedCount += 1;
+      hintBtn.disabled = true;
+      hintBtn.textContent = "힌트 사용함";
+    }
+
+    // 문제 하나의 점수 = 기본점수(10) x 난이도 배수 + 시간보너스 + 힌트미사용보너스 + 콤보보너스. 오답은 0점.
+    function calculateQuestionScore(current, isCorrect) {
+      if (!isCorrect) {
+        state.combo = 0;
+        return { questionScore: 0, timeBonus: 0, hintBonus: 0, comboBonus: 0 };
+      }
+
+      state.combo += 1;
+      if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+
+      const elapsedMs = Date.now() - state.questionStartTime;
+      const timeLimitMs = (current.timeLimit || DEFAULT_TIME_LIMIT_SECONDS) * 1000;
+      const timeBonus = elapsedMs <= timeLimitMs / 2 ? TIME_BONUS_POINTS : 0;
+
+      const hintBonus = current.hasHint && !state.hintUsedThisQuestion ? HINT_BONUS_POINTS : 0;
+
+      const comboBonus = state.combo % COMBO_STREAK === 0 ? COMBO_BONUS_POINTS : 0;
+
+      const base = BASE_SCORE * DIFFICULTY_MULTIPLIER[current.difficulty];
+      const questionScore = base + timeBonus + hintBonus + comboBonus;
+
+      return { questionScore, timeBonus, hintBonus, comboBonus, base, elapsedMs, timeLimitMs };
     }
 
     function selectChoice(selectedIndex, current) {
@@ -775,6 +876,18 @@
       } else {
         state.correctCount += 1;
       }
+
+      const result = calculateQuestionScore(current, isCorrect);
+      state.totalScore += result.questionScore;
+
+      console.log(
+        `[문제 ${state.index + 1}] 정답=${isCorrect} 난이도=${current.difficulty}(x${DIFFICULTY_MULTIPLIER[current.difficulty]}) ` +
+          `기본점수=${result.base ?? 0} 시간보너스=${result.timeBonus} 힌트보너스=${result.hintBonus} ` +
+          `콤보보너스=${result.comboBonus} 이번문제점수=${result.questionScore} ` +
+          `콤보=${state.combo} 누적점수=${state.totalScore}`
+      );
+
+      hintBtn.disabled = true;
 
       answerBanner.textContent = isCorrect ? "정답입니다!" : "오답입니다!";
       answerBanner.className = `answer-banner ${isCorrect ? "correct" : "wrong"}`;
@@ -800,7 +913,7 @@
 
     function renderResult() {
       const total = state.list.length;
-      const score = state.correctCount * POINTS_PER_QUESTION;
+      const score = state.totalScore;
       const accuracy = Math.round((state.correctCount / total) * 100);
       state.lastResult = { category: state.category, difficulty: state.difficulty, score, accuracy };
 
@@ -808,6 +921,7 @@
       resultDetail.textContent =
         `${state.category} (${state.difficulty}) - ${total}문제 중 ${state.correctCount}개 정답 ` +
         `(정답률 ${accuracy}%)`;
+      resultStats.textContent = `최고 콤보 ${state.maxCombo}연속 · 사용한 힌트 ${state.hintsUsedCount}개`;
 
       // 같은 PC를 여러 명이 쓸 수 있으니, 끝날 때마다 닉네임을 다시 입력받는다.
       nicknameInput.value = getLastNickname() || "";
@@ -893,6 +1007,7 @@
       });
     }
 
+    hintBtn.addEventListener("click", () => useHint(state.list[state.index]));
     nextBtn.addEventListener("click", goNext);
     backBtn.addEventListener("click", () => {
       clearTimeout(state.autoAdvanceTimer);
