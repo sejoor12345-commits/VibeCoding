@@ -67,3 +67,17 @@ show up under it.
 No server or build needed — open `Study-03/index.html` directly in a browser (double-click, or drag the
 file into a browser tab). It loads `questions.js` next to it with a relative `<script src="questions.js">`
 path, so keep both files in the same folder.
+
+## 퀴즈 문제 교차 검증 가이드라인
+
+모든 문제 작성 시 확인 사항
+1. 정답이 하나뿐인가?
+  - 다른 해석 가능 시 조건 명시 (예: 면적 기준, 2024년 기준)
+2. 최상급 표현에 기준이 있는가?
+  - '가장 큰', '최초의' 등 표현에 측정 기준 명시
+3. 시간과 범위가 명확한가?
+  - 변할 수 있는 정보는 시점 병시
+  - 지리적, 분류적 범위 한정
+4. 교차 검증했는가?
+  - 의심스러운 정보는 2개 이상 출처 확인
+  - 논란 있는 내용은 주류 학설기준
