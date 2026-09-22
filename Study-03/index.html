@@ -551,9 +551,7 @@
       }
     }
 
-    function addRecord(record) {
-      const records = getRecords();
-      records.push(record);
+    function saveRecords(records) {
       try {
         localStorage.setItem(STORAGE_KEYS.records, JSON.stringify(records));
       } catch (error) {
@@ -561,14 +559,27 @@
       }
     }
 
+    // 같은 닉네임 + 같은 카테고리 기록은 하나만 남기고, 새 점수가 더 높을 때만 그 기록을 갱신한다.
     function recordResult(nickname, result) {
-      addRecord({
+      const records = getRecords();
+      const existingIndex = records.findIndex(
+        (r) => r.nickname === nickname && r.category === result.category
+      );
+      const newRecord = {
         nickname,
         category: result.category,
         score: result.score,
         accuracy: result.accuracy,
         date: new Date().toISOString(),
-      });
+      };
+
+      if (existingIndex === -1) {
+        records.push(newRecord);
+      } else if (result.score > records[existingIndex].score) {
+        records[existingIndex] = newRecord;
+      }
+
+      saveRecords(records);
     }
 
     function renderCategoryButtons() {

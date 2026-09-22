@@ -34,15 +34,27 @@ still unused — showing it alongside the color feedback is a natural next step.
   navigated elsewhere), `lastResult` (the just-finished play's category/score/accuracy, used once the
   nickname is confirmed), and `leaderboardFilter`.
 
-  `localStorage` (see keys below) holds the nickname and the full play history across sessions;
-  `getNickname`/`setNickname`/`getRecords`/`addRecord` are the only functions touching it, each wrapped in
-  `try/catch` since storage can be disabled (private browsing, locked-down shared PCs).
+  `localStorage` (see keys below) holds the nickname and each player's best score, scoped to whichever
+  browser/device it's opened in (not shared between people or devices — see keys below).
+  `getNickname`/`setNickname`/`getRecords`/`saveRecords`/`recordResult` are the only functions touching it,
+  each wrapped in `try/catch` since storage can be disabled (private browsing, locked-down shared PCs).
 
 ## localStorage keys
 
 - `quiz:nickname` — plain string, the player's nickname.
-- `quiz:records` — JSON-encoded array of `{ nickname, category, score, accuracy, date }`, one entry per
-  finished quiz. `date` is `new Date().toISOString()`; the UI only ever shows the `YYYY-MM-DD` slice of it.
+- `quiz:records` — JSON-encoded array of `{ nickname, category, score, accuracy, date }`. At most one
+  entry per `(nickname, category)` pair: `recordResult()` only overwrites it when the new score is
+  strictly higher, so this is each player's personal best per category, not a full play history.
+  `date` is `new Date().toISOString()`; the UI only ever shows the `YYYY-MM-DD` slice of it.
+
+localStorage is per-browser-profile and per-origin — it lives on whichever device's browser rendered the
+page, not "in the cloud" or in a shared place, so different people's nicknames on different devices never
+actually get compared against each other; the leaderboard only ever reads what that one browser has saved
+locally. Opened as a `file://` page directly, that's the machine running the browser. Opened through a
+Colab port-forward (`serve_kernel_port_as_window`/`_iframe`), it's still the viewer's own physical browser
+storing it — Colab's Python runtime never sees it — but the forwarded URL is tied to that specific Colab
+session, so a new session (after a runtime restart) gets a new URL and the old localStorage entries won't
+show up under it.
 
 ## How to run it
 
