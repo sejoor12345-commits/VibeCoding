@@ -427,10 +427,10 @@ const questions = [
     category: "과학",
     difficulty: "하",
     hasHint: true,
-    question: "태양계에서 가장 큰 행성은 무엇일까요?",
+    question: "태양계에서 크기(부피) 기준으로 가장 큰 행성은 무엇일까요?",
     choices: ["지구", "화성", "목성", "토성"],
     answerIndex: 2,
-    explanation: "목성은 태양계 행성 중 크기가 가장 커요.",
+    explanation: "목성은 태양계 행성 중 부피와 질량이 모두 가장 큰 행성이에요.",
   },
   {
     id: 43,
@@ -1460,7 +1460,7 @@ const questions = [
     question: "신장에서 혈액을 걸러 노폐물을 거르는 기본 단위는 무엇일까요?",
     choices: ["뉴런", "네프론", "알베올리", "림프절"],
     answerIndex: 1,
-    explanation: "네프론(nephron)은 신장에서 혈액을 여과하는 최소 단위예요.",
+    explanation: "네프론(nephron)은 신장에서 혈액을 여과하는 기본 단위예요.",
   },
   {
     id: 144,
