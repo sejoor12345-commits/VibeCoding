@@ -158,6 +158,22 @@
       border-radius: 10px;
       padding: 12px 14px;
       font-size: 15px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .choice-item.correct {
+      background: #ecfdf3;
+      border-color: #16a34a;
+      color: #15803d;
+      font-weight: 700;
+    }
+
+    .choice-item.wrong {
+      background: #fef2f2;
+      border-color: #dc2626;
+      color: #b91c1c;
+      font-weight: 700;
     }
 
     .choice-number {
@@ -172,6 +188,16 @@
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+
+    .choice-item.correct .choice-number {
+      background: #16a34a;
+      color: #fff;
+    }
+
+    .choice-item.wrong .choice-number {
+      background: #dc2626;
+      color: #fff;
     }
 
     .quiz-footer {
@@ -192,6 +218,61 @@
     }
 
     .next-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    .next-btn:disabled {
+      background: var(--muted);
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    /* 결과 화면 */
+    .result-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 20px;
+      text-align: center;
+    }
+
+    .result-score {
+      font-size: 44px;
+      font-weight: 800;
+      color: var(--primary);
+      margin: 0 0 8px;
+    }
+
+    .result-detail {
+      color: var(--muted);
+      font-size: 15px;
+      margin: 0 0 28px;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .result-actions button {
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text);
+    }
+
+    .result-actions .retry-btn {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .result-actions .retry-btn:hover {
       background: var(--primary-hover);
     }
   </style>
@@ -220,7 +301,19 @@
       </div>
 
       <div class="quiz-footer">
-        <button type="button" id="next-btn" class="next-btn">다음 문제</button>
+        <button type="button" id="next-btn" class="next-btn" disabled>다음 문제</button>
+      </div>
+    </section>
+
+    <!-- 결과 화면 -->
+    <section id="screen-result" class="screen">
+      <div class="result-card">
+        <p id="result-score" class="result-score"></p>
+        <p id="result-detail" class="result-detail"></p>
+        <div class="result-actions">
+          <button type="button" id="retry-btn" class="retry-btn">같은 카테고리 다시 풀기</button>
+          <button type="button" id="result-back-btn">카테고리 선택으로</button>
+        </div>
       </div>
     </section>
   </main>
@@ -230,14 +323,21 @@
     // 화면에 보여줄 카테고리 순서
     const CATEGORIES = ["한국사", "과학", "일반상식", "의학"];
 
+    const AUTO_ADVANCE_MS = 1500;
+    const POINTS_PER_QUESTION = 10;
+
     const state = {
       category: null,
       list: [],
       index: 0,
+      correctCount: 0,
+      answered: false,
+      autoAdvanceTimer: null,
     };
 
     const screenStart = document.getElementById("screen-start");
     const screenQuiz = document.getElementById("screen-quiz");
+    const screenResult = document.getElementById("screen-result");
     const categoryGrid = document.getElementById("category-grid");
     const progressText = document.getElementById("progress-text");
     const categoryTag = document.getElementById("category-tag");
@@ -245,10 +345,15 @@
     const choiceList = document.getElementById("choice-list");
     const nextBtn = document.getElementById("next-btn");
     const backBtn = document.getElementById("back-btn");
+    const resultScore = document.getElementById("result-score");
+    const resultDetail = document.getElementById("result-detail");
+    const retryBtn = document.getElementById("retry-btn");
+    const resultBackBtn = document.getElementById("result-back-btn");
 
     function showScreen(name) {
       screenStart.classList.toggle("active", name === "start");
       screenQuiz.classList.toggle("active", name === "quiz");
+      screenResult.classList.toggle("active", name === "result");
     }
 
     function renderCategoryButtons() {
@@ -268,6 +373,7 @@
       state.category = category;
       state.list = questions.filter((q) => q.category === category);
       state.index = 0;
+      state.correctCount = 0;
       showScreen("quiz");
       renderQuestion();
     }
@@ -275,6 +381,9 @@
     function renderQuestion() {
       const total = state.list.length;
       const current = state.list[state.index];
+
+      state.answered = false;
+      clearTimeout(state.autoAdvanceTimer);
 
       progressText.textContent = `${state.index + 1} / ${total}`;
       categoryTag.textContent = current.category;
@@ -285,23 +394,58 @@
         const li = document.createElement("li");
         li.className = "choice-item";
         li.innerHTML = `<span class="choice-number">${i + 1}</span><span>${choice}</span>`;
+        li.addEventListener("click", () => selectChoice(i, current));
         choiceList.appendChild(li);
       });
 
-      nextBtn.textContent = state.index === total - 1 ? "처음으로" : "다음 문제";
+      nextBtn.disabled = true;
+      nextBtn.textContent = state.index === total - 1 ? "결과 보기" : "다음 문제";
+    }
+
+    function selectChoice(selectedIndex, current) {
+      if (state.answered) return;
+      state.answered = true;
+
+      const choiceItems = choiceList.querySelectorAll(".choice-item");
+      choiceItems[current.answerIndex].classList.add("correct");
+      if (selectedIndex !== current.answerIndex) {
+        choiceItems[selectedIndex].classList.add("wrong");
+      } else {
+        state.correctCount += 1;
+      }
+
+      nextBtn.disabled = false;
+      state.autoAdvanceTimer = setTimeout(goNext, AUTO_ADVANCE_MS);
     }
 
     function goNext() {
+      clearTimeout(state.autoAdvanceTimer);
       if (state.index < state.list.length - 1) {
         state.index += 1;
         renderQuestion();
       } else {
-        showScreen("start");
+        renderResult();
+        showScreen("result");
       }
     }
 
+    function renderResult() {
+      const total = state.list.length;
+      const score = state.correctCount * POINTS_PER_QUESTION;
+      const accuracy = Math.round((state.correctCount / total) * 100);
+
+      resultScore.textContent = `${score}점`;
+      resultDetail.textContent =
+        `${state.category} - ${total}문제 중 ${state.correctCount}개 정답 (정답률 ${accuracy}%)`;
+    }
+
     nextBtn.addEventListener("click", goNext);
-    backBtn.addEventListener("click", () => showScreen("start"));
+    backBtn.addEventListener("click", () => {
+      clearTimeout(state.autoAdvanceTimer);
+      showScreen("start");
+    });
+    retryBtn.addEventListener("click", () => startCategory(state.category));
+    resultBackBtn.addEventListener("click", () => showScreen("start"));
 
     renderCategoryButtons();
   </script>
