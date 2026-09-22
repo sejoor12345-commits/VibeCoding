@@ -251,6 +251,7 @@
 
     .result-actions {
       display: flex;
+      flex-wrap: wrap;
       gap: 10px;
       justify-content: center;
     }
@@ -274,6 +275,129 @@
 
     .result-actions .retry-btn:hover {
       background: var(--primary-hover);
+    }
+
+    /* 닉네임 입력 (최초 1회) */
+    .nickname-section {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin: 0 0 24px;
+      text-align: left;
+    }
+
+    .nickname-label {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .nickname-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .nickname-input {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 15px;
+    }
+
+    .nickname-save-btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .nickname-save-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    /* 리더보드 화면 */
+    .leaderboard-filter-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .leaderboard-filter-tabs button {
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .leaderboard-filter-tabs button.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .leaderboard-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .leaderboard-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+    }
+
+    .lb-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .lb-rank {
+      flex-shrink: 0;
+      width: 20px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .lb-name {
+      flex: 1;
+      font-weight: 700;
+    }
+
+    .lb-score {
+      font-weight: 800;
+    }
+
+    .lb-bottom {
+      display: flex;
+      gap: 6px;
+      padding-left: 30px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .leaderboard-empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 20px 0;
+      font-size: 14px;
     }
   </style>
 </head>
@@ -310,10 +434,38 @@
       <div class="result-card">
         <p id="result-score" class="result-score"></p>
         <p id="result-detail" class="result-detail"></p>
+
+        <div id="nickname-section" class="nickname-section" hidden>
+          <p class="nickname-label">기록을 남기려면 닉네임을 입력해주세요 (최초 1회만 입력하면 계속 저장돼요)</p>
+          <div class="nickname-row">
+            <input type="text" id="nickname-input" class="nickname-input" placeholder="닉네임" maxlength="10">
+            <button type="button" id="nickname-save-btn" class="nickname-save-btn">저장</button>
+          </div>
+        </div>
+
         <div class="result-actions">
+          <button type="button" id="leaderboard-btn">리더보드 보기</button>
           <button type="button" id="retry-btn" class="retry-btn">같은 카테고리 다시 풀기</button>
           <button type="button" id="result-back-btn">카테고리 선택으로</button>
         </div>
+      </div>
+    </section>
+
+    <!-- 리더보드 화면 -->
+    <section id="screen-leaderboard" class="screen">
+      <div class="quiz-header">
+        <button type="button" id="leaderboard-back-btn" class="back-btn">← 결과 화면으로</button>
+        <span class="progress-text">리더보드</span>
+      </div>
+
+      <div id="leaderboard-filter-tabs" class="leaderboard-filter-tabs"></div>
+
+      <div class="quiz-card">
+        <ul id="leaderboard-list" class="leaderboard-list"></ul>
+      </div>
+
+      <div class="quiz-footer">
+        <button type="button" id="leaderboard-retry-btn" class="next-btn">다시하기</button>
       </div>
     </section>
   </main>
@@ -325,6 +477,9 @@
 
     const AUTO_ADVANCE_MS = 1500;
     const POINTS_PER_QUESTION = 10;
+    const LEADERBOARD_SIZE = 10;
+    const STORAGE_KEYS = { nickname: "quiz:nickname", records: "quiz:records" };
+    const LEADERBOARD_FILTERS = ["전체", ...CATEGORIES];
 
     const state = {
       category: null,
@@ -333,11 +488,14 @@
       correctCount: 0,
       answered: false,
       autoAdvanceTimer: null,
+      lastResult: null,
+      leaderboardFilter: "전체",
     };
 
     const screenStart = document.getElementById("screen-start");
     const screenQuiz = document.getElementById("screen-quiz");
     const screenResult = document.getElementById("screen-result");
+    const screenLeaderboard = document.getElementById("screen-leaderboard");
     const categoryGrid = document.getElementById("category-grid");
     const progressText = document.getElementById("progress-text");
     const categoryTag = document.getElementById("category-tag");
@@ -349,11 +507,68 @@
     const resultDetail = document.getElementById("result-detail");
     const retryBtn = document.getElementById("retry-btn");
     const resultBackBtn = document.getElementById("result-back-btn");
+    const nicknameSection = document.getElementById("nickname-section");
+    const nicknameInput = document.getElementById("nickname-input");
+    const nicknameSaveBtn = document.getElementById("nickname-save-btn");
+    const leaderboardBtn = document.getElementById("leaderboard-btn");
+    const leaderboardFilterTabs = document.getElementById("leaderboard-filter-tabs");
+    const leaderboardList = document.getElementById("leaderboard-list");
+    const leaderboardBackBtn = document.getElementById("leaderboard-back-btn");
+    const leaderboardRetryBtn = document.getElementById("leaderboard-retry-btn");
 
     function showScreen(name) {
       screenStart.classList.toggle("active", name === "start");
       screenQuiz.classList.toggle("active", name === "quiz");
       screenResult.classList.toggle("active", name === "result");
+      screenLeaderboard.classList.toggle("active", name === "leaderboard");
+    }
+
+    // localStorage에 저장된 닉네임/기록을 읽고 쓰는 함수들.
+    // 사지방 컴퓨터처럼 localStorage가 막혀 있을 수도 있어 try/catch로 감싼다.
+    function getNickname() {
+      try {
+        return localStorage.getItem(STORAGE_KEYS.nickname);
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function setNickname(name) {
+      try {
+        localStorage.setItem(STORAGE_KEYS.nickname, name);
+      } catch (error) {
+        // 저장이 안 되더라도 이번 플레이는 계속 진행한다.
+      }
+    }
+
+    function getRecords() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.records);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function addRecord(record) {
+      const records = getRecords();
+      records.push(record);
+      try {
+        localStorage.setItem(STORAGE_KEYS.records, JSON.stringify(records));
+      } catch (error) {
+        // 저장 공간이 꽉 찼거나 막혀 있어도 이번 플레이 진행에는 영향 없음.
+      }
+    }
+
+    function recordResult(nickname, result) {
+      addRecord({
+        nickname,
+        category: result.category,
+        score: result.score,
+        accuracy: result.accuracy,
+        date: new Date().toISOString(),
+      });
     }
 
     function renderCategoryButtons() {
@@ -433,10 +648,95 @@
       const total = state.list.length;
       const score = state.correctCount * POINTS_PER_QUESTION;
       const accuracy = Math.round((state.correctCount / total) * 100);
+      state.lastResult = { category: state.category, score, accuracy };
 
       resultScore.textContent = `${score}점`;
       resultDetail.textContent =
         `${state.category} - ${total}문제 중 ${state.correctCount}개 정답 (정답률 ${accuracy}%)`;
+
+      const nickname = getNickname();
+      if (nickname) {
+        nicknameSection.hidden = true;
+        recordResult(nickname, state.lastResult);
+      } else {
+        nicknameSection.hidden = false;
+        nicknameInput.value = "";
+      }
+    }
+
+    function saveNickname() {
+      const name = nicknameInput.value.trim();
+      if (!name) {
+        nicknameInput.focus();
+        return;
+      }
+      setNickname(name);
+      nicknameSection.hidden = true;
+      recordResult(name, state.lastResult);
+    }
+
+    function renderLeaderboardFilterTabs() {
+      leaderboardFilterTabs.innerHTML = "";
+      LEADERBOARD_FILTERS.forEach((filter) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = filter;
+        btn.dataset.filter = filter;
+        btn.addEventListener("click", () => renderLeaderboard(filter));
+        leaderboardFilterTabs.appendChild(btn);
+      });
+    }
+
+    function renderLeaderboard(filter) {
+      state.leaderboardFilter = filter;
+
+      leaderboardFilterTabs.querySelectorAll("button").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.filter === filter);
+      });
+
+      const records = getRecords();
+      const filtered = filter === "전체" ? records : records.filter((r) => r.category === filter);
+      const top = [...filtered].sort((a, b) => b.score - a.score).slice(0, LEADERBOARD_SIZE);
+
+      leaderboardList.innerHTML = "";
+      if (top.length === 0) {
+        const empty = document.createElement("li");
+        empty.className = "leaderboard-empty";
+        empty.textContent = "아직 기록이 없어요";
+        leaderboardList.appendChild(empty);
+        return;
+      }
+
+      top.forEach((record, i) => {
+        const li = document.createElement("li");
+        li.className = "leaderboard-item";
+
+        const topRow = document.createElement("div");
+        topRow.className = "lb-top";
+        const rank = document.createElement("span");
+        rank.className = "lb-rank";
+        rank.textContent = i + 1;
+        const name = document.createElement("span");
+        name.className = "lb-name";
+        name.textContent = record.nickname;
+        const score = document.createElement("span");
+        score.className = "lb-score";
+        score.textContent = `${record.score}점`;
+        topRow.append(rank, name, score);
+
+        const bottomRow = document.createElement("div");
+        bottomRow.className = "lb-bottom";
+        const category = document.createElement("span");
+        category.textContent = record.category;
+        const accuracy = document.createElement("span");
+        accuracy.textContent = `정답률 ${record.accuracy}%`;
+        const date = document.createElement("span");
+        date.textContent = record.date.slice(0, 10);
+        bottomRow.append(category, accuracy, date);
+
+        li.append(topRow, bottomRow);
+        leaderboardList.appendChild(li);
+      });
     }
 
     nextBtn.addEventListener("click", goNext);
@@ -446,8 +746,19 @@
     });
     retryBtn.addEventListener("click", () => startCategory(state.category));
     resultBackBtn.addEventListener("click", () => showScreen("start"));
+    nicknameSaveBtn.addEventListener("click", saveNickname);
+    nicknameInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") saveNickname();
+    });
+    leaderboardBtn.addEventListener("click", () => {
+      renderLeaderboard(state.leaderboardFilter);
+      showScreen("leaderboard");
+    });
+    leaderboardBackBtn.addEventListener("click", () => showScreen("result"));
+    leaderboardRetryBtn.addEventListener("click", () => showScreen("start"));
 
     renderCategoryButtons();
+    renderLeaderboardFilterTabs();
   </script>
 </body>
 </html>
