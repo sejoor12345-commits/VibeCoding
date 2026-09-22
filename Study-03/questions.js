@@ -1,9 +1,9 @@
 // 상식 퀴즈 게임 - 문제 데이터
-// 카테고리 4개(한국사, 과학, 일반상식, 의학) x 난이도 4개(하/중/상/최상) x 5문제 = 총 80문제
+// 카테고리 4개(한국사, 과학, 일반상식, 의학) x 난이도 4개(하/중/상/최상) x 10문제 = 총 160문제
 // 난이도 기준: 하=초등학생, 중=고등학생, 상=대학생, 최상=그 분야를 공부하는 사람
 // 각 문제 형태: { id, category, difficulty, question, choices[4], answerIndex, explanation }
 const questions = [
-  // ===== 한국사 - 하 =====
+  // ===== 한국사 - 하 (1~10) =====
   {
     id: 1,
     category: "한국사",
@@ -49,10 +49,55 @@ const questions = [
     answerIndex: 1,
     explanation: "삼국시대는 고구려, 백제, 신라가 경쟁하던 시기예요.",
   },
-
-  // ===== 한국사 - 중 =====
   {
     id: 6,
+    category: "한국사",
+    difficulty: "하",
+    question: "신라 최초의 여왕으로 알려진 인물은 누구일까요?",
+    choices: ["선덕여왕", "진덕여왕", "진성여왕", "문무왕"],
+    answerIndex: 0,
+    explanation: "선덕여왕은 신라, 나아가 우리나라 역사상 최초의 여왕으로 알려져 있어요.",
+  },
+  {
+    id: 7,
+    category: "한국사",
+    difficulty: "하",
+    question: "우리나라 최초의 국가로 알려진 나라는 무엇일까요?",
+    choices: ["고조선", "부여", "고구려", "가야"],
+    answerIndex: 0,
+    explanation: "고조선은 단군왕검이 세운 것으로 전해지는 우리나라 최초의 국가예요.",
+  },
+  {
+    id: 8,
+    category: "한국사",
+    difficulty: "하",
+    question: "훈민정음이 세상에 정식으로 반포된 연도는 언제일까요?",
+    choices: ["1443년", "1446년", "1450년", "1392년"],
+    answerIndex: 1,
+    explanation: "훈민정음은 1443년에 만들어지고 1446년에 정식으로 반포됐어요.",
+  },
+  {
+    id: 9,
+    category: "한국사",
+    difficulty: "하",
+    question: "안중근 의사가 하얼빈에서 저격한 인물은 누구일까요?",
+    choices: ["이토 히로부미", "데라우치 마사타케", "이완용", "고종"],
+    answerIndex: 0,
+    explanation: "안중근 의사는 1909년 하얼빈에서 이토 히로부미를 저격했어요.",
+  },
+  {
+    id: 10,
+    category: "한국사",
+    difficulty: "하",
+    question: "유관순이 참여했던 것으로 유명한, 1919년의 만세운동은 무엇일까요?",
+    choices: ["3.1운동", "4.19혁명", "6월 민주항쟁", "5.18민주화운동"],
+    answerIndex: 0,
+    explanation: "유관순은 3.1운동 당시 만세운동에 앞장선 인물로 잘 알려져 있어요.",
+  },
+
+  // ===== 한국사 - 중 (11~20) =====
+  {
+    id: 11,
     category: "한국사",
     difficulty: "중",
     question: "고려 무신정권 시기 최고 권력을 오랫동안 잡았던 가문은 어디일까요?",
@@ -61,7 +106,7 @@ const questions = [
     explanation: "최충헌을 시작으로 한 최씨 가문은 4대에 걸쳐 고려의 실권을 장악했어요.",
   },
   {
-    id: 7,
+    id: 12,
     category: "한국사",
     difficulty: "중",
     question: "목민심서를 지은 조선 후기 실학자는 누구일까요?",
@@ -70,7 +115,7 @@ const questions = [
     explanation: "정약용은 목민심서 등을 통해 지방 관리의 자세를 강조한 실학자예요.",
   },
   {
-    id: 8,
+    id: 13,
     category: "한국사",
     difficulty: "중",
     question: "갑오개혁이 일어난 연도는 언제일까요?",
@@ -79,7 +124,7 @@ const questions = [
     explanation: "갑오개혁은 1894년 조선의 정치·사회 제도를 근대적으로 바꾸려 한 개혁이에요.",
   },
   {
-    id: 9,
+    id: 14,
     category: "한국사",
     difficulty: "중",
     question: "임진왜란 중 선조 때 설치된, 조선의 중앙 군사 조직은 무엇일까요?",
@@ -88,7 +133,7 @@ const questions = [
     explanation: "훈련도감은 1593년 임진왜란 중 선조 때 설치된 군사 조직이에요.",
   },
   {
-    id: 10,
+    id: 15,
     category: "한국사",
     difficulty: "중",
     question: "병자호란이 일어난 연도는 언제일까요?",
@@ -96,10 +141,55 @@ const questions = [
     answerIndex: 2,
     explanation: "병자호란은 1636년 청나라가 조선을 침입한 전쟁이에요.",
   },
-
-  // ===== 한국사 - 상 =====
   {
-    id: 11,
+    id: 16,
+    category: "한국사",
+    difficulty: "중",
+    question: "조선의 통치 규범을 담은 기본 법전은 무엇일까요?",
+    choices: ["경국대전", "대전통편", "속대전", "동의보감"],
+    answerIndex: 0,
+    explanation: "경국대전은 조선의 통치 체제의 근간이 된 기본 법전이에요.",
+  },
+  {
+    id: 17,
+    category: "한국사",
+    difficulty: "중",
+    question: "임진왜란이 시작된 연도는 언제일까요?",
+    choices: ["1592년", "1598년", "1608년", "1636년"],
+    answerIndex: 0,
+    explanation: "임진왜란은 1592년 일본의 침입으로 시작됐어요.",
+  },
+  {
+    id: 18,
+    category: "한국사",
+    difficulty: "중",
+    question: "조선 후기 왕권을 좌우할 정도로 세력이 컸던 세도 가문 중 하나는 어디일까요?",
+    choices: ["안동 김씨", "경주 이씨", "광산 김씨", "전주 이씨"],
+    answerIndex: 0,
+    explanation: "안동 김씨는 순조·헌종·철종 대에 걸쳐 강력한 세도정치를 펼쳤어요.",
+  },
+  {
+    id: 19,
+    category: "한국사",
+    difficulty: "중",
+    question: "일본과 맺은 최초의 근대적 조약으로, 부산 등 항구를 개항하게 한 조약은 무엇일까요?",
+    choices: ["강화도 조약", "제물포 조약", "한성 조약", "시모노세키 조약"],
+    answerIndex: 0,
+    explanation: "강화도 조약(1876)은 조선이 외국과 맺은 최초의 근대적 조약이에요.",
+  },
+  {
+    id: 20,
+    category: "한국사",
+    difficulty: "중",
+    question: "임진왜란 중 명나라에 지원군을 요청한 조선의 왕은 누구일까요?",
+    choices: ["선조", "광해군", "인조", "정조"],
+    answerIndex: 0,
+    explanation: "선조는 임진왜란 당시 명에 원군을 요청해 일본군에 맞섰어요.",
+  },
+
+  // ===== 한국사 - 상 (21~30) =====
+  {
+    id: 21,
     category: "한국사",
     difficulty: "상",
     question: "신라 하대 지방 호족 세력과 밀접하게 연결되었던 불교 사상은 무엇일까요?",
@@ -108,7 +198,7 @@ const questions = [
     explanation: "선종은 형식보다 개인의 깨달음을 중시해 지방 호족들의 지지를 받았어요.",
   },
   {
-    id: 12,
+    id: 22,
     category: "한국사",
     difficulty: "상",
     question: "조선에서 대동법을 최초로 시행한 지역은 어디일까요?",
@@ -117,7 +207,7 @@ const questions = [
     explanation: "대동법은 1608년 광해군 때 경기도에서 처음 시행됐어요.",
   },
   {
-    id: 13,
+    id: 23,
     category: "한국사",
     difficulty: "상",
     question: "고려 원 간섭기, 원이 철령 이북 지역에 설치했던 통치 기구는 무엇일까요?",
@@ -126,7 +216,7 @@ const questions = [
     explanation: "쌍성총관부는 원이 고려의 함경도 일대를 직접 지배하려고 설치한 기구예요.",
   },
   {
-    id: 14,
+    id: 24,
     category: "한국사",
     difficulty: "상",
     question: "동학농민운동 중 전주화약을 이끌어낸 지도자는 누구일까요?",
@@ -135,7 +225,7 @@ const questions = [
     explanation: "전봉준은 동학농민군을 이끌며 정부와 전주화약을 맺었어요.",
   },
   {
-    id: 15,
+    id: 25,
     category: "한국사",
     difficulty: "상",
     question: "을사조약 체결에 저항해 자결한 인물로 유명한 사람은 누구일까요?",
@@ -143,10 +233,55 @@ const questions = [
     answerIndex: 1,
     explanation: "민영환은 1905년 을사조약에 반대하며 스스로 목숨을 끊었어요.",
   },
-
-  // ===== 한국사 - 최상 =====
   {
-    id: 16,
+    id: 26,
+    category: "한국사",
+    difficulty: "상",
+    question: "이성계가 요동 정벌을 포기하고 군대를 돌려 정권을 잡은 사건은 무엇일까요?",
+    choices: ["위화도 회군", "계유정난", "인조반정", "중종반정"],
+    answerIndex: 0,
+    explanation: "위화도 회군(1388)으로 이성계는 실권을 잡고 조선 건국의 기반을 마련했어요.",
+  },
+  {
+    id: 27,
+    category: "한국사",
+    difficulty: "상",
+    question: "고려 말 신진사대부 중 온건파로, 조선 건국에 반대하다 죽임을 당한 인물은 누구일까요?",
+    choices: ["정몽주", "정도전", "조준", "이색"],
+    answerIndex: 0,
+    explanation: "정몽주는 고려왕조를 지키려다 이방원 세력에 의해 죽임을 당했어요.",
+  },
+  {
+    id: 28,
+    category: "한국사",
+    difficulty: "상",
+    question: "조선 초 왕위 계승을 둘러싸고 이방원이 일으킨 사건은 무엇일까요?",
+    choices: ["왕자의 난", "계유정난", "무오사화", "임오화변"],
+    answerIndex: 0,
+    explanation: "왕자의 난을 통해 이방원(태종)은 권력을 장악하고 훗날 왕위에 올랐어요.",
+  },
+  {
+    id: 29,
+    category: "한국사",
+    difficulty: "상",
+    question: "조선 중종 때 급진적 개혁을 추진하다 기묘사화로 실각한 인물은 누구일까요?",
+    choices: ["조광조", "김종직", "이황", "이이"],
+    answerIndex: 0,
+    explanation: "조광조는 급진적 개혁을 추진했지만 훈구 세력의 반발로 기묘사화 때 사약을 받았어요.",
+  },
+  {
+    id: 30,
+    category: "한국사",
+    difficulty: "상",
+    question: "병자호란 후 청에 인질로 끌려갔다가 귀국해 북벌을 추진한 왕은 누구일까요?",
+    choices: ["효종", "현종", "인조", "숙종"],
+    answerIndex: 0,
+    explanation: "효종(봉림대군)은 청에 볼모로 끌려갔다가 귀국 후 왕이 되어 북벌을 계획했어요.",
+  },
+
+  // ===== 한국사 - 최상 (31~40) =====
+  {
+    id: 31,
     category: "한국사",
     difficulty: "최상",
     question: "나당전쟁 중 신라가 당의 대군을 크게 격파한 전투는 무엇일까요?",
@@ -155,7 +290,7 @@ const questions = [
     explanation: "매소성 전투(675년)에서 신라는 당군을 크게 격파하며 삼국통일을 앞당겼어요.",
   },
   {
-    id: 17,
+    id: 32,
     category: "한국사",
     difficulty: "최상",
     question: "고려 광종이 실시한, 억울하게 노비가 된 사람을 원래 신분으로 되돌린 정책은 무엇일까요?",
@@ -164,7 +299,7 @@ const questions = [
     explanation: "노비안검법은 호족의 세력 기반이던 노비를 풀어줘 왕권을 강화하려는 정책이었어요.",
   },
   {
-    id: 18,
+    id: 33,
     category: "한국사",
     difficulty: "최상",
     question: "조선 선조 때 정여립 모반 사건으로 일어난, 동인이 큰 화를 입은 사건은 무엇일까요?",
@@ -173,7 +308,7 @@ const questions = [
     explanation: "기축옥사(1589)는 정여립 모반 사건을 계기로 동인이 대규모로 화를 입은 사건이에요.",
   },
   {
-    id: 19,
+    id: 34,
     category: "한국사",
     difficulty: "최상",
     question: "대한제국이 근대적 토지 소유권 확립을 위해 실시한 토지 조사 사업은 무엇일까요?",
@@ -182,7 +317,7 @@ const questions = [
     explanation: "광무양전은 대한제국이 지계를 발급하며 실시한 근대적 토지 조사 사업이에요.",
   },
   {
-    id: 20,
+    id: 35,
     category: "한국사",
     difficulty: "최상",
     question: "신라 6두품 출신으로 시무10조를 건의한 학자는 누구일까요?",
@@ -190,10 +325,55 @@ const questions = [
     answerIndex: 1,
     explanation: "최치원은 6두품 출신으로 신라 말 개혁안인 시무10조를 건의했어요.",
   },
-
-  // ===== 과학 - 하 =====
   {
-    id: 21,
+    id: 36,
+    category: "한국사",
+    difficulty: "최상",
+    question: "발해의 전성기를 이루며 중국으로부터 '해동성국'이라 불리게 한 왕은 누구일까요?",
+    choices: ["무왕", "문왕", "선왕", "대조영"],
+    answerIndex: 2,
+    explanation: "발해 선왕(대인수) 때 영토와 국력이 크게 확장되어 '해동성국'이라 불렸어요.",
+  },
+  {
+    id: 37,
+    category: "한국사",
+    difficulty: "최상",
+    question: "고려 인종 때 서경(평양) 천도를 주장하며 반란을 일으킨 인물은 누구일까요?",
+    choices: ["묘청", "김부식", "윤관", "이자겸"],
+    answerIndex: 0,
+    explanation: "묘청은 서경천도를 주장하며 반란을 일으켰으나 김부식에게 진압당했어요.",
+  },
+  {
+    id: 38,
+    category: "한국사",
+    difficulty: "최상",
+    question: "조선 후기 예송논쟁에서 핵심 쟁점이 된 것은 무엇일까요?",
+    choices: ["왕실의 상복(복상) 기간", "세금 제도 개편", "군역 부담 방식", "토지 소유 제한"],
+    answerIndex: 0,
+    explanation: "예송논쟁은 효종·인조비의 상 때 상복을 입는 기간을 두고 서인과 남인이 벌인 논쟁이에요.",
+  },
+  {
+    id: 39,
+    category: "한국사",
+    difficulty: "최상",
+    question: "대한제국 선포 직후 고종이 사용한 연호는 무엇일까요?",
+    choices: ["광무", "건양", "개국", "융희"],
+    answerIndex: 0,
+    explanation: "고종은 대한제국을 선포하며 '광무'라는 연호를 사용했어요.",
+  },
+  {
+    id: 40,
+    category: "한국사",
+    difficulty: "최상",
+    question: "일제강점기, 민족주의 계열과 사회주의 계열이 좌우합작으로 결성한 민족 운동 단체는 무엇일까요?",
+    choices: ["신간회", "신민회", "대한독립군", "한인애국단"],
+    answerIndex: 0,
+    explanation: "신간회(1927)는 이념을 넘어 민족 운동 세력이 연합해 만든 단체예요.",
+  },
+
+  // ===== 과학 - 하 (41~50) =====
+  {
+    id: 41,
     category: "과학",
     difficulty: "하",
     question: "물을 이루는 화학식은 무엇일까요?",
@@ -202,7 +382,7 @@ const questions = [
     explanation: "물은 수소 2개와 산소 1개가 결합한 H2O예요.",
   },
   {
-    id: 22,
+    id: 42,
     category: "과학",
     difficulty: "하",
     question: "태양계에서 가장 큰 행성은 무엇일까요?",
@@ -211,7 +391,7 @@ const questions = [
     explanation: "목성은 태양계 행성 중 크기가 가장 커요.",
   },
   {
-    id: 23,
+    id: 43,
     category: "과학",
     difficulty: "하",
     question: "식물이 빛을 이용해 스스로 양분을 만드는 과정은 무엇일까요?",
@@ -220,7 +400,7 @@ const questions = [
     explanation: "광합성은 빛, 물, 이산화탄소로 포도당과 산소를 만드는 과정이에요.",
   },
   {
-    id: 24,
+    id: 44,
     category: "과학",
     difficulty: "하",
     question: "사람 몸에서 혈액을 온몸으로 순환시키는 기관은 무엇일까요?",
@@ -229,7 +409,7 @@ const questions = [
     explanation: "심장은 펌프처럼 뛰며 혈액을 온몸으로 보내요.",
   },
   {
-    id: 25,
+    id: 45,
     category: "과학",
     difficulty: "하",
     question: "무지개는 보통 몇 가지 색깔로 표현될까요?",
@@ -237,10 +417,55 @@ const questions = [
     answerIndex: 2,
     explanation: "무지개는 흔히 빨주노초파남보 7가지 색으로 표현돼요.",
   },
-
-  // ===== 과학 - 중 =====
   {
-    id: 26,
+    id: 46,
+    category: "과학",
+    difficulty: "하",
+    question: "우리 몸에서 뼈를 움직여 몸을 움직이게 하는 조직은 무엇일까요?",
+    choices: ["뼈", "근육", "피부", "혈관"],
+    answerIndex: 1,
+    explanation: "근육이 늘어나고 줄어들면서 뼈를 움직여 몸이 움직이게 돼요.",
+  },
+  {
+    id: 47,
+    category: "과학",
+    difficulty: "하",
+    question: "소리가 전달되지 않는, 공기가 없는 공간을 무엇이라고 할까요?",
+    choices: ["대기", "진공", "기체", "액체"],
+    answerIndex: 1,
+    explanation: "소리는 공기 같은 매질이 있어야 전달되는데, 진공에는 매질이 없어요.",
+  },
+  {
+    id: 48,
+    category: "과학",
+    difficulty: "하",
+    question: "지구가 태양을 한 바퀴 도는 데 걸리는 시간은 대략 얼마일까요?",
+    choices: ["한 달", "6개월", "1년", "10년"],
+    answerIndex: 2,
+    explanation: "지구가 태양을 한 바퀴 공전하는 데 걸리는 시간이 1년(약 365일)이에요.",
+  },
+  {
+    id: 49,
+    category: "과학",
+    difficulty: "하",
+    question: "자석의 양쪽 끝을 무엇이라고 부를까요?",
+    choices: ["A극과 B극", "N극과 S극", "양극과 음극", "상극과 하극"],
+    answerIndex: 1,
+    explanation: "자석에는 N극과 S극이 있고, 같은 극끼리는 밀어내요.",
+  },
+  {
+    id: 50,
+    category: "과학",
+    difficulty: "하",
+    question: "우리 몸에서 음식물을 소화시키는 대표적인 기관은 무엇일까요?",
+    choices: ["폐", "위", "심장", "콩팥"],
+    answerIndex: 1,
+    explanation: "위는 음식물을 잘게 부수고 소화액을 분비해 소화를 돕는 기관이에요.",
+  },
+
+  // ===== 과학 - 중 (51~60) =====
+  {
+    id: 51,
     category: "과학",
     difficulty: "중",
     question: "원자핵을 구성하는 두 입자는 무엇일까요?",
@@ -249,7 +474,7 @@ const questions = [
     explanation: "원자핵은 양성자와 중성자로 이루어져 있고, 전자는 핵 주위를 돌아요.",
   },
   {
-    id: 27,
+    id: 52,
     category: "과학",
     difficulty: "중",
     question: "세포 안에서 에너지(ATP)를 주로 만들어내는 소기관은 무엇일까요?",
@@ -258,7 +483,7 @@ const questions = [
     explanation: "미토콘드리아는 세포호흡을 통해 에너지를 만드는 '세포의 발전소'예요.",
   },
   {
-    id: 28,
+    id: 53,
     category: "과학",
     difficulty: "중",
     question: "지진의 세기를 나타내는 척도로 널리 쓰이는 것은 무엇일까요?",
@@ -267,7 +492,7 @@ const questions = [
     explanation: "리히터 규모는 지진의 크기(에너지)를 나타내는 척도예요.",
   },
   {
-    id: 29,
+    id: 54,
     category: "과학",
     difficulty: "중",
     question: "유전 정보를 저장하는 물질의 이름은 무엇일까요?",
@@ -276,7 +501,7 @@ const questions = [
     explanation: "DNA(디옥시리보핵산)는 생물의 유전 정보를 담고 있는 물질이에요.",
   },
   {
-    id: 30,
+    id: 55,
     category: "과학",
     difficulty: "중",
     question: "뉴턴의 운동 법칙 중 '힘 = 질량 × 가속도'를 나타내는 법칙은 무엇일까요?",
@@ -284,10 +509,55 @@ const questions = [
     answerIndex: 1,
     explanation: "뉴턴 제2법칙은 힘, 질량, 가속도 사이의 관계(F=ma)를 나타내요.",
   },
-
-  // ===== 과학 - 상 =====
   {
-    id: 31,
+    id: 56,
+    category: "과학",
+    difficulty: "중",
+    question: "어떤 물질이 산성인지 염기성인지 나타내는 지표는 무엇일까요?",
+    choices: ["pH", "밀도", "온도", "압력"],
+    answerIndex: 0,
+    explanation: "pH 값이 7보다 작으면 산성, 크면 염기성을 나타내요.",
+  },
+  {
+    id: 57,
+    category: "과학",
+    difficulty: "중",
+    question: "식물 세포에만 있으며 광합성이 일어나는 초록색 소기관은 무엇일까요?",
+    choices: ["미토콘드리아", "엽록체", "리보솜", "세포벽"],
+    answerIndex: 1,
+    explanation: "엽록체는 빛에너지를 이용해 광합성을 하는 식물 세포의 소기관이에요.",
+  },
+  {
+    id: 58,
+    category: "과학",
+    difficulty: "중",
+    question: "전류의 세기를 나타내는 단위는 무엇일까요?",
+    choices: ["볼트(V)", "와트(W)", "암페어(A)", "옴(Ω)"],
+    answerIndex: 2,
+    explanation: "전류의 세기는 암페어(A)라는 단위로 나타내요.",
+  },
+  {
+    id: 59,
+    category: "과학",
+    difficulty: "중",
+    question: "원소를 원자번호 순서로 배열해 성질의 규칙성을 보여주는 표는 무엇일까요?",
+    choices: ["주기율표", "원소표", "화학식표", "분자량표"],
+    answerIndex: 0,
+    explanation: "주기율표는 멘델레예프가 처음 만든, 원소를 원자번호 순서로 배열한 표예요.",
+  },
+  {
+    id: 60,
+    category: "과학",
+    difficulty: "중",
+    question: "밤하늘에서 별의 밝기를 나타낼 때 사용하는 단위는 무엇일까요?",
+    choices: ["등급", "와트", "럭스", "칸델라"],
+    answerIndex: 0,
+    explanation: "별의 밝기는 '등급'으로 나타내며, 숫자가 작을수록 더 밝은 별이에요.",
+  },
+
+  // ===== 과학 - 상 (61~70) =====
+  {
+    id: 61,
     category: "과학",
     difficulty: "상",
     question: "원자와 입자의 세계를 다루는, 슈뢰딩거 방정식이 속한 물리학 분야는 무엇일까요?",
@@ -296,7 +566,7 @@ const questions = [
     explanation: "슈뢰딩거 방정식은 양자역학에서 입자의 상태를 기술하는 핵심 방정식이에요.",
   },
   {
-    id: 32,
+    id: 62,
     category: "과학",
     difficulty: "상",
     question: "DNA가 복제될 때 새로운 가닥을 합성하는 효소는 무엇일까요?",
@@ -305,7 +575,7 @@ const questions = [
     explanation: "DNA 중합효소(polymerase)가 주형을 따라 새로운 DNA 가닥을 합성해요.",
   },
   {
-    id: 33,
+    id: 63,
     category: "과학",
     difficulty: "상",
     question: "열역학 제2법칙과 밀접하게 관련된 물리량은 무엇일까요?",
@@ -314,7 +584,7 @@ const questions = [
     explanation: "열역학 제2법칙은 고립계의 엔트로피가 항상 증가하는 방향으로 변한다는 법칙이에요.",
   },
   {
-    id: 34,
+    id: 64,
     category: "과학",
     difficulty: "상",
     question: "세포호흡 단계 중 산소를 이용해 가장 많은 ATP를 만드는 단계는 무엇일까요?",
@@ -323,7 +593,7 @@ const questions = [
     explanation: "전자전달계(산화적 인산화)에서 산소를 이용해 대부분의 ATP가 생성돼요.",
   },
   {
-    id: 35,
+    id: 65,
     category: "과학",
     difficulty: "상",
     question: "아인슈타인이 특수상대성이론을 발표한 연도는 언제일까요?",
@@ -331,10 +601,55 @@ const questions = [
     answerIndex: 2,
     explanation: "아인슈타인은 1905년 특수상대성이론을 발표했어요. (일반상대성이론은 1915년이에요.)",
   },
-
-  // ===== 과학 - 최상 =====
   {
-    id: 36,
+    id: 66,
+    category: "과학",
+    difficulty: "상",
+    question: "화학반응의 속도를 변화시키지만 반응 후에도 자신은 변하지 않는 물질은 무엇일까요?",
+    choices: ["촉매", "용매", "반응물", "생성물"],
+    answerIndex: 0,
+    explanation: "촉매는 반응 속도를 높이거나 낮추면서도 자기 자신은 소모되지 않아요.",
+  },
+  {
+    id: 67,
+    category: "과학",
+    difficulty: "상",
+    question: "멘델의 유전법칙 중, 서로 다른 두 형질이 서로 영향을 주지 않고 유전된다는 법칙은 무엇일까요?",
+    choices: ["우열의 법칙", "분리의 법칙", "독립의 법칙", "연관의 법칙"],
+    answerIndex: 2,
+    explanation: "독립의 법칙은 두 형질이 서로 독립적으로 자손에게 전달된다는 법칙이에요.",
+  },
+  {
+    id: 68,
+    category: "과학",
+    difficulty: "상",
+    question: "빛이 파동처럼 행동한다는 것을 보여준 대표적인 실험은 무엇일까요?",
+    choices: ["이중슬릿 실험", "자유낙하 실험", "전기분해 실험", "단진자 실험"],
+    answerIndex: 0,
+    explanation: "이중슬릿 실험에서 빛의 간섭무늬가 나타나며 빛의 파동성이 확인됐어요.",
+  },
+  {
+    id: 69,
+    category: "과학",
+    difficulty: "상",
+    question: "수명을 다한 별이 폭발하며 강한 에너지를 방출하는 현상을 무엇이라고 할까요?",
+    choices: ["초신성", "블랙홀", "백색왜성", "펄서"],
+    answerIndex: 0,
+    explanation: "초신성(supernova)은 별이 생을 마감하며 대규모로 폭발하는 현상이에요.",
+  },
+  {
+    id: 70,
+    category: "과학",
+    difficulty: "상",
+    question: "생식세포(정자, 난자)를 만들 때 염색체 수가 절반으로 줄어드는 세포분열은 무엇일까요?",
+    choices: ["체세포분열", "감수분열", "이분법", "무성생식"],
+    answerIndex: 1,
+    explanation: "감수분열을 통해 염색체 수가 절반인 생식세포가 만들어져요.",
+  },
+
+  // ===== 과학 - 최상 (71~80) =====
+  {
+    id: 71,
     category: "과학",
     difficulty: "최상",
     question: "입자의 위치와 운동량을 동시에 정확히 알 수 없다는 양자역학의 원리는 무엇일까요?",
@@ -343,7 +658,7 @@ const questions = [
     explanation: "하이젠베르크의 불확정성 원리에 따르면 위치와 운동량을 동시에 정확히 측정할 수 없어요.",
   },
   {
-    id: 37,
+    id: 72,
     category: "과학",
     difficulty: "최상",
     question: "mRNA에서 하나의 아미노산을 지정하는 3개의 염기 서열 단위는 무엇일까요?",
@@ -352,7 +667,7 @@ const questions = [
     explanation: "코돈(codon)은 3개의 염기로 이루어져 하나의 아미노산을 지정해요.",
   },
   {
-    id: 38,
+    id: 73,
     category: "과학",
     difficulty: "최상",
     question: "표준모형에서 강력(강한 상호작용)을 매개하는 입자는 무엇일까요?",
@@ -361,7 +676,7 @@ const questions = [
     explanation: "글루온은 쿼크 사이의 강력을 매개하는 입자예요.",
   },
   {
-    id: 39,
+    id: 74,
     category: "과학",
     difficulty: "최상",
     question: "크렙스 회로(TCA 회로)가 일어나는 미토콘드리아 내 위치는 어디일까요?",
@@ -370,7 +685,7 @@ const questions = [
     explanation: "크렙스 회로는 미토콘드리아 기질에서 일어나요.",
   },
   {
-    id: 40,
+    id: 75,
     category: "과학",
     difficulty: "최상",
     question: "전기장의 변화가 자기장을 만든다는 것을 설명하는 맥스웰 방정식은 무엇일까요?",
@@ -378,10 +693,55 @@ const questions = [
     answerIndex: 2,
     explanation: "앙페르-맥스웰 법칙은 변화하는 전기장(변위 전류)이 자기장을 만든다는 것을 설명해요.",
   },
-
-  // ===== 일반상식 - 하 =====
   {
-    id: 41,
+    id: 76,
+    category: "과학",
+    difficulty: "최상",
+    question: "우주가 가속 팽창하는 원인으로 제시된, 정체가 정확히 밝혀지지 않은 에너지는 무엇일까요?",
+    choices: ["암흑물질", "암흑에너지", "반물질", "진공에너지"],
+    answerIndex: 1,
+    explanation: "암흑에너지는 우주의 가속 팽창을 설명하기 위해 도입된 개념이에요.",
+  },
+  {
+    id: 77,
+    category: "과학",
+    difficulty: "최상",
+    question: "전기 저항이 0이 되는 초전도 현상은 어떤 조건에서 나타날까요?",
+    choices: ["매우 높은 온도", "특정 임계온도 이하의 매우 낮은 온도", "강한 자기장 속에서만", "진공 상태에서만"],
+    answerIndex: 1,
+    explanation: "초전도 현상은 물질이 임계온도 이하로 냉각될 때 전기 저항이 0이 되는 현상이에요.",
+  },
+  {
+    id: 78,
+    category: "과학",
+    difficulty: "최상",
+    question: "DNA를 구성하는 염기 중 아데닌(A)과 항상 짝을 이루는 염기는 무엇일까요?",
+    choices: ["구아닌(G)", "시토신(C)", "티민(T)", "우라실(U)"],
+    answerIndex: 2,
+    explanation: "DNA에서 아데닌은 티민과, 구아닌은 시토신과 짝을 이뤄요.",
+  },
+  {
+    id: 79,
+    category: "과학",
+    difficulty: "최상",
+    question: "양자컴퓨터에서 정보를 표현하는 기본 단위는 무엇일까요?",
+    choices: ["비트", "큐비트", "바이트", "바이너리"],
+    answerIndex: 1,
+    explanation: "큐비트(qubit)는 0과 1을 동시에 가질 수 있는 양자컴퓨터의 정보 단위예요.",
+  },
+  {
+    id: 80,
+    category: "과학",
+    difficulty: "최상",
+    question: "일반상대성이론에서 중력을 설명하는 핵심 개념은 무엇일까요?",
+    choices: ["입자의 교환", "시공간의 휘어짐", "전자기력", "파동-입자 이중성"],
+    answerIndex: 1,
+    explanation: "일반상대성이론은 질량이 시공간을 휘어지게 만들고, 그것이 중력으로 나타난다고 설명해요.",
+  },
+
+  // ===== 일반상식 - 하 (81~90) =====
+  {
+    id: 81,
     category: "일반상식",
     difficulty: "하",
     question: "대한민국의 수도는 어디일까요?",
@@ -390,7 +750,7 @@ const questions = [
     explanation: "서울은 대한민국의 수도예요.",
   },
   {
-    id: 42,
+    id: 82,
     category: "일반상식",
     difficulty: "하",
     question: "지구에서 가장 넓은 대양은 무엇일까요?",
@@ -399,7 +759,7 @@ const questions = [
     explanation: "태평양은 지구에서 가장 넓은 대양이에요.",
   },
   {
-    id: 43,
+    id: 83,
     category: "일반상식",
     difficulty: "하",
     question: "1년은 몇 개월로 이루어져 있을까요?",
@@ -408,7 +768,7 @@ const questions = [
     explanation: "1년은 12개월이에요.",
   },
   {
-    id: 44,
+    id: 84,
     category: "일반상식",
     difficulty: "하",
     question: "세계에서 가장 높은 산은 무엇일까요?",
@@ -417,7 +777,7 @@ const questions = [
     explanation: "에베레스트는 해발 약 8,849m로 세계에서 가장 높은 산이에요.",
   },
   {
-    id: 45,
+    id: 85,
     category: "일반상식",
     difficulty: "하",
     question: "대한민국의 화폐 단위는 무엇일까요?",
@@ -425,10 +785,55 @@ const questions = [
     answerIndex: 2,
     explanation: "대한민국의 화폐 단위는 '원'이에요.",
   },
-
-  // ===== 일반상식 - 중 =====
   {
-    id: 46,
+    id: 86,
+    category: "일반상식",
+    difficulty: "하",
+    question: "세계에서 가장 긴 강으로 흔히 꼽히는 강은 무엇일까요?",
+    choices: ["나일강", "한강", "라인강", "메콩강"],
+    answerIndex: 0,
+    explanation: "나일강은 세계에서 가장 긴 강으로 흔히 꼽혀요.",
+  },
+  {
+    id: 87,
+    category: "일반상식",
+    difficulty: "하",
+    question: "하루는 몇 시간으로 이루어져 있을까요?",
+    choices: ["12시간", "24시간", "36시간", "48시간"],
+    answerIndex: 1,
+    explanation: "하루는 24시간이에요.",
+  },
+  {
+    id: 88,
+    category: "일반상식",
+    difficulty: "하",
+    question: "대한민국의 국기 이름은 무엇일까요?",
+    choices: ["태극기", "무궁화기", "한반도기", "봉황기"],
+    answerIndex: 0,
+    explanation: "대한민국의 국기는 태극기예요.",
+  },
+  {
+    id: 89,
+    category: "일반상식",
+    difficulty: "하",
+    question: "물이 얼어서 얼음이 되는 온도는 섭씨 몇 도일까요?",
+    choices: ["0도", "10도", "-10도", "100도"],
+    answerIndex: 0,
+    explanation: "물은 섭씨 0도에서 얼어요.",
+  },
+  {
+    id: 90,
+    category: "일반상식",
+    difficulty: "하",
+    question: "지구는 태양계에서 태양으로부터 몇 번째 행성일까요?",
+    choices: ["두 번째", "세 번째", "네 번째", "다섯 번째"],
+    answerIndex: 1,
+    explanation: "지구는 태양계에서 세 번째 행성이에요(수성, 금성, 지구 순).",
+  },
+
+  // ===== 일반상식 - 중 (91~100) =====
+  {
+    id: 91,
     category: "일반상식",
     difficulty: "중",
     question: "국제연합(UN) 안전보장이사회 상임이사국은 총 몇 개국일까요?",
@@ -437,7 +842,7 @@ const questions = [
     explanation: "미국, 영국, 프랑스, 러시아, 중국 5개국이 상임이사국이에요.",
   },
   {
-    id: 47,
+    id: 92,
     category: "일반상식",
     difficulty: "중",
     question: "세계 3대 영화제 중 프랑스에서 열리는 영화제는 무엇일까요?",
@@ -446,7 +851,7 @@ const questions = [
     explanation: "칸 영화제는 프랑스 남부 도시 칸에서 매년 열리는 영화제예요.",
   },
   {
-    id: 48,
+    id: 93,
     category: "일반상식",
     difficulty: "중",
     question: "노벨상을 제정한 사람은 누구일까요?",
@@ -455,7 +860,7 @@ const questions = [
     explanation: "스웨덴의 화학자 알프레드 노벨의 유언에 따라 노벨상이 만들어졌어요.",
   },
   {
-    id: 49,
+    id: 94,
     category: "일반상식",
     difficulty: "중",
     question: "유럽연합(EU)이 사용하는 공동 화폐는 무엇일까요?",
@@ -464,7 +869,7 @@ const questions = [
     explanation: "유로(Euro)는 여러 EU 회원국이 함께 사용하는 공동 화폐예요.",
   },
   {
-    id: 50,
+    id: 95,
     category: "일반상식",
     difficulty: "중",
     question: "세계 최초의 금속활자 인쇄본으로 알려진 고려의 책은 무엇일까요?",
@@ -472,10 +877,55 @@ const questions = [
     answerIndex: 2,
     explanation: "직지심체요절(직지)은 1377년 인쇄된, 현존하는 세계 최초의 금속활자본으로 알려져 있어요.",
   },
-
-  // ===== 일반상식 - 상 =====
   {
-    id: 51,
+    id: 96,
+    category: "일반상식",
+    difficulty: "중",
+    question: "세계 최대 규모의 국제 스포츠 대회로 꼽히는 것은 무엇일까요?",
+    choices: ["월드컵", "올림픽", "아시안게임", "유니버시아드"],
+    answerIndex: 1,
+    explanation: "올림픽은 여러 종목이 함께 열리는 세계 최대 규모의 국제 스포츠 대회예요.",
+  },
+  {
+    id: 97,
+    category: "일반상식",
+    difficulty: "중",
+    question: "국제올림픽위원회(IOC)의 본부가 있는 도시는 어디일까요?",
+    choices: ["파리", "로잔", "제네바", "런던"],
+    answerIndex: 1,
+    explanation: "IOC 본부는 스위스 로잔에 있어요.",
+  },
+  {
+    id: 98,
+    category: "일반상식",
+    difficulty: "중",
+    question: "다음 중 국제연합(UN)의 공식 언어가 아닌 것은 무엇일까요?",
+    choices: ["영어", "프랑스어", "한국어", "중국어"],
+    answerIndex: 2,
+    explanation: "UN의 공식 언어는 영어, 프랑스어, 스페인어, 러시아어, 중국어, 아랍어 6개로, 한국어는 포함되지 않아요.",
+  },
+  {
+    id: 99,
+    category: "일반상식",
+    difficulty: "중",
+    question: "세계에서 영토가 가장 넓은 나라는 어디일까요?",
+    choices: ["미국", "중국", "캐나다", "러시아"],
+    answerIndex: 3,
+    explanation: "러시아는 세계에서 영토가 가장 넓은 나라예요.",
+  },
+  {
+    id: 100,
+    category: "일반상식",
+    difficulty: "중",
+    question: "세계 4대 문명의 발생지로 흔히 꼽히지 않는 곳은 어디일까요?",
+    choices: ["이집트 문명", "메소포타미아 문명", "마야 문명", "황하 문명"],
+    answerIndex: 2,
+    explanation: "세계 4대 문명은 이집트, 메소포타미아, 인더스, 황하 문명을 꼽으며, 마야 문명은 보통 여기에 포함되지 않아요.",
+  },
+
+  // ===== 일반상식 - 상 (101~110) =====
+  {
+    id: 101,
     category: "일반상식",
     difficulty: "상",
     question: "GDP(국내총생산)는 무엇을 기준으로 계산하는 지표일까요?",
@@ -484,7 +934,7 @@ const questions = [
     explanation: "GDP는 국적과 관계없이 한 나라의 영토 안에서 이뤄진 생산을 기준으로 계산해요.",
   },
   {
-    id: 52,
+    id: 102,
     category: "일반상식",
     difficulty: "상",
     question: "세계에서 가장 오래된 것으로 널리 알려진 성문법은 무엇일까요?",
@@ -493,7 +943,7 @@ const questions = [
     explanation: "함무라비 법전은 기원전 1750년경 만들어진, 가장 오래된 성문법으로 널리 알려져 있어요.",
   },
   {
-    id: 53,
+    id: 103,
     category: "일반상식",
     difficulty: "상",
     question: "국제형사재판소(ICC)의 본부가 있는 도시는 어디일까요?",
@@ -502,7 +952,7 @@ const questions = [
     explanation: "국제형사재판소는 네덜란드 헤이그에 있어요.",
   },
   {
-    id: 54,
+    id: 104,
     category: "일반상식",
     difficulty: "상",
     question: "경제학에서 '보이지 않는 손'이라는 표현을 쓴 학자는 누구일까요?",
@@ -511,7 +961,7 @@ const questions = [
     explanation: "애덤 스미스는 시장의 자율적인 조정 기능을 '보이지 않는 손'이라고 표현했어요.",
   },
   {
-    id: 55,
+    id: 105,
     category: "일반상식",
     difficulty: "상",
     question: "다음 중 세계 3대 신용평가사에 속하지 않는 곳은 어디일까요?",
@@ -519,10 +969,55 @@ const questions = [
     answerIndex: 3,
     explanation: "블룸버그는 금융 정보·언론 회사로, 3대 신용평가사(무디스, S&P, 피치)에 속하지 않아요.",
   },
-
-  // ===== 일반상식 - 최상 =====
   {
-    id: 56,
+    id: 106,
+    category: "일반상식",
+    difficulty: "상",
+    question: "매년 스위스에서 열리며 '다보스포럼'이라는 별칭으로 잘 알려진 국제 민간회의는 무엇일까요?",
+    choices: ["세계경제포럼", "G7 정상회의", "OECD 총회", "UN 총회"],
+    answerIndex: 0,
+    explanation: "세계경제포럼(WEF)은 스위스 다보스에서 열려 흔히 '다보스포럼'이라 불려요.",
+  },
+  {
+    id: 107,
+    category: "일반상식",
+    difficulty: "상",
+    question: "'죄수의 딜레마'라는 상황으로 잘 알려진, 상호작용하는 의사결정을 다루는 학문 분야는 무엇일까요?",
+    choices: ["게임이론", "확률론", "통계학", "경영학"],
+    answerIndex: 0,
+    explanation: "게임이론은 서로 영향을 주는 주체들의 전략적 의사결정을 연구하는 분야예요.",
+  },
+  {
+    id: 108,
+    category: "일반상식",
+    difficulty: "상",
+    question: "세계에서 산업혁명이 가장 먼저 시작된 나라는 어디일까요?",
+    choices: ["영국", "프랑스", "독일", "미국"],
+    answerIndex: 0,
+    explanation: "산업혁명은 18세기 후반 영국에서 가장 먼저 시작됐어요.",
+  },
+  {
+    id: 109,
+    category: "일반상식",
+    difficulty: "상",
+    question: "세계 최초의 성문 헌법으로 흔히 꼽히는 것은 무엇일까요?",
+    choices: ["영국 대헌장", "미국 헌법", "프랑스 인권선언", "일본 헌법"],
+    answerIndex: 1,
+    explanation: "1787년 제정된 미국 헌법은 세계 최초의 성문 헌법으로 흔히 꼽혀요.",
+  },
+  {
+    id: 110,
+    category: "일반상식",
+    difficulty: "상",
+    question: "국제통화기금(IMF)의 주요 역할 중 하나는 무엇일까요?",
+    choices: ["회원국의 국제수지·외환위기 지원", "세계 빈곤국 무상 원조", "국제 무역 분쟁 재판", "전쟁 중재"],
+    answerIndex: 0,
+    explanation: "IMF는 회원국이 외환위기 등 국제수지 어려움을 겪을 때 자금을 지원하는 역할을 해요.",
+  },
+
+  // ===== 일반상식 - 최상 (111~120) =====
+  {
+    id: 111,
     category: "일반상식",
     difficulty: "최상",
     question: "조약 체결 절차 등을 규정한 '조약법에 관한 협약'이 채택된 도시의 이름을 딴 국제협약은 무엇일까요?",
@@ -531,7 +1026,7 @@ const questions = [
     explanation: "1969년 오스트리아 비엔나에서 채택된 '비엔나 조약법 협약'이 조약 체결 절차를 규정해요.",
   },
   {
-    id: 57,
+    id: 112,
     category: "일반상식",
     difficulty: "최상",
     question: "경제학자 애컬로프의 '레몬시장' 이론과 관련된, 정보 비대칭 상황에서 나쁜 상품이 시장에 남는 현상은 무엇일까요?",
@@ -540,7 +1035,7 @@ const questions = [
     explanation: "역선택(adverse selection)은 정보가 부족한 쪽이 불리한 선택을 하게 되는 현상이에요.",
   },
   {
-    id: 58,
+    id: 113,
     category: "일반상식",
     difficulty: "최상",
     question: "세계무역기구(WTO)의 전신이 된 국제 협정은 무엇일까요?",
@@ -549,7 +1044,7 @@ const questions = [
     explanation: "GATT(관세와 무역에 관한 일반협정)는 1995년 WTO로 발전했어요.",
   },
   {
-    id: 59,
+    id: 114,
     category: "일반상식",
     difficulty: "최상",
     question: "칸트가 강조한, 스스로 세운 도덕법칙을 스스로 따르는 상태를 뜻하는 개념은 무엇일까요?",
@@ -558,7 +1053,7 @@ const questions = [
     explanation: "칸트는 도덕적 자율(autonomy)을 인간 존엄성의 핵심으로 보았어요.",
   },
   {
-    id: 60,
+    id: 115,
     category: "일반상식",
     difficulty: "최상",
     question: "사회학자 뒤르켐이 제시한, 급격한 사회 변동으로 규범이 무너진 상태를 뜻하는 용어는 무엇일까요?",
@@ -566,10 +1061,55 @@ const questions = [
     answerIndex: 0,
     explanation: "아노미(anomie)는 사회 규범이 흔들리며 개인이 혼란을 겪는 상태를 뜻해요.",
   },
-
-  // ===== 의학 - 하 =====
   {
-    id: 61,
+    id: 116,
+    category: "일반상식",
+    difficulty: "최상",
+    question: "국제법의 기본 원칙 중, 한 국가가 다른 국가의 국내문제에 간섭하지 않아야 한다는 원칙은 무엇일까요?",
+    choices: ["불간섭 원칙", "최혜국 대우", "상호주의", "보편적 관할권"],
+    answerIndex: 0,
+    explanation: "불간섭 원칙은 국가 주권을 존중해 타국의 내부 문제에 간섭하지 않아야 한다는 국제법 원칙이에요.",
+  },
+  {
+    id: 117,
+    category: "일반상식",
+    difficulty: "최상",
+    question: "시장 실패를 교정하기 위한 정부의 적극적 개입(재정정책)을 강조한 경제학자는 누구일까요?",
+    choices: ["애덤 스미스", "존 메이너드 케인스", "밀턴 프리드먼", "프리드리히 하이에크"],
+    answerIndex: 1,
+    explanation: "케인스는 불황기에 정부가 재정지출을 늘려 경기를 부양해야 한다고 주장했어요.",
+  },
+  {
+    id: 118,
+    category: "일반상식",
+    difficulty: "최상",
+    question: "'만인의 만인에 대한 투쟁'이라는 표현으로 자연 상태를 설명하며 사회계약론을 주장한 철학자는 누구일까요?",
+    choices: ["존 로크", "토마스 홉스", "장 자크 루소", "몽테스키외"],
+    answerIndex: 1,
+    explanation: "토마스 홉스는 저서 '리바이어던'에서 자연 상태를 이렇게 표현했어요.",
+  },
+  {
+    id: 119,
+    category: "일반상식",
+    difficulty: "최상",
+    question: "국가들이 힘의 균형을 통해 안정을 유지한다고 보는 국제정치 이론 전통은 무엇일까요?",
+    choices: ["자유주의", "현실주의", "구성주의", "마르크스주의"],
+    answerIndex: 1,
+    explanation: "현실주의(realism)는 국가 간 힘의 균형(세력균형)을 국제정치의 핵심으로 봐요.",
+  },
+  {
+    id: 120,
+    category: "일반상식",
+    difficulty: "최상",
+    question: "법의 내용과 상관없이 정해진 절차에 따라 만들어졌다면 지켜야 한다는 법철학적 입장은 무엇일까요?",
+    choices: ["법실증주의", "자연법론", "법현실주의", "비판법학"],
+    answerIndex: 0,
+    explanation: "법실증주의는 법의 내용이 옳은지와 별개로, 정당한 절차로 제정된 법의 효력을 인정하는 입장이에요.",
+  },
+
+  // ===== 의학 - 하 (121~130) =====
+  {
+    id: 121,
     category: "의학",
     difficulty: "하",
     question: "사람의 혈액형은 흔히 ABO식으로 몇 가지로 나뉠까요?",
@@ -578,7 +1118,7 @@ const questions = [
     explanation: "ABO식 혈액형은 A형, B형, AB형, O형 4가지로 나뉘어요.",
   },
   {
-    id: 62,
+    id: 122,
     category: "의학",
     difficulty: "하",
     question: "사람의 심장은 몇 개의 방으로 이루어져 있을까요?",
@@ -587,7 +1127,7 @@ const questions = [
     explanation: "심장은 좌심방, 좌심실, 우심방, 우심실 총 4개의 방으로 나뉘어요.",
   },
   {
-    id: 63,
+    id: 123,
     category: "의학",
     difficulty: "하",
     question: "감기는 주로 무엇 때문에 생길까요?",
@@ -596,7 +1136,7 @@ const questions = [
     explanation: "감기는 대부분 여러 종류의 바이러스가 일으켜요.",
   },
   {
-    id: 64,
+    id: 124,
     category: "의학",
     difficulty: "하",
     question: "건강한 성인의 평균 체온은 대략 몇 도일까요?",
@@ -605,7 +1145,7 @@ const questions = [
     explanation: "사람의 정상 체온은 개인차가 있지만 보통 36.5도 전후예요.",
   },
   {
-    id: 65,
+    id: 125,
     category: "의학",
     difficulty: "하",
     question: "우리 몸에서 산소를 운반하는 혈액 속 세포는 무엇일까요?",
@@ -613,10 +1153,55 @@ const questions = [
     answerIndex: 2,
     explanation: "적혈구는 헤모글로빈을 통해 온몸으로 산소를 운반해요.",
   },
-
-  // ===== 의학 - 중 =====
   {
-    id: 66,
+    id: 126,
+    category: "의학",
+    difficulty: "하",
+    question: "우리 몸에서 숨을 쉬며 산소와 이산화탄소를 교환하는 기관은 무엇일까요?",
+    choices: ["심장", "폐", "위", "콩팥"],
+    answerIndex: 1,
+    explanation: "폐는 숨을 쉴 때 산소를 받아들이고 이산화탄소를 내보내는 기관이에요.",
+  },
+  {
+    id: 127,
+    category: "의학",
+    difficulty: "하",
+    question: "뼈와 뼈가 만나 몸을 구부리거나 움직일 수 있게 해주는 부분을 무엇이라고 할까요?",
+    choices: ["관절", "근육", "인대", "혈관"],
+    answerIndex: 0,
+    explanation: "관절은 뼈와 뼈가 연결된 부분으로, 몸을 움직일 수 있게 해줘요.",
+  },
+  {
+    id: 128,
+    category: "의학",
+    difficulty: "하",
+    question: "손을 자주 씻는 가장 중요한 이유는 무엇일까요?",
+    choices: ["세균·바이러스 감염 예방", "피부를 하얗게 하기 위해", "냄새 제거를 위해", "손톱을 깨끗이 하기 위해"],
+    answerIndex: 0,
+    explanation: "손 씻기는 손에 묻은 세균이나 바이러스를 씻어내 감염을 예방하는 데 중요해요.",
+  },
+  {
+    id: 129,
+    category: "의학",
+    difficulty: "하",
+    question: "우리 몸에서 혈액 속 노폐물을 걸러 소변으로 내보내는 기관은 무엇일까요?",
+    choices: ["폐", "간", "콩팥(신장)", "위"],
+    answerIndex: 2,
+    explanation: "콩팥(신장)은 혈액을 걸러 노폐물을 소변으로 내보내는 기관이에요.",
+  },
+  {
+    id: 130,
+    category: "의학",
+    difficulty: "하",
+    question: "음식을 이로 씹어 잘게 부수는 과정을 무엇이라고 할까요?",
+    choices: ["저작운동", "소화운동", "연동운동", "흡수운동"],
+    answerIndex: 0,
+    explanation: "저작운동은 이로 음식을 씹어 잘게 부수는 과정을 말해요.",
+  },
+
+  // ===== 의학 - 중 (131~140) =====
+  {
+    id: 131,
     category: "의학",
     difficulty: "중",
     question: "혈당을 낮추는 역할을 하는 호르몬은 무엇일까요?",
@@ -625,7 +1210,7 @@ const questions = [
     explanation: "인슐린은 이자(췌장)에서 분비되어 혈당을 낮춰요.",
   },
   {
-    id: 67,
+    id: 132,
     category: "의학",
     difficulty: "중",
     question: "예방접종(백신)이 몸속에 만드는 것은 무엇일까요?",
@@ -634,7 +1219,7 @@ const questions = [
     explanation: "백신은 특정 병원체에 대한 면역(항체)을 미리 만들도록 도와줘요.",
   },
   {
-    id: 68,
+    id: 133,
     category: "의학",
     difficulty: "중",
     question: "심장에서 나온 혈액을 온몸으로 보내는 혈관은 무엇일까요?",
@@ -643,7 +1228,7 @@ const questions = [
     explanation: "동맥은 심장에서 나온 혈액을 몸 곳곳으로 보내는 혈관이에요.",
   },
   {
-    id: 69,
+    id: 134,
     category: "의학",
     difficulty: "중",
     question: "성인의 몸에는 대략 몇 개의 뼈가 있을까요?",
@@ -652,7 +1237,7 @@ const questions = [
     explanation: "성인의 몸은 보통 206개의 뼈로 이루어져 있어요.",
   },
   {
-    id: 70,
+    id: 135,
     category: "의학",
     difficulty: "중",
     question: "알레르기 반응이 일어날 때 몸속에서 분비되어 증상을 일으키는 물질은 무엇일까요?",
@@ -660,10 +1245,55 @@ const questions = [
     answerIndex: 0,
     explanation: "히스타민은 알레르기 반응 시 분비되어 가려움, 부종 등의 증상을 일으켜요.",
   },
-
-  // ===== 의학 - 상 =====
   {
-    id: 71,
+    id: 136,
+    category: "의학",
+    difficulty: "중",
+    question: "피가 부족한 환자에게 다른 사람의 피를 나눠주는 것을 무엇이라고 할까요?",
+    choices: ["수혈", "이식", "투석", "접종"],
+    answerIndex: 0,
+    explanation: "수혈은 부족한 혈액을 다른 사람의 혈액으로 보충해주는 의료 행위예요.",
+  },
+  {
+    id: 137,
+    category: "의학",
+    difficulty: "중",
+    question: "세균 감염을 치료하는 데 사용하는 대표적인 약은 무엇일까요?",
+    choices: ["항생제", "해열제", "진통제", "소화제"],
+    answerIndex: 0,
+    explanation: "항생제는 세균을 죽이거나 증식을 막아 세균 감염을 치료하는 약이에요.",
+  },
+  {
+    id: 138,
+    category: "의학",
+    difficulty: "중",
+    question: "눈에서 빛을 받아들여 상이 맺히는 부분은 어디일까요?",
+    choices: ["각막", "수정체", "망막", "홍채"],
+    answerIndex: 2,
+    explanation: "망막은 눈 뒤쪽에서 빛을 받아들여 시각 정보를 만드는 부분이에요.",
+  },
+  {
+    id: 139,
+    category: "의학",
+    difficulty: "중",
+    question: "위에서 음식물 소화를 돕기 위해 분비되는 강한 산은 무엇일까요?",
+    choices: ["위산(염산)", "담즙", "침", "혈액"],
+    answerIndex: 0,
+    explanation: "위산은 강한 산성 물질로, 음식물을 분해하고 세균을 죽이는 역할도 해요.",
+  },
+  {
+    id: 140,
+    category: "의학",
+    difficulty: "중",
+    question: "뇌와 몸 곳곳을 연결해 신호를 전달하는 세포는 무엇일까요?",
+    choices: ["신경세포(뉴런)", "적혈구", "근육세포", "상피세포"],
+    answerIndex: 0,
+    explanation: "신경세포(뉴런)는 전기 신호를 통해 뇌와 몸 사이에 정보를 전달해요.",
+  },
+
+  // ===== 의학 - 상 (141~150) =====
+  {
+    id: 141,
     category: "의학",
     difficulty: "상",
     question: "심장 박동의 전기 신호를 처음 만들어내는 부위는 어디일까요?",
@@ -672,7 +1302,7 @@ const questions = [
     explanation: "굴심방결절(SA node)은 심장의 자연 박동원으로, 여기서 전기 신호가 시작돼요.",
   },
   {
-    id: 72,
+    id: 142,
     category: "의학",
     difficulty: "상",
     question: "간에서 여러 약물과 독소를 해독하는 대표적인 효소계는 무엇일까요?",
@@ -681,7 +1311,7 @@ const questions = [
     explanation: "사이토크롬 P450은 간에서 약물과 독소를 대사·해독하는 대표적인 효소 시스템이에요.",
   },
   {
-    id: 73,
+    id: 143,
     category: "의학",
     difficulty: "상",
     question: "신장에서 혈액을 걸러 노폐물을 거르는 기본 단위는 무엇일까요?",
@@ -690,7 +1320,7 @@ const questions = [
     explanation: "네프론(nephron)은 신장에서 혈액을 여과하는 최소 단위예요.",
   },
   {
-    id: 74,
+    id: 144,
     category: "의학",
     difficulty: "상",
     question: "최초로 항생제 페니실린을 발견한 사람은 누구일까요?",
@@ -699,7 +1329,7 @@ const questions = [
     explanation: "알렉산더 플레밍은 1928년 우연히 페니실린을 발견했어요.",
   },
   {
-    id: 75,
+    id: 145,
     category: "의학",
     difficulty: "상",
     question: "혈액 응고 과정에서 핵심 역할을 하는 혈장 단백질은 무엇일까요?",
@@ -707,10 +1337,55 @@ const questions = [
     answerIndex: 2,
     explanation: "피브리노겐은 트롬빈에 의해 피브린으로 바뀌며 혈액 응고를 돕는 단백질이에요.",
   },
-
-  // ===== 의학 - 최상 =====
   {
-    id: 76,
+    id: 146,
+    category: "의학",
+    difficulty: "상",
+    question: "코로나19 백신에서 널리 사용된, 병원체의 유전 정보 일부를 전달해 면역반응을 유도하는 새로운 방식의 백신은 무엇일까요?",
+    choices: ["약독화 생백신", "불활성화 백신", "mRNA 백신", "톡소이드 백신"],
+    answerIndex: 2,
+    explanation: "mRNA 백신은 병원체 단백질을 만드는 유전 정보(mRNA)를 전달해 면역반응을 유도해요.",
+  },
+  {
+    id: 147,
+    category: "의학",
+    difficulty: "상",
+    question: "혈압 측정치(예: 120/80)에서 심장이 수축할 때의 압력을 나타내는 수치는 무엇일까요?",
+    choices: ["수축기 혈압", "확장기 혈압", "평균 혈압", "맥압"],
+    answerIndex: 0,
+    explanation: "수축기 혈압은 심장이 수축하며 혈액을 내보낼 때의 압력을 나타내요.",
+  },
+  {
+    id: 148,
+    category: "의학",
+    difficulty: "상",
+    question: "폐에서 산소와 이산화탄소가 교환되는 작은 공기주머니는 무엇일까요?",
+    choices: ["기관지", "폐포", "횡격막", "후두"],
+    answerIndex: 1,
+    explanation: "폐포(alveoli)는 모세혈관과 맞닿아 있어 기체 교환이 일어나는 작은 주머니예요.",
+  },
+  {
+    id: 149,
+    category: "의학",
+    difficulty: "상",
+    question: "태어날 때부터 갖고 있으며 병원체 종류를 가리지 않고 신속하게 반응하는 면역은 무엇일까요?",
+    choices: ["선천면역", "후천면역(적응면역)", "능동면역", "수동면역"],
+    answerIndex: 0,
+    explanation: "선천면역은 특정 병원체를 가리지 않고 즉시 반응하는, 태어날 때부터 갖춘 방어 체계예요.",
+  },
+  {
+    id: 150,
+    category: "의학",
+    difficulty: "상",
+    question: "갑상선에서 분비되어 몸의 신진대사 속도를 조절하는 호르몬은 무엇일까요?",
+    choices: ["인슐린", "티록신", "코르티솔", "에스트로겐"],
+    answerIndex: 1,
+    explanation: "티록신(thyroxine)은 갑상선에서 분비되어 신진대사를 조절하는 호르몬이에요.",
+  },
+
+  // ===== 의학 - 최상 (151~160) =====
+  {
+    id: 151,
     category: "의학",
     difficulty: "최상",
     question: "심전도(ECG)에서 심실의 탈분극을 나타내는 파형은 무엇일까요?",
@@ -719,7 +1394,7 @@ const questions = [
     explanation: "QRS파는 심실이 탈분극되며 수축을 준비하는 순간을 나타내요.",
   },
   {
-    id: 77,
+    id: 152,
     category: "의학",
     difficulty: "최상",
     question: "인슐린 저항성이 핵심 병리인 대표적인 대사질환은 무엇일까요?",
@@ -728,7 +1403,7 @@ const questions = [
     explanation: "제2형 당뇨병은 세포가 인슐린에 잘 반응하지 않는 인슐린 저항성이 핵심 원인이에요.",
   },
   {
-    id: 78,
+    id: 153,
     category: "의학",
     difficulty: "최상",
     question: "항체를 생성하는 면역세포는 무엇일까요?",
@@ -737,7 +1412,7 @@ const questions = [
     explanation: "B세포는 형질세포로 분화해 항체를 만들어 분비해요.",
   },
   {
-    id: 79,
+    id: 154,
     category: "의학",
     difficulty: "최상",
     question: "신장의 사구체여과율(GFR)을 추정할 때 흔히 사용하는 혈액 지표는 무엇일까요?",
@@ -746,12 +1421,57 @@ const questions = [
     explanation: "혈중 크레아티닌 농도는 신장 기능(GFR)을 추정하는 데 흔히 사용돼요.",
   },
   {
-    id: 80,
+    id: 155,
     category: "의학",
     difficulty: "최상",
     question: "자가면역질환 중 관절을 주로 침범하는 대표적인 질환은 무엇일까요?",
     choices: ["루푸스", "류마티스 관절염", "건선", "크론병"],
     answerIndex: 1,
     explanation: "류마티스 관절염은 면역체계가 관절을 공격해 염증을 일으키는 자가면역질환이에요.",
+  },
+  {
+    id: 156,
+    category: "의학",
+    difficulty: "최상",
+    question: "좌심실에서 대동맥으로 혈액이 나갈 때 거치는 밸브는 무엇일까요?",
+    choices: ["삼첨판", "승모판", "대동맥판막", "폐동맥판막"],
+    answerIndex: 2,
+    explanation: "대동맥판막은 좌심실에서 대동맥으로 혈액이 나갈 때 열리고 닫히는 밸브예요.",
+  },
+  {
+    id: 157,
+    category: "의학",
+    difficulty: "최상",
+    question: "항암화학요법이 암세포를 표적하는 데 주로 이용하는 특징은 무엇일까요?",
+    choices: ["느린 세포분열", "빠른 세포분열", "낮은 산소 요구량", "강한 세포막"],
+    answerIndex: 1,
+    explanation: "항암제는 빠르게 분열하는 세포를 주로 공격하는데, 암세포가 이런 특징을 가지고 있어요.",
+  },
+  {
+    id: 158,
+    category: "의학",
+    difficulty: "최상",
+    question: "세균성 폐렴을 흔히 일으키는 대표적인 세균은 무엇일까요?",
+    choices: ["대장균", "폐렴구균", "황색포도상구균", "살모넬라균"],
+    answerIndex: 1,
+    explanation: "폐렴구균(Streptococcus pneumoniae)은 세균성 폐렴의 대표적인 원인균이에요.",
+  },
+  {
+    id: 159,
+    category: "의학",
+    difficulty: "최상",
+    question: "신경을 감싸는 미엘린(신경초)을 면역체계가 공격하는 자가면역질환은 무엇일까요?",
+    choices: ["다발성 경화증", "류마티스 관절염", "루푸스", "중증근무력증"],
+    answerIndex: 0,
+    explanation: "다발성 경화증은 면역체계가 신경의 미엘린을 공격해 신경 신호 전달에 문제를 일으키는 질환이에요.",
+  },
+  {
+    id: 160,
+    category: "의학",
+    difficulty: "최상",
+    question: "손가락 등에 끼워 비침습적으로 혈액 속 산소포화도를 측정하는 기기는 무엇일까요?",
+    choices: ["혈압계", "펄스옥시미터", "청진기", "체온계"],
+    answerIndex: 1,
+    explanation: "펄스옥시미터는 빛을 이용해 혈액 속 산소포화도를 비침습적으로 측정하는 기기예요.",
   },
 ];

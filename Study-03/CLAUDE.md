@@ -21,8 +21,8 @@ category+difficulty), or back to category selection.
 ## Files
 
 - **`questions.js`** — the question bank. A single global array `questions`, loaded via a plain
-  `<script>` tag (no modules, no bundler). 80 questions: 4 categories (한국사, 과학, 일반상식, 의학) x 4
-  difficulties (하=초등학생, 중=고등학생, 상=대학생, 최상=그 분야를 공부하는 사람) x 5 questions each. Each
+  `<script>` tag (no modules, no bundler). 160 questions: 4 categories (한국사, 과학, 일반상식, 의학) x 4
+  difficulties (하=초등학생, 중=고등학생, 상=대학생, 최상=그 분야를 공부하는 사람) x 10 questions each. Each
   entry: `{ id, category, difficulty, question, choices[4], answerIndex, explanation }`.
 - **`index.html`** — the whole app: markup, CSS, and the quiz logic, all in this one file (`questions.js`
   is loaded separately only because it's data, not app code). Five screens toggled by a `.active` class:
@@ -32,7 +32,7 @@ category+difficulty), or back to category selection.
   answering, "다음 문제"/"결과 보기" button), `#screen-result` (score, accuracy, the always-shown
   `#nickname-section`, and leaderboard/retry/back buttons), and `#screen-leaderboard` (filter tabs from
   `LEADERBOARD_FILTERS`, top-`LEADERBOARD_SIZE` list, "다시하기" back to category select). `state` holds the
-  current category/difficulty, the filtered 5-question list, the current index, `correctCount`, whether
+  current category/difficulty, the filtered 10-question list, the current index, `correctCount`, whether
   the current question has been `answered` (blocks further clicks and re-entrant auto-advance timers), the
   pending `autoAdvanceTimer` (cleared on manual next/back so it can't fire after the user has already
   navigated elsewhere), `lastResult` (the just-finished play's category/difficulty/score/accuracy, used
