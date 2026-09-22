@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>상식 퀴즈 게임</title>
+  <style>
+    :root {
+      --bg: #f5f6fa;
+      --card-bg: #ffffff;
+      --text: #1f2430;
+      --muted: #6b7280;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --border: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+      display: flex;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    h1 {
+      font-size: 24px;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 32px;
+      font-size: 14px;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    /* 시작 화면: 카테고리 선택 */
+    .category-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .category-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 12px;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .category-btn:hover {
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .category-count {
+      display: block;
+      margin-top: 6px;
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    /* 퀴즈 화면 */
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+
+    .back-btn:hover {
+      color: var(--text);
+    }
+
+    .progress-text {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .quiz-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 20px;
+    }
+
+    .category-tag {
+      display: inline-block;
+      background: #eef2ff;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+
+    .question-text {
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1.5;
+      margin: 0 0 20px;
+    }
+
+    .choice-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .choice-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 15px;
+    }
+
+    .choice-number {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .quiz-footer {
+      margin-top: 24px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .next-btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .next-btn:hover {
+      background: var(--primary-hover);
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>상식 퀴즈 게임</h1>
+    <p class="subtitle">카테고리를 골라서 문제를 풀어보세요</p>
+
+    <!-- 시작 화면 -->
+    <section id="screen-start" class="screen active">
+      <div id="category-grid" class="category-grid"></div>
+    </section>
+
+    <!-- 퀴즈 화면 -->
+    <section id="screen-quiz" class="screen">
+      <div class="quiz-header">
+        <button type="button" id="back-btn" class="back-btn">← 카테고리 선택으로</button>
+        <span id="progress-text" class="progress-text"></span>
+      </div>
+
+      <div class="quiz-card">
+        <span id="category-tag" class="category-tag"></span>
+        <p id="question-text" class="question-text"></p>
+        <ul id="choice-list" class="choice-list"></ul>
+      </div>
+
+      <div class="quiz-footer">
+        <button type="button" id="next-btn" class="next-btn">다음 문제</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="questions.js"></script>
+  <script>
+    // 화면에 보여줄 카테고리 순서
+    const CATEGORIES = ["한국사", "과학", "일반상식", "의학"];
+
+    const state = {
+      category: null,
+      list: [],
+      index: 0,
+    };
+
+    const screenStart = document.getElementById("screen-start");
+    const screenQuiz = document.getElementById("screen-quiz");
+    const categoryGrid = document.getElementById("category-grid");
+    const progressText = document.getElementById("progress-text");
+    const categoryTag = document.getElementById("category-tag");
+    const questionText = document.getElementById("question-text");
+    const choiceList = document.getElementById("choice-list");
+    const nextBtn = document.getElementById("next-btn");
+    const backBtn = document.getElementById("back-btn");
+
+    function showScreen(name) {
+      screenStart.classList.toggle("active", name === "start");
+      screenQuiz.classList.toggle("active", name === "quiz");
+    }
+
+    function renderCategoryButtons() {
+      categoryGrid.innerHTML = "";
+      CATEGORIES.forEach((category) => {
+        const count = questions.filter((q) => q.category === category).length;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "category-btn";
+        btn.innerHTML = `${category}<span class="category-count">${count}문제</span>`;
+        btn.addEventListener("click", () => startCategory(category));
+        categoryGrid.appendChild(btn);
+      });
+    }
+
+    function startCategory(category) {
+      state.category = category;
+      state.list = questions.filter((q) => q.category === category);
+      state.index = 0;
+      showScreen("quiz");
+      renderQuestion();
+    }
+
+    function renderQuestion() {
+      const total = state.list.length;
+      const current = state.list[state.index];
+
+      progressText.textContent = `${state.index + 1} / ${total}`;
+      categoryTag.textContent = current.category;
+      questionText.textContent = current.question;
+
+      choiceList.innerHTML = "";
+      current.choices.forEach((choice, i) => {
+        const li = document.createElement("li");
+        li.className = "choice-item";
+        li.innerHTML = `<span class="choice-number">${i + 1}</span><span>${choice}</span>`;
+        choiceList.appendChild(li);
+      });
+
+      nextBtn.textContent = state.index === total - 1 ? "처음으로" : "다음 문제";
+    }
+
+    function goNext() {
+      if (state.index < state.list.length - 1) {
+        state.index += 1;
+        renderQuestion();
+      } else {
+        showScreen("start");
+      }
+    }
+
+    nextBtn.addEventListener("click", goNext);
+    backBtn.addEventListener("click", () => showScreen("start"));
+
+    renderCategoryButtons();
+  </script>
+</body>
+</html>
