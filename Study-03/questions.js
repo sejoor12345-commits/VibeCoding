@@ -1303,7 +1303,7 @@ const questions = [
     category: "의학",
     difficulty: "하",
     hasHint: true,
-    question: "손을 자주 씻는 가장 중요한 이유는 무엇일까요?",
+    question: "손을 자주 씻는 가장 중요한 의학적 이유는 무엇일까요?",
     choices: ["세균·바이러스 감염 예방", "피부를 하얗게 하기 위해", "냄새 제거를 위해", "손톱을 깨끗이 하기 위해"],
     answerIndex: 0,
     explanation: "손 씻기는 손에 묻은 세균이나 바이러스를 씻어내 감염을 예방하는 데 중요해요.",
