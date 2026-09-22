@@ -56,6 +56,40 @@
       display: block;
     }
 
+    /* 모드 선택 화면 */
+    .mode-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .mode-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 16px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .mode-btn:hover {
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .mode-desc {
+      display: block;
+      margin-top: 6px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
     /* 시작 화면: 카테고리 선택 */
     .category-grid {
       display: grid;
@@ -178,6 +212,18 @@
     .difficulty-tag {
       background: #fff7ed;
       color: #c2410c;
+    }
+
+    .speed-timer {
+      text-align: center;
+      font-size: 40px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 14px;
+    }
+
+    .speed-timer.low {
+      color: #dc2626;
     }
 
     .question-text {
@@ -518,17 +564,25 @@
 <body>
   <main class="page">
     <h1>상식 퀴즈 게임</h1>
-    <p class="subtitle">카테고리를 골라서 문제를 풀어보세요</p>
+    <p class="subtitle">모드를 고르고 문제를 풀어보세요</p>
 
-    <!-- 시작 화면 -->
-    <section id="screen-start" class="screen active">
+    <!-- 모드 선택 화면 -->
+    <section id="screen-mode" class="screen active">
+      <div id="mode-grid" class="mode-grid"></div>
+    </section>
+
+    <!-- 시작 화면: 카테고리 선택 (카테고리별 모드에서만 사용) -->
+    <section id="screen-start" class="screen">
+      <div class="quiz-header">
+        <button type="button" id="start-back-btn" class="back-btn">← 모드 선택으로</button>
+      </div>
       <div id="category-grid" class="category-grid"></div>
     </section>
 
     <!-- 난이도 선택 화면 -->
     <section id="screen-difficulty" class="screen">
       <div class="quiz-header">
-        <button type="button" id="difficulty-back-btn" class="back-btn">← 카테고리 선택으로</button>
+        <button type="button" id="difficulty-back-btn" class="back-btn">← 뒤로</button>
       </div>
       <p id="difficulty-title" class="difficulty-title"></p>
       <div id="difficulty-grid" class="difficulty-grid"></div>
@@ -537,11 +591,12 @@
     <!-- 퀴즈 화면 -->
     <section id="screen-quiz" class="screen">
       <div class="quiz-header">
-        <button type="button" id="back-btn" class="back-btn">← 카테고리 선택으로</button>
+        <button type="button" id="back-btn" class="back-btn">← 처음으로</button>
         <span id="progress-text" class="progress-text"></span>
       </div>
 
       <div class="quiz-card">
+        <div id="speed-timer" class="speed-timer" hidden></div>
         <span id="category-tag" class="category-tag"></span>
         <span id="difficulty-tag" class="difficulty-tag"></span>
         <p id="question-text" class="question-text"></p>
@@ -564,7 +619,7 @@
         <p id="result-stats" class="result-stats"></p>
 
         <div id="nickname-section" class="nickname-section">
-          <p class="nickname-label">닉네임을 입력하면 기록이 저장돼요 (같은 닉네임+카테고리+난이도면 최고 점수만 남아요)</p>
+          <p class="nickname-label">닉네임을 입력하면 기록이 저장돼요 (같은 닉네임+모드+난이도면 최고 점수만 남아요)</p>
           <div class="nickname-row">
             <input type="text" id="nickname-input" class="nickname-input" placeholder="닉네임" maxlength="10">
             <button type="button" id="nickname-save-btn" class="nickname-save-btn">저장</button>
@@ -573,8 +628,8 @@
 
         <div class="result-actions">
           <button type="button" id="leaderboard-btn">리더보드 보기</button>
-          <button type="button" id="retry-btn" class="retry-btn">같은 카테고리 다시 풀기</button>
-          <button type="button" id="result-back-btn">카테고리 선택으로</button>
+          <button type="button" id="retry-btn" class="retry-btn">다시 풀기</button>
+          <button type="button" id="result-back-btn">처음으로</button>
         </div>
       </div>
     </section>
@@ -611,20 +666,31 @@
       { key: "최상", desc: "그 분야를 공부하는 사람 수준" },
     ];
 
+    // 게임 모드: category(카테고리별 10문제), all(전체 도전 40문제), speed(스피드 퀴즈 20문제)
+    const MODES = [
+      { key: "category", label: "카테고리별", desc: "원하는 카테고리 1개 · 10문제" },
+      { key: "all", label: "전체 도전", desc: "4개 카테고리 전부 · 40문제 (무작위 순서)" },
+      { key: "speed", label: "스피드 퀴즈", desc: "카테고리 무작위 20문제 · 문제당 15초" },
+    ];
+
     const AUTO_ADVANCE_MS = 2500;
     const BASE_SCORE = 10;
     // 난이도 배수: 상위 난이도일수록 문제당 기본 점수가 더 높다.
     const DIFFICULTY_MULTIPLIER = { 하: 1.0, 중: 1.2, 상: 1.5, 최상: 2.0 };
     const DEFAULT_TIME_LIMIT_SECONDS = 10; // 문제에 timeLimit이 없을 때 쓰는 기본 제한시간
+    const SPEED_TIME_LIMIT_SECONDS = 15; // 스피드 퀴즈는 문제마다 이 시간이 강제 제한시간
+    const SPEED_QUESTION_COUNT = 20;
     const TIME_BONUS_POINTS = 5;
     const HINT_BONUS_POINTS = 3;
     const COMBO_STREAK = 3; // 연속 정답이 이 배수에 도달할 때마다 콤보 보너스
     const COMBO_BONUS_POINTS = 5;
     const LEADERBOARD_SIZE = 10;
     const STORAGE_KEYS = { lastNickname: "quiz:lastNickname", records: "quiz:records" };
-    const LEADERBOARD_FILTERS = ["전체", ...CATEGORIES];
+    // "모두"는 모드 구분 없이 전체 기록을 보는 메타 필터라서, "전체 도전" 모드 이름과 겹치지 않게 따로 둔다.
+    const LEADERBOARD_FILTERS = ["모두", "전체", ...CATEGORIES, "스피드"];
 
     const state = {
+      mode: null, // "category" | "all" | "speed"
       category: null,
       difficulty: null,
       list: [],
@@ -632,8 +698,9 @@
       correctCount: 0,
       answered: false,
       autoAdvanceTimer: null,
+      speedTimerInterval: null,
       lastResult: null,
-      leaderboardFilter: "전체",
+      leaderboardFilter: "모두",
       totalScore: 0,
       combo: 0,
       maxCombo: 0,
@@ -642,16 +709,20 @@
       questionStartTime: 0,
     };
 
+    const screenMode = document.getElementById("screen-mode");
     const screenStart = document.getElementById("screen-start");
     const screenDifficulty = document.getElementById("screen-difficulty");
     const screenQuiz = document.getElementById("screen-quiz");
     const screenResult = document.getElementById("screen-result");
     const screenLeaderboard = document.getElementById("screen-leaderboard");
+    const modeGrid = document.getElementById("mode-grid");
+    const startBackBtn = document.getElementById("start-back-btn");
     const categoryGrid = document.getElementById("category-grid");
     const difficultyTitle = document.getElementById("difficulty-title");
     const difficultyGrid = document.getElementById("difficulty-grid");
     const difficultyBackBtn = document.getElementById("difficulty-back-btn");
     const progressText = document.getElementById("progress-text");
+    const speedTimer = document.getElementById("speed-timer");
     const categoryTag = document.getElementById("category-tag");
     const difficultyTag = document.getElementById("difficulty-tag");
     const questionText = document.getElementById("question-text");
@@ -676,11 +747,22 @@
     const leaderboardRetryBtn = document.getElementById("leaderboard-retry-btn");
 
     function showScreen(name) {
+      screenMode.classList.toggle("active", name === "mode");
       screenStart.classList.toggle("active", name === "start");
       screenDifficulty.classList.toggle("active", name === "difficulty");
       screenQuiz.classList.toggle("active", name === "quiz");
       screenResult.classList.toggle("active", name === "result");
       screenLeaderboard.classList.toggle("active", name === "leaderboard");
+    }
+
+    // Fisher-Yates 셔플. 원본 배열은 건드리지 않고 새 배열을 반환한다.
+    function shuffle(array) {
+      const result = array.slice();
+      for (let i = result.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+      }
+      return result;
     }
 
     // localStorage에 저장된 마지막 닉네임(입력창에 미리 채워주는 용도)/기록을 읽고 쓰는 함수들.
@@ -719,15 +801,17 @@
       }
     }
 
-    // 같은 닉네임 + 같은 카테고리 + 같은 난이도 기록은 하나만 남기고, 새 점수가 더 높을 때만 그 기록을 갱신한다.
+    // 같은 닉네임 + 같은 모드 + 같은 난이도 기록은 하나만 남기고, 새 점수가 더 높을 때만 그 기록을 갱신한다.
+    // mode 값은 "전체"(전체 도전), 카테고리명(카테고리별), "스피드"(스피드 퀴즈) 중 하나.
+    // 스피드 퀴즈는 문제마다 난이도가 섞이므로 difficulty는 항상 null.
     function recordResult(nickname, result) {
       const records = getRecords();
       const existingIndex = records.findIndex(
-        (r) => r.nickname === nickname && r.category === result.category && r.difficulty === result.difficulty
+        (r) => r.nickname === nickname && r.mode === result.mode && r.difficulty === result.difficulty
       );
       const newRecord = {
         nickname,
-        category: result.category,
+        mode: result.mode,
         difficulty: result.difficulty,
         score: result.score,
         accuracy: result.accuracy,
@@ -743,6 +827,30 @@
       saveRecords(records);
     }
 
+    function renderModeButtons() {
+      modeGrid.innerHTML = "";
+      MODES.forEach(({ key, label, desc }) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "mode-btn";
+        btn.innerHTML = `${label}<span class="mode-desc">${desc}</span>`;
+        btn.addEventListener("click", () => selectMode(key));
+        modeGrid.appendChild(btn);
+      });
+    }
+
+    function selectMode(mode) {
+      state.mode = mode;
+      if (mode === "category") {
+        showScreen("start");
+      } else if (mode === "all") {
+        state.category = null;
+        goToDifficultyScreen();
+      } else {
+        startSpeedQuiz();
+      }
+    }
+
     function renderCategoryButtons() {
       categoryGrid.innerHTML = "";
       CATEGORIES.forEach((category) => {
@@ -751,35 +859,60 @@
         btn.type = "button";
         btn.className = "category-btn";
         btn.innerHTML = `${category}<span class="category-count">${count}문제</span>`;
-        btn.addEventListener("click", () => goToDifficultyScreen(category));
+        btn.addEventListener("click", () => {
+          state.category = category;
+          goToDifficultyScreen();
+        });
         categoryGrid.appendChild(btn);
       });
     }
 
-    function goToDifficultyScreen(category) {
-      state.category = category;
-      difficultyTitle.textContent = `${category} - 난이도를 선택하세요`;
+    // 카테고리별 모드에서는 state.category가 채워진 채로, 전체 도전 모드에서는 카테고리 없이 호출된다.
+    function goToDifficultyScreen() {
+      const isAllChallenge = state.mode === "all";
+      difficultyTitle.textContent = isAllChallenge
+        ? "전체 도전 - 난이도를 선택하세요"
+        : `${state.category} - 난이도를 선택하세요`;
 
       difficultyGrid.innerHTML = "";
       DIFFICULTIES.forEach(({ key, desc }) => {
-        const count = questions.filter((q) => q.category === category && q.difficulty === key).length;
+        const count = isAllChallenge
+          ? questions.filter((q) => q.difficulty === key).length
+          : questions.filter((q) => q.category === state.category && q.difficulty === key).length;
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "difficulty-btn";
         btn.innerHTML =
           `${key}<span class="difficulty-desc">${desc}</span>` +
           `<span class="category-count">${count}문제</span>`;
-        btn.addEventListener("click", () => startQuiz(category, key));
+        btn.addEventListener("click", () => {
+          if (isAllChallenge) startAllChallengeQuiz(key);
+          else startCategoryQuiz(state.category, key);
+        });
         difficultyGrid.appendChild(btn);
       });
 
       showScreen("difficulty");
     }
 
-    function startQuiz(category, difficulty) {
-      state.category = category;
-      state.difficulty = difficulty;
-      state.list = questions.filter((q) => q.category === category && q.difficulty === difficulty);
+    // 전체 도전: 4개 카테고리를 각각 10문제씩 모아 무작위로 섞는다.
+    // 순차 배치(카테고리별로 10문제씩 묶어서 진행)도 가능하지만, 그러면 "카테고리별 모드 x4"를 이어붙인 것과
+    // 다를 게 없어져서 전체 도전만의 특징이 사라진다. 카테고리를 예측할 수 없게 섞어야 콤보/집중력 도전이라는
+    // 모드 취지에 맞고, 매번 다른 순서로 플레이되니 재도전 재미도 커진다. 그래서 무작위 셔플을 기본으로 한다.
+    function buildAllChallengeList(difficulty) {
+      const combined = CATEGORIES.flatMap((category) =>
+        questions.filter((q) => q.category === category && q.difficulty === difficulty)
+      );
+      return shuffle(combined);
+    }
+
+    // 스피드 퀴즈: 카테고리/난이도 구분 없이 전체 문제 풀에서 무작위로 20문제를 뽑는다.
+    function buildSpeedList() {
+      return shuffle(questions).slice(0, SPEED_QUESTION_COUNT);
+    }
+
+    function beginQuiz(list) {
+      state.list = list;
       state.index = 0;
       state.correctCount = 0;
       state.totalScore = 0;
@@ -790,6 +923,39 @@
       renderQuestion();
     }
 
+    function startCategoryQuiz(category, difficulty) {
+      state.mode = "category";
+      state.category = category;
+      state.difficulty = difficulty;
+      beginQuiz(questions.filter((q) => q.category === category && q.difficulty === difficulty));
+    }
+
+    function startAllChallengeQuiz(difficulty) {
+      state.mode = "all";
+      state.category = null;
+      state.difficulty = difficulty;
+      beginQuiz(buildAllChallengeList(difficulty));
+    }
+
+    function startSpeedQuiz() {
+      state.mode = "speed";
+      state.category = null;
+      state.difficulty = null;
+      beginQuiz(buildSpeedList());
+    }
+
+    function retryCurrentMode() {
+      if (state.mode === "category") startCategoryQuiz(state.category, state.difficulty);
+      else if (state.mode === "all") startAllChallengeQuiz(state.difficulty);
+      else startSpeedQuiz();
+    }
+
+    // 스피드 퀴즈는 문제마다 고정 15초, 나머지 모드는 문제별 timeLimit(없으면 기본 10초)을 쓴다.
+    function getEffectiveTimeLimitSeconds(current) {
+      if (state.mode === "speed") return SPEED_TIME_LIMIT_SECONDS;
+      return current.timeLimit || DEFAULT_TIME_LIMIT_SECONDS;
+    }
+
     function renderQuestion() {
       const total = state.list.length;
       const current = state.list[state.index];
@@ -798,6 +964,7 @@
       state.hintUsedThisQuestion = false;
       state.questionStartTime = Date.now();
       clearTimeout(state.autoAdvanceTimer);
+      clearInterval(state.speedTimerInterval);
 
       progressText.textContent = `${state.index + 1} / ${total}`;
       categoryTag.textContent = current.category;
@@ -821,6 +988,33 @@
       explanationText.hidden = true;
       nextBtn.disabled = true;
       nextBtn.textContent = state.index === total - 1 ? "결과 보기" : "다음 문제";
+
+      if (state.mode === "speed") {
+        speedTimer.hidden = false;
+        startSpeedCountdown(current);
+      } else {
+        speedTimer.hidden = true;
+      }
+    }
+
+    // 스피드 퀴즈 전용: 15초 카운트다운을 화면에 크게 표시하고, 0초가 되면 자동으로 오답 처리한다.
+    function startSpeedCountdown(current) {
+      const limitMs = SPEED_TIME_LIMIT_SECONDS * 1000;
+
+      function tick() {
+        const remainingMs = limitMs - (Date.now() - state.questionStartTime);
+        const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+        speedTimer.textContent = `${remainingSeconds}초`;
+        speedTimer.classList.toggle("low", remainingSeconds <= 5);
+
+        if (remainingMs <= 0) {
+          clearInterval(state.speedTimerInterval);
+          handleTimeout(current);
+        }
+      }
+
+      tick();
+      state.speedTimerInterval = setInterval(tick, 200);
     }
 
     function useHint(current) {
@@ -851,7 +1045,7 @@
       if (state.combo > state.maxCombo) state.maxCombo = state.combo;
 
       const elapsedMs = Date.now() - state.questionStartTime;
-      const timeLimitMs = (current.timeLimit || DEFAULT_TIME_LIMIT_SECONDS) * 1000;
+      const timeLimitMs = getEffectiveTimeLimitSeconds(current) * 1000;
       const timeBonus = elapsedMs <= timeLimitMs / 2 ? TIME_BONUS_POINTS : 0;
 
       const hintBonus = current.hasHint && !state.hintUsedThisQuestion ? HINT_BONUS_POINTS : 0;
@@ -866,22 +1060,37 @@
 
     function selectChoice(selectedIndex, current) {
       if (state.answered) return;
-      state.answered = true;
+      answerQuestion(current, selectedIndex);
+    }
 
-      const isCorrect = selectedIndex === current.answerIndex;
+    // 스피드 퀴즈에서 15초 카운트다운이 0에 도달했는데 아직 답하지 않았을 때 호출된다.
+    function handleTimeout(current) {
+      if (state.answered) return;
+      answerQuestion(current, null);
+    }
+
+    // selectedIndex가 null이면 "시간 초과로 답을 못 골랐다"는 뜻 — 오답과 동일하게 채점하되
+    // 어떤 보기도 오답으로 표시하지 않는다(고른 게 없으니까).
+    function answerQuestion(current, selectedIndex) {
+      state.answered = true;
+      clearInterval(state.speedTimerInterval);
+
+      const isTimeout = selectedIndex === null;
+      const isCorrect = !isTimeout && selectedIndex === current.answerIndex;
       const choiceItems = choiceList.querySelectorAll(".choice-item");
       choiceItems[current.answerIndex].classList.add("correct");
-      if (!isCorrect) {
-        choiceItems[selectedIndex].classList.add("wrong");
-      } else {
+      if (isCorrect) {
         state.correctCount += 1;
+      } else if (!isTimeout) {
+        choiceItems[selectedIndex].classList.add("wrong");
       }
 
       const result = calculateQuestionScore(current, isCorrect);
       state.totalScore += result.questionScore;
 
       console.log(
-        `[문제 ${state.index + 1}] 정답=${isCorrect} 난이도=${current.difficulty}(x${DIFFICULTY_MULTIPLIER[current.difficulty]}) ` +
+        `[문제 ${state.index + 1}] 정답=${isCorrect} ${isTimeout ? "(시간 초과) " : ""}` +
+          `난이도=${current.difficulty}(x${DIFFICULTY_MULTIPLIER[current.difficulty]}) ` +
           `기본점수=${result.base ?? 0} 시간보너스=${result.timeBonus} 힌트보너스=${result.hintBonus} ` +
           `콤보보너스=${result.comboBonus} 이번문제점수=${result.questionScore} ` +
           `콤보=${state.combo} 누적점수=${state.totalScore}`
@@ -889,7 +1098,11 @@
 
       hintBtn.disabled = true;
 
-      answerBanner.textContent = isCorrect ? "정답입니다!" : "오답입니다!";
+      if (isTimeout) {
+        answerBanner.textContent = "시간 초과! 오답으로 처리돼요";
+      } else {
+        answerBanner.textContent = isCorrect ? "정답입니다!" : "오답입니다!";
+      }
       answerBanner.className = `answer-banner ${isCorrect ? "correct" : "wrong"}`;
       answerBanner.hidden = false;
 
@@ -911,17 +1124,44 @@
       }
     }
 
+    // 리더보드/기록에 저장할 mode 값: 전체 도전="전체", 카테고리별=카테고리명, 스피드 퀴즈="스피드".
+    function getRecordModeValue() {
+      if (state.mode === "category") return state.category;
+      if (state.mode === "all") return "전체";
+      return "스피드";
+    }
+
+    // 스피드 퀴즈는 문제마다 난이도가 섞이므로 기록에는 난이도를 남기지 않는다.
+    function getRecordDifficultyValue() {
+      return state.mode === "speed" ? null : state.difficulty;
+    }
+
+    function getResultTitle() {
+      if (state.mode === "category") return `${state.category} (${state.difficulty})`;
+      if (state.mode === "all") return `전체 도전 (${state.difficulty})`;
+      return "스피드 퀴즈";
+    }
+
     function renderResult() {
       const total = state.list.length;
       const score = state.totalScore;
       const accuracy = Math.round((state.correctCount / total) * 100);
-      state.lastResult = { category: state.category, difficulty: state.difficulty, score, accuracy };
+      state.lastResult = {
+        mode: getRecordModeValue(),
+        difficulty: getRecordDifficultyValue(),
+        score,
+        accuracy,
+      };
 
       resultScore.textContent = `${score}점`;
       resultDetail.textContent =
-        `${state.category} (${state.difficulty}) - ${total}문제 중 ${state.correctCount}개 정답 ` +
-        `(정답률 ${accuracy}%)`;
+        `${getResultTitle()} - ${total}문제 중 ${state.correctCount}개 정답 (정답률 ${accuracy}%)`;
       resultStats.textContent = `최고 콤보 ${state.maxCombo}연속 · 사용한 힌트 ${state.hintsUsedCount}개`;
+
+      retryBtn.textContent =
+        state.mode === "category" ? "같은 카테고리 다시 풀기" :
+        state.mode === "all" ? "같은 난이도로 다시 풀기" :
+        "다시 도전하기";
 
       // 같은 PC를 여러 명이 쓸 수 있으니, 끝날 때마다 닉네임을 다시 입력받는다.
       nicknameInput.value = getLastNickname() || "";
@@ -963,7 +1203,7 @@
       });
 
       const records = getRecords();
-      const filtered = filter === "전체" ? records : records.filter((r) => r.category === filter);
+      const filtered = filter === "모두" ? records : records.filter((r) => r.mode === filter);
       const top = [...filtered].sort((a, b) => b.score - a.score).slice(0, LEADERBOARD_SIZE);
 
       leaderboardList.innerHTML = "";
@@ -994,13 +1234,13 @@
 
         const bottomRow = document.createElement("div");
         bottomRow.className = "lb-bottom";
-        const category = document.createElement("span");
-        category.textContent = `${record.category} (${record.difficulty})`;
+        const modeLine = document.createElement("span");
+        modeLine.textContent = record.difficulty ? `${record.mode} (${record.difficulty})` : record.mode;
         const accuracy = document.createElement("span");
         accuracy.textContent = `정답률 ${record.accuracy}%`;
         const date = document.createElement("span");
         date.textContent = record.date.slice(0, 10);
-        bottomRow.append(category, accuracy, date);
+        bottomRow.append(modeLine, accuracy, date);
 
         li.append(topRow, bottomRow);
         leaderboardList.appendChild(li);
@@ -1011,11 +1251,13 @@
     nextBtn.addEventListener("click", goNext);
     backBtn.addEventListener("click", () => {
       clearTimeout(state.autoAdvanceTimer);
-      showScreen("start");
+      clearInterval(state.speedTimerInterval);
+      showScreen("mode");
     });
-    difficultyBackBtn.addEventListener("click", () => showScreen("start"));
-    retryBtn.addEventListener("click", () => startQuiz(state.category, state.difficulty));
-    resultBackBtn.addEventListener("click", () => showScreen("start"));
+    startBackBtn.addEventListener("click", () => showScreen("mode"));
+    difficultyBackBtn.addEventListener("click", () => showScreen(state.mode === "all" ? "mode" : "start"));
+    retryBtn.addEventListener("click", retryCurrentMode);
+    resultBackBtn.addEventListener("click", () => showScreen("mode"));
     nicknameSaveBtn.addEventListener("click", saveNickname);
     nicknameInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter") saveNickname();
@@ -1025,8 +1267,9 @@
       showScreen("leaderboard");
     });
     leaderboardBackBtn.addEventListener("click", () => showScreen("result"));
-    leaderboardRetryBtn.addEventListener("click", () => showScreen("start"));
+    leaderboardRetryBtn.addEventListener("click", () => showScreen("mode"));
 
+    renderModeButtons();
     renderCategoryButtons();
     renderLeaderboardFilterTabs();
   </script>
