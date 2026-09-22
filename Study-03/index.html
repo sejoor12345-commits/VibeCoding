@@ -89,6 +89,45 @@
       color: var(--muted);
     }
 
+    /* 난이도 선택 화면 */
+    .difficulty-title {
+      text-align: center;
+      font-weight: 700;
+      margin: 0 0 16px;
+    }
+
+    .difficulty-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .difficulty-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 12px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .difficulty-btn:hover {
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .difficulty-desc {
+      display: block;
+      margin-top: 6px;
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
     /* 퀴즈 화면 */
     .quiz-header {
       display: flex;
@@ -123,7 +162,8 @@
       padding: 24px 20px;
     }
 
-    .category-tag {
+    .category-tag,
+    .difficulty-tag {
       display: inline-block;
       background: #eef2ff;
       color: var(--primary);
@@ -132,6 +172,12 @@
       padding: 4px 10px;
       border-radius: 999px;
       margin-bottom: 14px;
+      margin-right: 6px;
+    }
+
+    .difficulty-tag {
+      background: #fff7ed;
+      color: #c2410c;
     }
 
     .question-text {
@@ -198,6 +244,35 @@
     .choice-item.wrong .choice-number {
       background: #dc2626;
       color: #fff;
+    }
+
+    .answer-banner {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 16px;
+      text-align: center;
+    }
+
+    .answer-banner.correct {
+      background: #16a34a;
+      color: #fff;
+    }
+
+    .answer-banner.wrong {
+      background: #dc2626;
+      color: #fff;
+    }
+
+    .explanation-text {
+      margin: 12px 0 0;
+      padding: 12px 14px;
+      background: var(--bg);
+      border-radius: 10px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text);
     }
 
     .quiz-footer {
@@ -277,7 +352,7 @@
       background: var(--primary-hover);
     }
 
-    /* 닉네임 입력 (최초 1회) */
+    /* 닉네임 입력 (매 플레이마다) */
     .nickname-section {
       background: var(--bg);
       border: 1px solid var(--border);
@@ -319,6 +394,12 @@
 
     .nickname-save-btn:hover {
       background: var(--primary-hover);
+    }
+
+    .nickname-save-btn:disabled {
+      background: var(--muted);
+      cursor: not-allowed;
+      opacity: 0.7;
     }
 
     /* 리더보드 화면 */
@@ -411,6 +492,15 @@
       <div id="category-grid" class="category-grid"></div>
     </section>
 
+    <!-- 난이도 선택 화면 -->
+    <section id="screen-difficulty" class="screen">
+      <div class="quiz-header">
+        <button type="button" id="difficulty-back-btn" class="back-btn">← 카테고리 선택으로</button>
+      </div>
+      <p id="difficulty-title" class="difficulty-title"></p>
+      <div id="difficulty-grid" class="difficulty-grid"></div>
+    </section>
+
     <!-- 퀴즈 화면 -->
     <section id="screen-quiz" class="screen">
       <div class="quiz-header">
@@ -420,8 +510,11 @@
 
       <div class="quiz-card">
         <span id="category-tag" class="category-tag"></span>
+        <span id="difficulty-tag" class="difficulty-tag"></span>
         <p id="question-text" class="question-text"></p>
         <ul id="choice-list" class="choice-list"></ul>
+        <div id="answer-banner" class="answer-banner" hidden></div>
+        <p id="explanation-text" class="explanation-text" hidden></p>
       </div>
 
       <div class="quiz-footer">
@@ -435,8 +528,8 @@
         <p id="result-score" class="result-score"></p>
         <p id="result-detail" class="result-detail"></p>
 
-        <div id="nickname-section" class="nickname-section" hidden>
-          <p class="nickname-label">기록을 남기려면 닉네임을 입력해주세요 (최초 1회만 입력하면 계속 저장돼요)</p>
+        <div id="nickname-section" class="nickname-section">
+          <p class="nickname-label">닉네임을 입력하면 기록이 저장돼요 (같은 닉네임+카테고리+난이도면 최고 점수만 남아요)</p>
           <div class="nickname-row">
             <input type="text" id="nickname-input" class="nickname-input" placeholder="닉네임" maxlength="10">
             <button type="button" id="nickname-save-btn" class="nickname-save-btn">저장</button>
@@ -475,14 +568,23 @@
     // 화면에 보여줄 카테고리 순서
     const CATEGORIES = ["한국사", "과학", "일반상식", "의학"];
 
-    const AUTO_ADVANCE_MS = 1500;
+    // 난이도: 하=초등학생, 중=고등학생, 상=대학생, 최상=그 분야를 공부하는 사람 수준
+    const DIFFICULTIES = [
+      { key: "하", desc: "초등학생 수준" },
+      { key: "중", desc: "고등학생 수준" },
+      { key: "상", desc: "대학생 수준" },
+      { key: "최상", desc: "그 분야를 공부하는 사람 수준" },
+    ];
+
+    const AUTO_ADVANCE_MS = 2500;
     const POINTS_PER_QUESTION = 10;
     const LEADERBOARD_SIZE = 10;
-    const STORAGE_KEYS = { nickname: "quiz:nickname", records: "quiz:records" };
+    const STORAGE_KEYS = { lastNickname: "quiz:lastNickname", records: "quiz:records" };
     const LEADERBOARD_FILTERS = ["전체", ...CATEGORIES];
 
     const state = {
       category: null,
+      difficulty: null,
       list: [],
       index: 0,
       correctCount: 0,
@@ -493,14 +595,21 @@
     };
 
     const screenStart = document.getElementById("screen-start");
+    const screenDifficulty = document.getElementById("screen-difficulty");
     const screenQuiz = document.getElementById("screen-quiz");
     const screenResult = document.getElementById("screen-result");
     const screenLeaderboard = document.getElementById("screen-leaderboard");
     const categoryGrid = document.getElementById("category-grid");
+    const difficultyTitle = document.getElementById("difficulty-title");
+    const difficultyGrid = document.getElementById("difficulty-grid");
+    const difficultyBackBtn = document.getElementById("difficulty-back-btn");
     const progressText = document.getElementById("progress-text");
     const categoryTag = document.getElementById("category-tag");
+    const difficultyTag = document.getElementById("difficulty-tag");
     const questionText = document.getElementById("question-text");
     const choiceList = document.getElementById("choice-list");
+    const answerBanner = document.getElementById("answer-banner");
+    const explanationText = document.getElementById("explanation-text");
     const nextBtn = document.getElementById("next-btn");
     const backBtn = document.getElementById("back-btn");
     const resultScore = document.getElementById("result-score");
@@ -518,24 +627,25 @@
 
     function showScreen(name) {
       screenStart.classList.toggle("active", name === "start");
+      screenDifficulty.classList.toggle("active", name === "difficulty");
       screenQuiz.classList.toggle("active", name === "quiz");
       screenResult.classList.toggle("active", name === "result");
       screenLeaderboard.classList.toggle("active", name === "leaderboard");
     }
 
-    // localStorage에 저장된 닉네임/기록을 읽고 쓰는 함수들.
+    // localStorage에 저장된 마지막 닉네임(입력창에 미리 채워주는 용도)/기록을 읽고 쓰는 함수들.
     // 사지방 컴퓨터처럼 localStorage가 막혀 있을 수도 있어 try/catch로 감싼다.
-    function getNickname() {
+    function getLastNickname() {
       try {
-        return localStorage.getItem(STORAGE_KEYS.nickname);
+        return localStorage.getItem(STORAGE_KEYS.lastNickname);
       } catch (error) {
         return null;
       }
     }
 
-    function setNickname(name) {
+    function setLastNickname(name) {
       try {
-        localStorage.setItem(STORAGE_KEYS.nickname, name);
+        localStorage.setItem(STORAGE_KEYS.lastNickname, name);
       } catch (error) {
         // 저장이 안 되더라도 이번 플레이는 계속 진행한다.
       }
@@ -559,15 +669,16 @@
       }
     }
 
-    // 같은 닉네임 + 같은 카테고리 기록은 하나만 남기고, 새 점수가 더 높을 때만 그 기록을 갱신한다.
+    // 같은 닉네임 + 같은 카테고리 + 같은 난이도 기록은 하나만 남기고, 새 점수가 더 높을 때만 그 기록을 갱신한다.
     function recordResult(nickname, result) {
       const records = getRecords();
       const existingIndex = records.findIndex(
-        (r) => r.nickname === nickname && r.category === result.category
+        (r) => r.nickname === nickname && r.category === result.category && r.difficulty === result.difficulty
       );
       const newRecord = {
         nickname,
         category: result.category,
+        difficulty: result.difficulty,
         score: result.score,
         accuracy: result.accuracy,
         date: new Date().toISOString(),
@@ -590,14 +701,35 @@
         btn.type = "button";
         btn.className = "category-btn";
         btn.innerHTML = `${category}<span class="category-count">${count}문제</span>`;
-        btn.addEventListener("click", () => startCategory(category));
+        btn.addEventListener("click", () => goToDifficultyScreen(category));
         categoryGrid.appendChild(btn);
       });
     }
 
-    function startCategory(category) {
+    function goToDifficultyScreen(category) {
       state.category = category;
-      state.list = questions.filter((q) => q.category === category);
+      difficultyTitle.textContent = `${category} - 난이도를 선택하세요`;
+
+      difficultyGrid.innerHTML = "";
+      DIFFICULTIES.forEach(({ key, desc }) => {
+        const count = questions.filter((q) => q.category === category && q.difficulty === key).length;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "difficulty-btn";
+        btn.innerHTML =
+          `${key}<span class="difficulty-desc">${desc}</span>` +
+          `<span class="category-count">${count}문제</span>`;
+        btn.addEventListener("click", () => startQuiz(category, key));
+        difficultyGrid.appendChild(btn);
+      });
+
+      showScreen("difficulty");
+    }
+
+    function startQuiz(category, difficulty) {
+      state.category = category;
+      state.difficulty = difficulty;
+      state.list = questions.filter((q) => q.category === category && q.difficulty === difficulty);
       state.index = 0;
       state.correctCount = 0;
       showScreen("quiz");
@@ -613,6 +745,7 @@
 
       progressText.textContent = `${state.index + 1} / ${total}`;
       categoryTag.textContent = current.category;
+      difficultyTag.textContent = `난이도: ${current.difficulty}`;
       questionText.textContent = current.question;
 
       choiceList.innerHTML = "";
@@ -624,6 +757,8 @@
         choiceList.appendChild(li);
       });
 
+      answerBanner.hidden = true;
+      explanationText.hidden = true;
       nextBtn.disabled = true;
       nextBtn.textContent = state.index === total - 1 ? "결과 보기" : "다음 문제";
     }
@@ -632,13 +767,21 @@
       if (state.answered) return;
       state.answered = true;
 
+      const isCorrect = selectedIndex === current.answerIndex;
       const choiceItems = choiceList.querySelectorAll(".choice-item");
       choiceItems[current.answerIndex].classList.add("correct");
-      if (selectedIndex !== current.answerIndex) {
+      if (!isCorrect) {
         choiceItems[selectedIndex].classList.add("wrong");
       } else {
         state.correctCount += 1;
       }
+
+      answerBanner.textContent = isCorrect ? "정답입니다!" : "오답입니다!";
+      answerBanner.className = `answer-banner ${isCorrect ? "correct" : "wrong"}`;
+      answerBanner.hidden = false;
+
+      explanationText.textContent = current.explanation;
+      explanationText.hidden = false;
 
       nextBtn.disabled = false;
       state.autoAdvanceTimer = setTimeout(goNext, AUTO_ADVANCE_MS);
@@ -659,20 +802,18 @@
       const total = state.list.length;
       const score = state.correctCount * POINTS_PER_QUESTION;
       const accuracy = Math.round((state.correctCount / total) * 100);
-      state.lastResult = { category: state.category, score, accuracy };
+      state.lastResult = { category: state.category, difficulty: state.difficulty, score, accuracy };
 
       resultScore.textContent = `${score}점`;
       resultDetail.textContent =
-        `${state.category} - ${total}문제 중 ${state.correctCount}개 정답 (정답률 ${accuracy}%)`;
+        `${state.category} (${state.difficulty}) - ${total}문제 중 ${state.correctCount}개 정답 ` +
+        `(정답률 ${accuracy}%)`;
 
-      const nickname = getNickname();
-      if (nickname) {
-        nicknameSection.hidden = true;
-        recordResult(nickname, state.lastResult);
-      } else {
-        nicknameSection.hidden = false;
-        nicknameInput.value = "";
-      }
+      // 같은 PC를 여러 명이 쓸 수 있으니, 끝날 때마다 닉네임을 다시 입력받는다.
+      nicknameInput.value = getLastNickname() || "";
+      nicknameSaveBtn.textContent = "저장";
+      nicknameSaveBtn.disabled = false;
+      nicknameSection.hidden = false;
     }
 
     function saveNickname() {
@@ -681,9 +822,11 @@
         nicknameInput.focus();
         return;
       }
-      setNickname(name);
-      nicknameSection.hidden = true;
+      setLastNickname(name);
       recordResult(name, state.lastResult);
+      nicknameInput.value = "";
+      nicknameSaveBtn.textContent = "저장됨";
+      nicknameSaveBtn.disabled = true;
     }
 
     function renderLeaderboardFilterTabs() {
@@ -738,7 +881,7 @@
         const bottomRow = document.createElement("div");
         bottomRow.className = "lb-bottom";
         const category = document.createElement("span");
-        category.textContent = record.category;
+        category.textContent = `${record.category} (${record.difficulty})`;
         const accuracy = document.createElement("span");
         accuracy.textContent = `정답률 ${record.accuracy}%`;
         const date = document.createElement("span");
@@ -755,7 +898,8 @@
       clearTimeout(state.autoAdvanceTimer);
       showScreen("start");
     });
-    retryBtn.addEventListener("click", () => startCategory(state.category));
+    difficultyBackBtn.addEventListener("click", () => showScreen("start"));
+    retryBtn.addEventListener("click", () => startQuiz(state.category, state.difficulty));
     resultBackBtn.addEventListener("click", () => showScreen("start"));
     nicknameSaveBtn.addEventListener("click", saveNickname);
     nicknameInput.addEventListener("keydown", (event) => {
