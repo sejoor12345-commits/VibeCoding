@@ -1,5 +1,5 @@
 // 상식 퀴즈 게임 - 문제 데이터
-// 카테고리 4개(한국사, 과학, 일반상식, 의학) x 난이도 4개(하/중/상/최상) x 10문제 = 총 160문제
+// 카테고리 4개(한국사, 과학, 일반상식, 의학) x 난이도 4개(하/중/상/최상) x 10문제 = 총 161문제 (의학-최상 11문제)
 // 난이도 기준: 하=초등학생, 중=고등학생, 상=대학생, 최상=그 분야를 공부하는 사람
 // 각 문제 형태: { id, category, difficulty, question, choices[4], answerIndex, explanation }
 const questions = [
@@ -1533,7 +1533,7 @@ const questions = [
     explanation: "티록신(thyroxine)은 갑상선에서 분비되어 신진대사를 조절하는 호르몬이에요.",
   },
 
-  // ===== 의학 - 최상 (151~160) =====
+  // ===== 의학 - 최상 (151~160, 161 추가) =====
   {
     id: 151,
     category: "의학",
@@ -1633,5 +1633,15 @@ const questions = [
     choices: ["혈압계", "펄스옥시미터", "청진기", "체온계"],
     answerIndex: 1,
     explanation: "펄스옥시미터는 빛을 이용해 혈액 속 산소포화도를 비침습적으로 측정하는 기기예요.",
+  },
+  {
+    id: 161,
+    category: "의학",
+    difficulty: "최상",
+    hasHint: false,
+    question: "급성 심근경색 진단에서 심장 바이오마커 중 특이도가 가장 높은 표준 지표는 무엇일까요?",
+    choices: ["CK-MB", "트로포닌(Troponin)", "LDH", "AST"],
+    answerIndex: 1,
+    explanation: "트로포닌은 심근 손상 시에만 특이적으로 상승하는 단백질로, CK-MB나 LDH보다 특이도가 높아 급성 심근경색 진단의 표준 바이오마커로 쓰여요.",
   },
 ];
