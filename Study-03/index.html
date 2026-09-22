@@ -4,15 +4,71 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>상식 퀴즈 게임</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%A7%A0</text></svg>">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
   <style>
     :root {
-      --bg: #f5f6fa;
+      --bg: #f4f5fb;
       --card-bg: #ffffff;
       --text: #1f2430;
       --muted: #6b7280;
       --primary: #4f46e5;
+      --primary-2: #7c3aed;
+      --accent: #ec4899;
       --primary-hover: #4338ca;
-      --border: #e5e7eb;
+      --border: #e6e7f0;
+
+      --tag-cat-bg: #eef2ff;
+      --tag-cat-text: #4f46e5;
+      --tag-diff-bg: #fff7ed;
+      --tag-diff-text: #c2410c;
+
+      --correct-bg: #ecfdf3;
+      --correct-border: #16a34a;
+      --correct-text: #15803d;
+      --wrong-bg: #fef2f2;
+      --wrong-border: #dc2626;
+      --wrong-text: #b91c1c;
+
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+
+      --shadow-sm: 0 2px 8px rgba(31, 36, 48, 0.06);
+      --shadow-md: 0 10px 24px rgba(79, 70, 229, 0.14);
+      --shadow-lg: 0 20px 44px rgba(79, 70, 229, 0.22);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #10111a;
+        --card-bg: #1a1c28;
+        --text: #e9eaf3;
+        --muted: #9599ab;
+        --primary: #818cf8;
+        --primary-2: #a78bfa;
+        --accent: #f472b6;
+        --primary-hover: #6366f1;
+        --border: #2b2e3d;
+
+        --tag-cat-bg: rgba(129, 140, 248, 0.16);
+        --tag-cat-text: #b4bcfb;
+        --tag-diff-bg: rgba(251, 146, 60, 0.16);
+        --tag-diff-text: #fdba74;
+
+        --correct-bg: rgba(34, 197, 94, 0.16);
+        --correct-border: #22c55e;
+        --correct-text: #6ee7a3;
+        --wrong-bg: rgba(239, 68, 68, 0.16);
+        --wrong-border: #ef4444;
+        --wrong-text: #fca5a5;
+
+        --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.35);
+        --shadow-md: 0 10px 26px rgba(0, 0, 0, 0.45);
+        --shadow-lg: 0 22px 48px rgba(0, 0, 0, 0.55);
+      }
     }
 
     * {
@@ -22,12 +78,15 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background: var(--bg);
+      background:
+        radial-gradient(900px 480px at 8% -8%, rgba(79, 70, 229, 0.14), transparent 60%),
+        radial-gradient(700px 420px at 108% 6%, rgba(236, 72, 153, 0.12), transparent 55%),
+        var(--bg);
       color: var(--text);
-      font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
       display: flex;
       justify-content: center;
-      padding: 32px 16px;
+      padding: 32px 16px 56px;
     }
 
     .page {
@@ -35,16 +94,60 @@
       max-width: 480px;
     }
 
-    h1 {
-      font-size: 24px;
+    /* 히어로 헤더 */
+    .hero {
+      position: relative;
+      overflow: hidden;
       text-align: center;
-      margin-bottom: 8px;
+      padding: 34px 20px 30px;
+      margin-bottom: 26px;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 55%, var(--accent) 100%);
+      box-shadow: var(--shadow-lg);
     }
 
-    .subtitle {
-      text-align: center;
-      color: var(--muted);
-      margin-bottom: 32px;
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .hero::before {
+      width: 160px;
+      height: 160px;
+      top: -70px;
+      left: -50px;
+    }
+
+    .hero::after {
+      width: 120px;
+      height: 120px;
+      bottom: -60px;
+      right: -30px;
+    }
+
+    .hero-icon {
+      position: relative;
+      display: block;
+      font-size: 38px;
+      margin-bottom: 6px;
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.18));
+    }
+
+    .hero h1 {
+      position: relative;
+      margin: 0 0 6px;
+      font-size: 25px;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .hero .subtitle {
+      position: relative;
+      margin: 0;
+      color: rgba(255, 255, 255, 0.88);
       font-size: 14px;
     }
 
@@ -54,6 +157,18 @@
 
     .screen.active {
       display: block;
+      animation: screenIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes screenIn {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     /* 모드 선택 화면 */
@@ -64,30 +179,85 @@
     }
 
     .mode-btn {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 14px;
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px 16px;
-      font-size: 18px;
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      font-size: 16px;
       font-weight: 700;
       color: var(--text);
       text-align: left;
       cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .mode-btn::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      opacity: 0;
+      transition: opacity 0.2s ease;
     }
 
     .mode-btn:hover {
       border-color: var(--primary);
-      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
-      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-3px);
+    }
+
+    .mode-btn:hover::before {
+      opacity: 0.06;
+    }
+
+    .mode-icon {
+      position: relative;
+      flex-shrink: 0;
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      background: var(--tag-cat-bg);
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mode-body {
+      position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .mode-label {
+      font-size: 16px;
+      font-weight: 800;
     }
 
     .mode-desc {
-      display: block;
-      margin-top: 6px;
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 400;
       color: var(--muted);
+    }
+
+    .mode-arrow {
+      position: relative;
+      color: var(--muted);
+      font-size: 18px;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .mode-btn:hover .mode-arrow {
+      transform: translateX(4px);
+      color: var(--primary);
     }
 
     /* 시작 화면: 카테고리 선택 */
@@ -97,27 +267,44 @@
       gap: 12px;
     }
 
-    .category-btn {
+    .category-btn,
+    .difficulty-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 28px 12px;
-      font-size: 17px;
-      font-weight: 600;
+      border-radius: var(--radius-md);
+      padding: 22px 12px;
+      font-size: 16px;
+      font-weight: 700;
       color: var(--text);
       cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
 
-    .category-btn:hover {
+    .category-btn:hover,
+    .difficulty-btn:hover {
       border-color: var(--primary);
-      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
-      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-3px) scale(1.02);
+    }
+
+    .btn-icon-lg {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .btn-label {
+      font-size: 16px;
+      font-weight: 700;
     }
 
     .category-count {
       display: block;
-      margin-top: 6px;
+      margin-top: 2px;
       font-size: 12px;
       font-weight: 400;
       color: var(--muted);
@@ -136,33 +323,14 @@
       gap: 12px;
     }
 
-    .difficulty-btn {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px 12px;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-      cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
-    }
-
-    .difficulty-btn:hover {
-      border-color: var(--primary);
-      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
-      transform: translateY(-2px);
-    }
-
     .difficulty-desc {
       display: block;
-      margin-top: 6px;
       font-size: 12px;
       font-weight: 400;
       color: var(--muted);
     }
 
-    /* 퀴즈 화면 */
+    /* 공통 상단 헤더 (뒤로가기 / 진행률) */
     .quiz-header {
       display: flex;
       align-items: center;
@@ -171,36 +339,57 @@
     }
 
     .back-btn {
+      flex-shrink: 0;
       background: none;
       border: none;
       color: var(--muted);
       font-size: 14px;
       cursor: pointer;
       padding: 4px 0;
+      transition: color 0.15s;
     }
 
     .back-btn:hover {
-      color: var(--text);
+      color: var(--primary);
+    }
+
+    .progress-track {
+      flex: 1;
+      height: 8px;
+      margin: 0 12px;
+      border-radius: 999px;
+      background: var(--border);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-2));
+      transition: width 0.35s ease;
     }
 
     .progress-text {
+      flex-shrink: 0;
       font-size: 13px;
       color: var(--muted);
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .quiz-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: var(--radius-lg);
       padding: 24px 20px;
+      box-shadow: var(--shadow-sm);
     }
 
     .category-tag,
     .difficulty-tag {
       display: inline-block;
-      background: #eef2ff;
-      color: var(--primary);
+      background: var(--tag-cat-bg);
+      color: var(--tag-cat-text);
       font-size: 12px;
       font-weight: 700;
       padding: 4px 10px;
@@ -210,20 +399,27 @@
     }
 
     .difficulty-tag {
-      background: #fff7ed;
-      color: #c2410c;
+      background: var(--tag-diff-bg);
+      color: var(--tag-diff-text);
     }
 
     .speed-timer {
       text-align: center;
-      font-size: 40px;
+      font-size: 38px;
       font-weight: 800;
       color: var(--primary);
       margin-bottom: 14px;
+      transition: color 0.2s ease;
     }
 
     .speed-timer.low {
-      color: #dc2626;
+      color: var(--wrong-border);
+      animation: pulse 0.6s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
     }
 
     .question-text {
@@ -247,24 +443,41 @@
       align-items: center;
       gap: 10px;
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
       padding: 12px 14px;
       font-size: 15px;
       cursor: pointer;
-      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+    }
+
+    .choice-item:hover:not(.correct):not(.wrong) {
+      border-color: var(--primary);
+      background: var(--tag-cat-bg);
+      transform: translateX(2px);
+    }
+
+    .choice-item.correct,
+    .choice-item.wrong {
+      animation: choicePop 0.3s ease;
+    }
+
+    @keyframes choicePop {
+      0% { transform: scale(0.97); }
+      60% { transform: scale(1.02); }
+      100% { transform: scale(1); }
     }
 
     .choice-item.correct {
-      background: #ecfdf3;
-      border-color: #16a34a;
-      color: #15803d;
+      background: var(--correct-bg);
+      border-color: var(--correct-border);
+      color: var(--correct-text);
       font-weight: 700;
     }
 
     .choice-item.wrong {
-      background: #fef2f2;
-      border-color: #dc2626;
-      color: #b91c1c;
+      background: var(--wrong-bg);
+      border-color: var(--wrong-border);
+      color: var(--wrong-text);
       font-weight: 700;
     }
 
@@ -283,31 +496,37 @@
     }
 
     .choice-item.correct .choice-number {
-      background: #16a34a;
+      background: var(--correct-border);
       color: #fff;
     }
 
     .choice-item.wrong .choice-number {
-      background: #dc2626;
+      background: var(--wrong-border);
       color: #fff;
     }
 
     .answer-banner {
       margin-top: 16px;
       padding: 12px 14px;
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
       font-weight: 800;
       font-size: 16px;
       text-align: center;
+      animation: bannerIn 0.3s ease;
+    }
+
+    @keyframes bannerIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .answer-banner.correct {
-      background: #16a34a;
+      background: var(--correct-border);
       color: #fff;
     }
 
     .answer-banner.wrong {
-      background: #dc2626;
+      background: var(--wrong-border);
       color: #fff;
     }
 
@@ -315,7 +534,7 @@
       margin: 12px 0 0;
       padding: 12px 14px;
       background: var(--bg);
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
       font-size: 14px;
       line-height: 1.5;
       color: var(--text);
@@ -335,10 +554,11 @@
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      transition: background 0.15s;
     }
 
     .hint-btn:hover {
-      background: #eef2ff;
+      background: var(--tag-cat-bg);
     }
 
     .hint-btn:disabled {
@@ -355,55 +575,87 @@
     }
 
     .next-btn {
-      background: var(--primary);
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
       color: #fff;
       border: none;
-      border-radius: 10px;
-      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      padding: 12px 22px;
       font-size: 15px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
     }
 
-    .next-btn:hover {
-      background: var(--primary-hover);
+    .next-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
     }
 
     .next-btn:disabled {
       background: var(--muted);
       cursor: not-allowed;
-      opacity: 0.6;
+      opacity: 0.55;
+      box-shadow: none;
     }
 
     /* 결과 화면 */
     .result-card {
+      position: relative;
+      overflow: hidden;
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 36px 20px;
+      border-radius: var(--radius-lg);
+      padding: 38px 20px 32px;
       text-align: center;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .result-card::before {
+      content: "";
+      position: absolute;
+      top: -80px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(79, 70, 229, 0.16), transparent 70%);
+    }
+
+    .result-icon {
+      position: relative;
+      font-size: 46px;
+      margin: 0 0 4px;
     }
 
     .result-score {
+      position: relative;
       font-size: 44px;
       font-weight: 800;
-      color: var(--primary);
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
       margin: 0 0 8px;
     }
 
     .result-detail {
+      position: relative;
       color: var(--muted);
       font-size: 15px;
       margin: 0 0 8px;
     }
 
     .result-stats {
+      position: relative;
       color: var(--muted);
       font-size: 13px;
       margin: 0 0 28px;
     }
 
     .result-actions {
+      position: relative;
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
@@ -411,7 +663,7 @@
     }
 
     .result-actions button {
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
       padding: 12px 18px;
       font-size: 15px;
       font-weight: 600;
@@ -419,23 +671,26 @@
       border: 1px solid var(--border);
       background: var(--card-bg);
       color: var(--text);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .result-actions button:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
     }
 
     .result-actions .retry-btn {
-      background: var(--primary);
-      border-color: var(--primary);
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      border-color: transparent;
       color: #fff;
-    }
-
-    .result-actions .retry-btn:hover {
-      background: var(--primary-hover);
     }
 
     /* 닉네임 입력 (매 플레이마다) */
     .nickname-section {
+      position: relative;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       padding: 16px;
       margin: 0 0 24px;
       text-align: left;
@@ -455,13 +710,15 @@
     .nickname-input {
       flex: 1;
       border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text);
       border-radius: 8px;
       padding: 10px 12px;
       font-size: 15px;
     }
 
     .nickname-save-btn {
-      background: var(--primary);
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
       color: #fff;
       border: none;
       border-radius: 8px;
@@ -469,10 +726,6 @@
       font-size: 15px;
       font-weight: 600;
       cursor: pointer;
-    }
-
-    .nickname-save-btn:hover {
-      background: var(--primary-hover);
     }
 
     .nickname-save-btn:disabled {
@@ -498,11 +751,12 @@
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
     }
 
     .leaderboard-filter-tabs button.active {
-      background: var(--primary);
-      border-color: var(--primary);
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      border-color: transparent;
       color: #fff;
     }
 
@@ -517,9 +771,25 @@
 
     .leaderboard-item {
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
       padding: 10px 14px;
       font-size: 14px;
+      transition: transform 0.15s;
+    }
+
+    .leaderboard-item.rank-gold {
+      border-color: #eab308;
+      background: linear-gradient(90deg, rgba(234, 179, 8, 0.1), transparent);
+    }
+
+    .leaderboard-item.rank-silver {
+      border-color: #94a3b8;
+      background: linear-gradient(90deg, rgba(148, 163, 184, 0.1), transparent);
+    }
+
+    .leaderboard-item.rank-bronze {
+      border-color: #c2703a;
+      background: linear-gradient(90deg, rgba(194, 112, 58, 0.1), transparent);
     }
 
     .lb-top {
@@ -531,7 +801,8 @@
 
     .lb-rank {
       flex-shrink: 0;
-      width: 20px;
+      width: 22px;
+      font-size: 15px;
       font-weight: 800;
       color: var(--primary);
     }
@@ -548,7 +819,7 @@
     .lb-bottom {
       display: flex;
       gap: 6px;
-      padding-left: 30px;
+      padding-left: 32px;
       font-size: 12px;
       color: var(--muted);
     }
@@ -563,8 +834,11 @@
 </head>
 <body>
   <main class="page">
-    <h1>상식 퀴즈 게임</h1>
-    <p class="subtitle">모드를 고르고 문제를 풀어보세요</p>
+    <header class="hero">
+      <span class="hero-icon">🧠</span>
+      <h1>상식 퀴즈 게임</h1>
+      <p class="subtitle">모드를 고르고 문제를 풀어보세요</p>
+    </header>
 
     <!-- 모드 선택 화면 -->
     <section id="screen-mode" class="screen active">
@@ -592,6 +866,7 @@
     <section id="screen-quiz" class="screen">
       <div class="quiz-header">
         <button type="button" id="back-btn" class="back-btn">← 처음으로</button>
+        <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
         <span id="progress-text" class="progress-text"></span>
       </div>
 
@@ -601,7 +876,7 @@
         <span id="difficulty-tag" class="difficulty-tag"></span>
         <p id="question-text" class="question-text"></p>
         <ul id="choice-list" class="choice-list"></ul>
-        <button type="button" id="hint-btn" class="hint-btn" hidden>힌트 보기 (오답 하나 제거, 보너스 3점 사라짐)</button>
+        <button type="button" id="hint-btn" class="hint-btn" hidden>💡 힌트 보기 (오답 하나 제거, 보너스 3점 사라짐)</button>
         <div id="answer-banner" class="answer-banner" hidden></div>
         <p id="explanation-text" class="explanation-text" hidden></p>
       </div>
@@ -614,6 +889,7 @@
     <!-- 결과 화면 -->
     <section id="screen-result" class="screen">
       <div class="result-card">
+        <p id="result-icon" class="result-icon"></p>
         <p id="result-score" class="result-score"></p>
         <p id="result-detail" class="result-detail"></p>
         <p id="result-stats" class="result-stats"></p>
@@ -627,7 +903,7 @@
         </div>
 
         <div class="result-actions">
-          <button type="button" id="leaderboard-btn">리더보드 보기</button>
+          <button type="button" id="leaderboard-btn">🏆 리더보드 보기</button>
           <button type="button" id="retry-btn" class="retry-btn">다시 풀기</button>
           <button type="button" id="result-back-btn">처음으로</button>
         </div>
@@ -638,7 +914,7 @@
     <section id="screen-leaderboard" class="screen">
       <div class="quiz-header">
         <button type="button" id="leaderboard-back-btn" class="back-btn">← 결과 화면으로</button>
-        <span class="progress-text">리더보드</span>
+        <span class="progress-text">🏆 리더보드</span>
       </div>
 
       <div id="leaderboard-filter-tabs" class="leaderboard-filter-tabs"></div>
@@ -657,6 +933,11 @@
   <script>
     // 화면에 보여줄 카테고리 순서
     const CATEGORIES = ["한국사", "과학", "일반상식", "의학"];
+
+    // 카테고리/난이도/모드마다 화면에 보여줄 이모지 아이콘 (꾸밈 용도일 뿐, 게임 로직과는 무관)
+    const CATEGORY_ICONS = { 한국사: "🏯", 과학: "🔬", 일반상식: "💡", 의학: "⚕️" };
+    const DIFFICULTY_ICONS = { 하: "🌱", 중: "📘", 상: "🎓", 최상: "🏆" };
+    const MODE_ICONS = { category: "📚", all: "🔥", speed: "⚡" };
 
     // 난이도: 하=초등학생, 중=고등학생, 상=대학생, 최상=그 분야를 공부하는 사람 수준
     const DIFFICULTIES = [
@@ -722,6 +1003,7 @@
     const difficultyGrid = document.getElementById("difficulty-grid");
     const difficultyBackBtn = document.getElementById("difficulty-back-btn");
     const progressText = document.getElementById("progress-text");
+    const progressFill = document.getElementById("progress-fill");
     const speedTimer = document.getElementById("speed-timer");
     const categoryTag = document.getElementById("category-tag");
     const difficultyTag = document.getElementById("difficulty-tag");
@@ -732,6 +1014,7 @@
     const explanationText = document.getElementById("explanation-text");
     const nextBtn = document.getElementById("next-btn");
     const backBtn = document.getElementById("back-btn");
+    const resultIcon = document.getElementById("result-icon");
     const resultScore = document.getElementById("result-score");
     const resultDetail = document.getElementById("result-detail");
     const resultStats = document.getElementById("result-stats");
@@ -833,7 +1116,11 @@
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "mode-btn";
-        btn.innerHTML = `${label}<span class="mode-desc">${desc}</span>`;
+        btn.innerHTML =
+          `<span class="mode-icon">${MODE_ICONS[key]}</span>` +
+          `<span class="mode-body"><span class="mode-label">${label}</span>` +
+          `<span class="mode-desc">${desc}</span></span>` +
+          `<span class="mode-arrow">›</span>`;
         btn.addEventListener("click", () => selectMode(key));
         modeGrid.appendChild(btn);
       });
@@ -858,7 +1145,10 @@
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "category-btn";
-        btn.innerHTML = `${category}<span class="category-count">${count}문제</span>`;
+        btn.innerHTML =
+          `<span class="btn-icon-lg">${CATEGORY_ICONS[category]}</span>` +
+          `<span class="btn-label">${category}</span>` +
+          `<span class="category-count">${count}문제</span>`;
         btn.addEventListener("click", () => {
           state.category = category;
           goToDifficultyScreen();
@@ -883,7 +1173,9 @@
         btn.type = "button";
         btn.className = "difficulty-btn";
         btn.innerHTML =
-          `${key}<span class="difficulty-desc">${desc}</span>` +
+          `<span class="btn-icon-lg">${DIFFICULTY_ICONS[key]}</span>` +
+          `<span class="btn-label">${key}</span>` +
+          `<span class="difficulty-desc">${desc}</span>` +
           `<span class="category-count">${count}문제</span>`;
         btn.addEventListener("click", () => {
           if (isAllChallenge) startAllChallengeQuiz(key);
@@ -967,8 +1259,10 @@
       clearInterval(state.speedTimerInterval);
 
       progressText.textContent = `${state.index + 1} / ${total}`;
-      categoryTag.textContent = current.category;
-      difficultyTag.textContent = `난이도: ${current.difficulty} (x${DIFFICULTY_MULTIPLIER[current.difficulty]})`;
+      progressFill.style.width = `${Math.round(((state.index + 1) / total) * 100)}%`;
+      categoryTag.textContent = `${CATEGORY_ICONS[current.category] || ""} ${current.category}`;
+      difficultyTag.textContent =
+        `${DIFFICULTY_ICONS[current.difficulty] || ""} 난이도: ${current.difficulty} (x${DIFFICULTY_MULTIPLIER[current.difficulty]})`;
       questionText.textContent = current.question;
 
       choiceList.innerHTML = "";
@@ -982,7 +1276,7 @@
 
       hintBtn.hidden = !current.hasHint;
       hintBtn.disabled = false;
-      hintBtn.textContent = "힌트 보기 (오답 하나 제거, 보너스 3점 사라짐)";
+      hintBtn.textContent = "💡 힌트 보기 (오답 하나 제거, 보너스 3점 사라짐)";
 
       answerBanner.hidden = true;
       explanationText.hidden = true;
@@ -1004,7 +1298,7 @@
       function tick() {
         const remainingMs = limitMs - (Date.now() - state.questionStartTime);
         const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
-        speedTimer.textContent = `${remainingSeconds}초`;
+        speedTimer.textContent = `⏱ ${remainingSeconds}초`;
         speedTimer.classList.toggle("low", remainingSeconds <= 5);
 
         if (remainingMs <= 0) {
@@ -1031,7 +1325,7 @@
       state.hintUsedThisQuestion = true;
       state.hintsUsedCount += 1;
       hintBtn.disabled = true;
-      hintBtn.textContent = "힌트 사용함";
+      hintBtn.textContent = "✅ 힌트 사용함";
     }
 
     // 문제 하나의 점수 = 기본점수(10) x 난이도 배수 + 시간보너스 + 힌트미사용보너스 + 콤보보너스. 오답은 0점.
@@ -1099,9 +1393,9 @@
       hintBtn.disabled = true;
 
       if (isTimeout) {
-        answerBanner.textContent = "시간 초과! 오답으로 처리돼요";
+        answerBanner.textContent = "⏰ 시간 초과! 오답으로 처리돼요";
       } else {
-        answerBanner.textContent = isCorrect ? "정답입니다!" : "오답입니다!";
+        answerBanner.textContent = isCorrect ? "✅ 정답입니다!" : "❌ 오답입니다!";
       }
       answerBanner.className = `answer-banner ${isCorrect ? "correct" : "wrong"}`;
       answerBanner.hidden = false;
@@ -1142,6 +1436,14 @@
       return "스피드 퀴즈";
     }
 
+    // 정답률에 따라 결과 화면 맨 위에 보여줄 이모지를 고른다 (순전히 장식용).
+    function getResultTierIcon(accuracy) {
+      if (accuracy >= 90) return "🏆";
+      if (accuracy >= 70) return "👍";
+      if (accuracy >= 50) return "🙂";
+      return "💪";
+    }
+
     function renderResult() {
       const total = state.list.length;
       const score = state.totalScore;
@@ -1153,10 +1455,11 @@
         accuracy,
       };
 
+      resultIcon.textContent = getResultTierIcon(accuracy);
       resultScore.textContent = `${score}점`;
       resultDetail.textContent =
         `${getResultTitle()} - ${total}문제 중 ${state.correctCount}개 정답 (정답률 ${accuracy}%)`;
-      resultStats.textContent = `최고 콤보 ${state.maxCombo}연속 · 사용한 힌트 ${state.hintsUsedCount}개`;
+      resultStats.textContent = `🔥 최고 콤보 ${state.maxCombo}연속 · 💡 사용한 힌트 ${state.hintsUsedCount}개`;
 
       retryBtn.textContent =
         state.mode === "category" ? "같은 카테고리 다시 풀기" :
@@ -1195,6 +1498,14 @@
       });
     }
 
+    // 상위 3등은 순위 숫자 대신 메달 이모지로 보여준다.
+    function getRankDisplay(rankIndex) {
+      if (rankIndex === 0) return { text: "🥇", cssClass: "rank-gold" };
+      if (rankIndex === 1) return { text: "🥈", cssClass: "rank-silver" };
+      if (rankIndex === 2) return { text: "🥉", cssClass: "rank-bronze" };
+      return { text: `${rankIndex + 1}`, cssClass: null };
+    }
+
     function renderLeaderboard(filter) {
       state.leaderboardFilter = filter;
 
@@ -1216,14 +1527,16 @@
       }
 
       top.forEach((record, i) => {
+        const { text: rankText, cssClass: rankClass } = getRankDisplay(i);
+
         const li = document.createElement("li");
-        li.className = "leaderboard-item";
+        li.className = rankClass ? `leaderboard-item ${rankClass}` : "leaderboard-item";
 
         const topRow = document.createElement("div");
         topRow.className = "lb-top";
         const rank = document.createElement("span");
         rank.className = "lb-rank";
-        rank.textContent = i + 1;
+        rank.textContent = rankText;
         const name = document.createElement("span");
         name.className = "lb-name";
         name.textContent = record.nickname;
