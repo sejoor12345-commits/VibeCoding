@@ -1,5 +1,5 @@
 ---
-description: teacher-import → teacher-summary → teacher-rank → teacher-topics를 순서대로 실행해 하나의 학급 리포트로 보여주는 통합 명령어
+description: teacher-import → teacher-summary → teacher-rank → teacher-topics를 실행해 리포트를 만들고, teacher-report.html로 저장한 뒤 CSV/PDF까지 내보내는 통합 명령어
 argument-hint: [학생별 quiz:records를 합친 JSON 배열]
 ---
 
@@ -24,3 +24,20 @@ nickname+mode+difficulty는 최고 점수만 유지)을 한 번만 정리해서 
 맨 마지막에 아래를 한 줄로 요약하는 `## 종합 요약`을 추가해라: 학생 수, 전체 기록 수, 학급
 평균 정답률, 가장 취약한 카테고리·난이도, 이번 리포트에서 선생님이 가장 먼저 봐야 할 것
 한 가지(예: "전체 평균 정답률이 낮은 학생 이름" 또는 "정답률이 가장 낮은 주제").
+
+## 5. HTML 리포트로 저장
+
+1~4단계 결과를 `Study-03/teacher-report.html`에 그대로 반영해라. 그 파일이 이미 있으면 같은
+페이지 구조와 스타일(카드, 표, "학급 평균"/"보강 필요"/"최저" 강조 표시)을 유지한 채 내용만
+이번 실행 결과로 덮어써라. 파일이 없으면 그 구조를 새로 만들어라.
+
+## 6. CSV/PDF로 내보내기
+
+5단계에서 저장한 `teacher-report.html`을 대상으로 `export-report.md`를 두 번 실행해라: 한 번은
+`csv`로, 한 번은 `pdf`로. 각각의 검증(csv는 표 개수·행 수 일치, pdf는 파일 생성·크기)도 그대로
+따라라.
+
+## 종합 요약에 추가할 내용
+
+`## 종합 요약`의 마지막 줄에 "HTML 리포트: Study-03/teacher-report.html", "CSV: Study-03/exports/
+안 파일 개수", "PDF: Study-03/exports/teacher-report.pdf"를 덧붙여라.
