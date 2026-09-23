@@ -69,8 +69,8 @@ description: 문제 은행 구조 확인 → 분포 파악 → 부족한 칸 찾
 ## 6단계: 전체 데이터 백업
 
 5단계까지 통과했다면, 지금 상태의 `Study-03/questions.js` 전체를
-`Study-03/.claude/backups/questions.js.<YYYYMMDD-HHMMSS>.bak` 경로로 그대로 복사해 백업해라
-(`Study-03/.claude/backups/` 폴더가 없으면 새로 만들어라).
+`Study-03/backups/questions.js.<YYYYMMDD-HHMMSS>.bak` 경로로 그대로 복사해 백업해라
+(`Study-03/backups/` 폴더가 없으면 새로 만들어라).
 
 - **검증**: 백업 파일이 실제로 생성됐고, 그 내용이 방금 수정한 `questions.js`와 한 글자도 다르지
   않아야 한다.
@@ -89,7 +89,7 @@ description: 문제 은행 구조 확인 → 분포 파악 → 부족한 칸 찾
 3단계 (부족 부분): {카테고리}-{난이도} 칸이 M개로 가장 적어 오늘의 목표로 선정
 4단계 (중복 체크): 통과, 초안 주제: "..."
 5단계 (형식 검증): 통과, 새 문제 id={새id}
-6단계 (백업): Study-03/.claude/backups/questions.js.{타임스탬프}.bak 생성 완료
+6단계 (백업): Study-03/backups/questions.js.{타임스탬프}.bak 생성 완료
 - 새로 추가된 문제: id / category / difficulty / question / 정답 선택지 / explanation
 - 추가 전 → 추가 후 카테고리 x 난이도 16칸 표
 ```
