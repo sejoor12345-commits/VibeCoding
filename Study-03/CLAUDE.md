@@ -82,9 +82,9 @@ logs its full breakdown to the browser console (see **Verifying the scoring**).
 ## Files
 
 - **`questions.js`** — the question bank. A single global array `questions`, loaded via a plain
-  `<script>` tag (no modules, no bundler). 161 questions: 4 categories (한국사, 과학, 일반상식, 의학) x 4
-  difficulties (하=초등학생, 중=고등학생, 상=대학생, 최상=그 분야를 공부하는 사람) x 10 questions each (의학-최상
-  only has 11). Each
+  `<script>` tag (no modules, no bundler). 162 questions: 4 categories (한국사, 과학, 일반상식, 의학) x 4
+  difficulties (하=초등학생, 중=고등학생, 상=대학생, 최상=그 분야를 공부하는 사람) x 10 questions each (한국사-하
+  and 의학-최상 have 11 each). Each
   entry: `{ id, category, difficulty, hasHint, question, choices[4], answerIndex, explanation }`.
   `hasHint` is `true` for 하/중/상 and `false` for every 최상 question (expert-tier questions get no hint
   button at all) — an editorial choice, not something the game logic requires; set it per-question if you
