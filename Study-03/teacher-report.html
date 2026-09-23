@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>선생님 모드 - 학급 리포트</title>
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --card-bg: #ffffff;
+    --text: #1f2430;
+    --muted: #6b7280;
+    --primary: #4f46e5;
+    --border: #e5e7eb;
+    --danger: #dc2626;
+    --danger-bg: #fef2f2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    padding: 24px 16px 60px;
+  }
+  .page { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 24px; text-align: center; margin-bottom: 4px; }
+  .subtitle { text-align: center; color: var(--muted); margin-bottom: 28px; font-size: 14px; }
+  .note {
+    background: #eef2ff; color: var(--primary); font-size: 13px;
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 24px;
+  }
+  section { margin-bottom: 32px; }
+  h2 { font-size: 18px; border-left: 4px solid var(--primary); padding-left: 10px; margin-bottom: 12px; }
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px; margin-bottom: 14px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  tr.class-avg td { font-weight: 700; color: var(--primary); background: #eef2ff; }
+  tr.warn td { background: var(--danger-bg); }
+  .warn-tag {
+    display: inline-block; background: var(--danger); color: #fff;
+    font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 8px; margin-left: 6px;
+  }
+  .stat-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+  .stat-tile {
+    flex: 1; min-width: 140px; background: var(--bg); border-radius: 10px;
+    padding: 10px 12px; font-size: 13px; color: var(--muted);
+  }
+  .stat-tile b { display: block; font-size: 18px; color: var(--text); margin-top: 2px; }
+  .summary-box {
+    background: var(--primary); color: #fff; border-radius: 14px; padding: 18px 20px; font-size: 14px;
+  }
+  .summary-box b { display: block; font-size: 16px; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+  <main class="page">
+    <h1>선생님 모드 - 학급 리포트</h1>
+    <p class="subtitle">/teacher-mode 실행 결과 (가상 학생 5명 데이터)</p>
+    <p class="note">
+      이 리포트는 실제 학생 기록이 아니라, /teacher-mode 명령어가 어떻게 동작하는지 보여주기 위해
+      만든 가상 데이터예요. 실제로 쓰려면 각 학생이 브라우저 콘솔에서
+      <code>localStorage.getItem("quiz:records")</code>로 뽑은 값을 모아 명령어에 붙여넣으면 돼요.
+    </p>
+
+    <section>
+      <h2>1. 학생 데이터 가져오기</h2>
+      <div class="card">
+        <div class="stat-row">
+          <div class="stat-tile">원본 기록<b>20건</b></div>
+          <div class="stat-tile">예전 형식 제외<b>0건</b></div>
+          <div class="stat-tile">중복 제거 후<b>20건</b></div>
+          <div class="stat-tile">학생 수<b>5명</b></div>
+        </div>
+        <table style="margin-top:14px">
+          <tr><th>닉네임</th><th>기록 수</th><th>참여 모드</th></tr>
+          <tr><td>민수</td><td>4</td><td>한국사, 과학, 전체, 스피드</td></tr>
+          <tr><td>지영</td><td>4</td><td>한국사, 과학, 일반상식, 의학</td></tr>
+          <tr><td>재현</td><td>3</td><td>과학, 스피드</td></tr>
+          <tr><td>소율</td><td>4</td><td>한국사, 일반상식, 의학, 전체</td></tr>
+          <tr><td>태양</td><td>5</td><td>과학, 한국사, 일반상식, 의학, 스피드</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>2. 학생별 요약</h2>
+      <div class="card">
+        <table>
+          <tr><th>닉네임</th><th>플레이 수</th><th>평균 정답률</th><th>모드별 최고 점수</th></tr>
+          <tr><td>민수</td><td>4</td><td>71.3%</td><td>한국사(하) 92 · 과학(중) 68 · 전체(중) 310 · 스피드 180</td></tr>
+          <tr><td>소율</td><td>4</td><td>81.3%</td><td>한국사(중) 82 · 일반상식(하) 91 · 의학(중) 77 · 전체(하) 250</td></tr>
+          <tr class="warn"><td>재현</td><td>3</td><td>51.7%<span class="warn-tag">최저</span></td><td>과학(상) 53 · 과학(최상) 112 · 스피드 95</td></tr>
+          <tr><td>지영</td><td>4</td><td>72.5%</td><td>한국사(하) 65 · 과학(상) 48 · 일반상식(중) 88 · 의학(하) 95</td></tr>
+          <tr><td>태양</td><td>5</td><td>62.0%</td><td>과학(하) 68 · 한국사(하) 55 · 일반상식(상) 45 · 의학(최상) 140 · 스피드 205</td></tr>
+        </table>
+        <div class="stat-row">
+          <div class="stat-tile">학급 평균 정답률<b>67.7%</b></div>
+          <div class="stat-tile">최다 플레이<b>태양 (5회)</b></div>
+          <div class="stat-tile">최소 플레이<b>재현 (3회)</b></div>
+          <div class="stat-tile">평균 정답률 최고<b>소율 (81.3%)</b></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>3. 학급 순위 (모드별)</h2>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px">한국사</h3>
+        <table>
+          <tr><th>순위</th><th>닉네임</th><th>점수</th><th>정답률</th><th>난이도</th></tr>
+          <tr><td>1</td><td>민수</td><td>92</td><td>90%</td><td>하</td></tr>
+          <tr><td>2</td><td>소율</td><td>82</td><td>80%</td><td>중</td></tr>
+          <tr><td>3</td><td>지영</td><td>65</td><td>60%</td><td>하</td></tr>
+          <tr><td>4</td><td>태양</td><td>55</td><td>50%</td><td>하</td></tr>
+          <tr class="class-avg"><td colspan="2">학급 평균</td><td>73.5</td><td>70.0%</td><td>-</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px">과학</h3>
+        <table>
+          <tr><th>순위</th><th>닉네임</th><th>점수</th><th>정답률</th><th>난이도</th></tr>
+          <tr><td>1</td><td>재현</td><td>112</td><td>60%</td><td>최상</td></tr>
+          <tr><td>2</td><td>민수</td><td>68</td><td>60%</td><td>중</td></tr>
+          <tr><td>3</td><td>태양</td><td>68</td><td>70%</td><td>하</td></tr>
+          <tr><td>4</td><td>재현</td><td>53</td><td>50%</td><td>상</td></tr>
+          <tr><td>5</td><td>지영</td><td>48</td><td>40%</td><td>상</td></tr>
+          <tr class="class-avg"><td colspan="2">학급 평균</td><td>69.8</td><td>56.0%</td><td>-</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px">일반상식</h3>
+        <table>
+          <tr><th>순위</th><th>닉네임</th><th>점수</th><th>정답률</th><th>난이도</th></tr>
+          <tr><td>1</td><td>소율</td><td>91</td><td>90%</td><td>하</td></tr>
+          <tr><td>2</td><td>지영</td><td>88</td><td>90%</td><td>중</td></tr>
+          <tr><td>3</td><td>태양</td><td>45</td><td>35%</td><td>상</td></tr>
+          <tr class="class-avg"><td colspan="2">학급 평균</td><td>74.7</td><td>71.7%</td><td>-</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px">의학</h3>
+        <table>
+          <tr><th>순위</th><th>닉네임</th><th>점수</th><th>정답률</th><th>난이도</th></tr>
+          <tr><td>1</td><td>태양</td><td>140</td><td>75%</td><td>최상</td></tr>
+          <tr><td>2</td><td>지영</td><td>95</td><td>100%</td><td>하</td></tr>
+          <tr><td>3</td><td>소율</td><td>77</td><td>70%</td><td>중</td></tr>
+          <tr class="class-avg"><td colspan="2">학급 평균</td><td>104.0</td><td>81.7%</td><td>-</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px">전체 도전</h3>
+        <table>
+          <tr><th>순위</th><th>닉네임</th><th>점수</th><th>정답률</th><th>난이도</th></tr>
+          <tr><td>1</td><td>민수</td><td>310</td><td>65%</td><td>중</td></tr>
+          <tr><td>2</td><td>소율</td><td>250</td><td>85%</td><td>하</td></tr>
+          <tr class="class-avg"><td colspan="2">학급 평균</td><td>280.0</td><td>75.0%</td><td>-</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px">스피드 퀴즈</h3>
+        <table>
+          <tr><th>순위</th><th>닉네임</th><th>점수</th><th>정답률</th></tr>
+          <tr><td>1</td><td>태양</td><td>205</td><td>80%</td></tr>
+          <tr><td>2</td><td>민수</td><td>180</td><td>70%</td></tr>
+          <tr><td>3</td><td>재현</td><td>95</td><td>45%</td></tr>
+          <tr class="class-avg"><td colspan="2">학급 평균</td><td>160.0</td><td>65.0%</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>4. 취약 주제 분석 (카테고리별 모드만, 60% 미만 = 보강 필요)</h2>
+      <div class="card">
+        <table>
+          <tr><th>주제(카테고리/난이도)</th><th>학생 수</th><th>플레이 수</th><th>학급 평균 정답률</th></tr>
+          <tr class="warn"><td>일반상식 / 상</td><td>1</td><td>1</td><td>35.0%<span class="warn-tag">보강 필요</span></td></tr>
+          <tr class="warn"><td>과학 / 상</td><td>2</td><td>2</td><td>45.0%<span class="warn-tag">보강 필요</span></td></tr>
+          <tr><td>과학 / 중</td><td>1</td><td>1</td><td>60.0%</td></tr>
+          <tr><td>과학 / 최상</td><td>1</td><td>1</td><td>60.0%</td></tr>
+          <tr><td>한국사 / 하</td><td>3</td><td>3</td><td>66.7%</td></tr>
+          <tr><td>과학 / 하</td><td>1</td><td>1</td><td>70.0%</td></tr>
+          <tr><td>의학 / 중</td><td>1</td><td>1</td><td>70.0%</td></tr>
+          <tr><td>의학 / 최상</td><td>1</td><td>1</td><td>75.0%</td></tr>
+          <tr><td>한국사 / 중</td><td>1</td><td>1</td><td>80.0%</td></tr>
+          <tr><td>일반상식 / 중</td><td>1</td><td>1</td><td>90.0%</td></tr>
+          <tr><td>일반상식 / 하</td><td>1</td><td>1</td><td>90.0%</td></tr>
+          <tr><td>의학 / 하</td><td>1</td><td>1</td><td>100.0%</td></tr>
+        </table>
+        <p style="color:var(--muted); font-size:13px; margin-top:10px">
+          분석 대상 15건 (카테고리별 모드만) / 제외 5건 ("전체 도전"·"스피드"는 카테고리가 섞여 있어 특정 주제 정답률로 볼 수 없음)
+        </p>
+      </div>
+    </section>
+
+    <section>
+      <div class="summary-box">
+        <b>종합 요약</b>
+        학생 5명 · 전체 기록 20건 · 학급 평균 정답률 67.7%<br>
+        가장 취약한 주제: <b style="display:inline">일반상식 / 상 (35.0%)</b><br>
+        가장 먼저 볼 것: <b style="display:inline">재현</b> 학생의 평균 정답률(51.7%)이 학급에서 가장 낮음
+      </div>
+    </section>
+  </main>
+</body>
+</html>
