@@ -129,7 +129,7 @@ os.environ["OPENROUTER_API_KEY"] = userdata.get("OPENROUTER_API_KEY")
 # 셀 3: 앱 서버를 백그라운드로 켜기 (마지막 줄에 ok가 나오면 성공)
 %cd /content/VibeCoding/Study-04/fridge_recipe
 !pkill -f "streamlit run" ; sleep 1
-!nohup streamlit run app.py --server.port 8501 --server.headless true --server.enableCORS false --server.enableXsrfProtection false > streamlit.log 2>&1 &
+!nohup streamlit run app.py --server.port 8501 --server.headless true --server.enableXsrfProtection false > streamlit.log 2>&1 &
 !sleep 5 ; curl -s localhost:8501/_stcore/health ; echo
 
 # 셀 4: 앱 화면을 셀 아래에 띄우기
@@ -139,9 +139,11 @@ output.serve_kernel_port_as_iframe(8501, height=900)
 
 - 셀 3의 `pkill` 줄은 이미 켜져 있던 앱을 끄고 새로 켜기 위한 것이다. 코드를 `git pull`로 바꾼 뒤에는
   셀 3, 셀 4를 다시 실행한다.
-- `--server.enableCORS false`, `--server.enableXsrfProtection false`: Colab 통로를 거쳐 들어오는 접속을
-  Streamlit이 "낯선 주소"로 보고 거절하지 않게 한다. 이 옵션이 없으면 화면이 무한 로딩되거나 사진 업로드가
-  막힌다. Colab 통로는 내 구글 계정으로만 열리므로 꺼도 괜찮다.
+- `--server.enableXsrfProtection false`: Colab 주소를 거쳐 접속하면 사진 업로드가 보안 검사에 막히는
+  경우가 있어서 끈다. Colab 통로는 내 구글 계정으로만 열리므로 괜찮다.
+- 처음 화면이 뜰 때 로딩이 한참(수십 초) 걸릴 수 있다. 조금 기다려 본다.
+- 오래 기다려도 계속 로딩만 되면 셀 3에 `--server.enableCORS false`를 추가해 본다
+  (Colab 통로로 들어오는 접속을 Streamlit이 거절하는 경우를 막는 옵션).
 - `serve_kernel_port_as_window`(새 창)는 브라우저 보안 정책 때문에 동작하지 않을 수 있어 `_as_iframe`을 쓴다.
 - 공개 주소를 만드는 도구(ngrok, localtunnel 등)는 쓰지 않는다. 주소를 아는 사람은 누구나 내 API 키로 AI를
   쓸 수 있게 되기 때문이다.
