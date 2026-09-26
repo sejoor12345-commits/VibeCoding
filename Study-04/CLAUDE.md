@@ -22,9 +22,16 @@ Planned app: a fridge-photo → recipe web app, specified in three PRDs (Korean,
 --server.enableXsrfProtection false` (without the CORS flag the Colab proxy's websocket is rejected
 intermittently → endless loading; the user hit this) — see `PRD_step1.md` §8; `openrouter_client.py` as the single place holding `MODEL` and request/error
 handling). Build one step at a time; read the matching PRD first and treat its 완료 기준 as the checklist.
-Steps 1–2 are built (`app.py`, `openrouter_client.py`, `vision.py`, `recipe.py`). Streamlit reruns `app.py`
-top to bottom on every interaction, so state that must survive (`message`, `ingredients_text`, `recipes` —
-the normalized recipe dicts step 3 will save as-is, `recipe_error`) lives in `st.session_state`.
+All 3 steps are built: `vision.py` (1), `recipe.py` (2, plus profile rules + allergy filter for 3),
+`storage.py` (3: `profiles.json` under `RECIPE_DATA_DIR`, a Google Drive folder in Colab, else
+`fridge_recipe/data/` which is gitignored; atomic write via temp file + `os.replace`; a corrupt file is moved to
+`profiles.corrupt.json`). Streamlit reruns `app.py` top to bottom on every interaction, so state that must
+survive (`message`, `ingredients_text`, `recipes`, `recipe_source_ingredients`, `profile_name`, `notice`…)
+lives in `st.session_state`. Anything that changes an already-rendered widget's value (e.g. selecting the new
+profile, setting `servings`) happens in an `on_click`/`on_change` callback. User feedback uses inline
+`notice`s shown next to the triggering button and cleared at the *end* of the script — not `st.toast`, which
+silently dropped a second toast while one was still visible, and not cleared at the start, because
+typing-then-clicking fires two back-to-back reruns and the first can be interrupted.
 Verify without the real API by patching `requests.post` (e.g. a `sitecustomize.py` on `PYTHONPATH` that
 returns a canned OpenRouter JSON), then drive it with `streamlit.testing.v1.AppTest` or Playwright
 (`executable_path="/opt/pw-browsers/chromium"`).

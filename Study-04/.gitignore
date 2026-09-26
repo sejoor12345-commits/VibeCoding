@@ -9,3 +9,6 @@ __pycache__/
 
 # Colab에서 Streamlit 앱을 켤 때 생기는 실행 기록 파일
 streamlit.log
+
+# 3단계 프로필/저장 레시피 데이터 (개인 데이터라 GitHub에 올리지 않음)
+fridge_recipe/data/

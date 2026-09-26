@@ -14,6 +14,14 @@ DIFFICULTY_OPTIONS = ["쉬움", "보통", "상관없음"]
 COUNT_OPTIONS = [1, 2, 3]
 
 
+# 식단 유형별로 AI에게 전할 규칙
+DIET_RULES = {
+    "채식": "고기, 생선, 해산물은 쓰지 않는다 (달걀, 유제품은 써도 된다).",
+    "비건": "고기, 생선, 해산물, 달걀, 우유·치즈 같은 유제품, 꿀 등 동물성 재료는 전혀 쓰지 않는다.",
+    "저탄수화물": "밥, 면, 빵, 떡, 설탕처럼 탄수화물이 많은 재료는 최대한 줄인다.",
+}
+
+
 class RecipeError(Exception):
     """화면에 그대로 보여줘도 되는 안내 문구를 담은 오류."""
 
@@ -28,7 +36,33 @@ def parse_ingredients(text):
     return names
 
 
-def build_prompt(ingredients, servings, time_limit, difficulty, count, exclude_titles):
+def find_allergens(texts, allergies):
+    """texts(재료 이름 목록) 안에 들어 있는 알레르기 재료를 돌려준다. '달걀 2개'처럼 양이 붙어 있어도 찾는다."""
+    return [allergy for allergy in allergies if any(allergy in text for text in texts)]
+
+
+def profile_conditions(profile):
+    """프로필(알레르기, 싫어하는 재료, 식단, 실력)을 AI에게 전할 규칙 목록으로 바꾼다."""
+    if not profile:
+        return []
+
+    conditions = []
+    if profile["allergies"]:
+        conditions.append(
+            f"- 알레르기 재료({', '.join(profile['allergies'])})는 절대 쓰지 않는다. missing_ingredients에도 넣지 않는다."
+        )
+    if profile["dislikes"]:
+        conditions.append(f"- 싫어하는 재료({', '.join(profile['dislikes'])})는 가능하면 쓰지 않는다.")
+    if profile["diet"] in DIET_RULES:
+        conditions.append(f"- 식단: {profile['diet']}. {DIET_RULES[profile['diet']]}")
+    if profile["skill"] == "초보":
+        conditions.append("- 요리 초보용이다. 쉬운 레시피 위주로 추천하고, 조리 순서를 불 세기와 시간까지 더 자세히 쓴다.")
+    elif profile["skill"] == "능숙":
+        conditions.append("- 요리에 능숙한 사람용이다. 조금 손이 가는 레시피도 괜찮다.")
+    return conditions
+
+
+def build_prompt(ingredients, servings, time_limit, difficulty, count, exclude_titles, profile=None):
     """AI에게 보낼 레시피 요청 글을 만든다."""
     conditions = [f"- {servings}인분 기준으로 재료 양을 쓴다."]
     if time_limit:
@@ -37,6 +71,7 @@ def build_prompt(ingredients, servings, time_limit, difficulty, count, exclude_t
         conditions.append(f"- 난이도는 \"{difficulty}\"이어야 한다.")
     if exclude_titles:
         conditions.append(f"- 다음 레시피는 이미 추천했으니 제외한다: {', '.join(exclude_titles)}")
+    conditions += profile_conditions(profile)
 
     example = {
         "recipes": [{
@@ -112,11 +147,19 @@ def normalize_recipes(data, count):
     return recipes[:count]
 
 
-def generate_recipes(ingredients, servings, time_limit, difficulty, count, exclude_titles=()):
-    """재료와 조건으로 레시피 목록을 만든다. 실패하면 RecipeError(또는 OpenRouterError)를 낸다."""
+def generate_recipes(ingredients, servings, time_limit, difficulty, count, exclude_titles=(), profile=None):
+    """재료와 조건으로 레시피 목록을 만든다. 실패하면 RecipeError(또는 OpenRouterError)를 낸다.
+
+    profile이 있으면 알레르기 재료를 재료 목록에서 빼고 요청하며, 그래도 AI가 알레르기 재료를 넣은 레시피는 버린다.
+    """
+    allergies = profile["allergies"] if profile else []
+    ingredients = [item for item in ingredients if not find_allergens([item], allergies)]
+    if not ingredients:
+        raise RecipeError("알레르기 재료를 빼고 나니 남은 재료가 없어요.")
+
     answer = chat([{
         "role": "user",
-        "content": build_prompt(ingredients, servings, time_limit, difficulty, count, list(exclude_titles)),
+        "content": build_prompt(ingredients, servings, time_limit, difficulty, count, list(exclude_titles), profile),
     }])
 
     try:
@@ -129,7 +172,15 @@ def generate_recipes(ingredients, servings, time_limit, difficulty, count, exclu
         if not data["recipes"]:  # AI가 일부러 빈 목록을 준 경우 (음식 재료가 아님)
             raise RecipeError("이 재료로는 레시피를 만들기 어려워요.")
         raise RecipeError("레시피를 만들지 못했어요. 다시 시도해주세요.")
-    return recipes
+
+    # 안전장치: AI가 규칙을 어기고 알레르기 재료를 넣은 레시피는 보여주지 않는다
+    safe_recipes = [
+        recipe for recipe in recipes
+        if not find_allergens(recipe["used_ingredients"] + recipe["missing_ingredients"], allergies)
+    ]
+    if not safe_recipes:
+        raise RecipeError("알레르기 재료가 들어간 레시피만 나와서 보여드리지 않았어요. 다시 시도해주세요.")
+    return safe_recipes
 
 
 def recipe_to_markdown(recipe):

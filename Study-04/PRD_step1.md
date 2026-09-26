@@ -125,6 +125,11 @@ import os
 from google.colab import userdata
 os.environ["OPENROUTER_API_KEY"] = userdata.get("OPENROUTER_API_KEY")
 
+# 셀 2-1 (3단계부터): Google Drive 연결 + 프로필 저장 폴더 지정 — 셀 3보다 먼저 실행
+from google.colab import drive
+drive.mount("/content/drive")
+os.environ["RECIPE_DATA_DIR"] = "/content/drive/MyDrive/fridge_recipe_data"
+
 # 셀 3: 앱 서버를 백그라운드로 실행 (마지막 줄에 ok가 나오면 성공)
 %cd /content/VibeCoding/Study-04/fridge_recipe
 !pkill -f "streamlit run" ; sleep 1
