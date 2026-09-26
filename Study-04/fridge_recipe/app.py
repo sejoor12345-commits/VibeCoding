@@ -26,15 +26,18 @@ from storage import (
     ProfileError,
     create_profile,
     delete_recipe,
+    empty_data,
+    get_profile,
     load_data,
     save_recipe,
     update_profile,
 )
-from vision import UnreadableResultError, UnsupportedImageError, recognize_ingredients
+from vision import UnreadableResultError, UnsupportedImageError, prepare_image, recognize_ingredients
 
 ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"]
 NO_PROFILE = "(프로필 선택 안 함)"
-WAIT_HINT = f"보통 30초~1분, 최대 {TIMEOUT_SECONDS // 60}분 걸려요"  # 기다리는 동안 보여줄 안내
+# 기다리는 동안 보여줄 안내. 기다리는 중에 화면을 건드리면 Streamlit이 실행을 멈춰서 AI 답이 버려지므로 그것도 알린다
+WAIT_HINT = f"보통 30초~1분, 최대 {TIMEOUT_SECONDS // 60}분 걸려요. 기다리는 동안 다른 칸을 바꾸거나 버튼을 누르면 요청이 취소돼요"
 CONFIDENCE_MARKS = {"높음": "", "보통": "", "낮음": " ❓"}
 
 
@@ -59,11 +62,26 @@ def result_to_markdown(result):
     return "\n".join(lines)
 
 
-def run_recognition(photo):
-    """사진으로 재료를 인식하고, 결과를 session_state에 넣는다. 오류는 화면용 메시지로 바꿔 넣는다."""
+def prepare_photo(photo):
+    """올린 사진을 줄인 JPEG로 바꿔 (줄인 사진, 오류 문구)로 돌려준다. 열 수 없는 사진이면 줄인 사진이 None.
+
+    화면이 다시 그려질 때마다 큰 원본 사진을 다시 줄이지 않도록, 사진마다 붙는 번호(file_id)를 기준으로
+    처음 한 번만 줄이고 결과를 session_state에 보관해 다시 쓴다. 미리보기와 재료 인식 모두 이 사진을 쓴다.
+    """
+    if st.session_state.get("photo_id") != photo.file_id:
+        try:
+            st.session_state.prepared_photo = (prepare_image(photo), None)
+        except UnsupportedImageError as error:
+            st.session_state.prepared_photo = (None, str(error))
+        st.session_state.photo_id = photo.file_id
+    return st.session_state.prepared_photo
+
+
+def run_recognition(photo_jpeg):
+    """줄인 사진으로 재료를 인식하고, 결과를 session_state에 넣는다. 오류는 화면용 메시지로 바꿔 넣는다."""
     try:
-        result = recognize_ingredients(photo)
-    except (OpenRouterError, UnsupportedImageError) as error:
+        result = recognize_ingredients(photo_jpeg)
+    except OpenRouterError as error:
         st.session_state.message = ("error", str(error))
         return
     except UnreadableResultError as error:
@@ -76,11 +94,14 @@ def run_recognition(photo):
 
 
 def run_recipe_generation(profile, exclude_titles=()):
-    """입력칸의 재료와 선택한 조건(+프로필)으로 레시피를 만들고, 결과를 session_state에 넣는다."""
+    """입력칸의 재료와 선택한 조건(+프로필)으로 레시피를 만들고, 결과를 session_state에 넣는다.
+
+    오류는 버튼 아래 알림(notify)으로 한 번만 보여준다. 재료를 고치는 등 화면을 다시 그리면 사라진다.
+    """
     st.session_state.recipe_notice = None
     ingredients = parse_ingredients(st.session_state.ingredients_text)
     if not ingredients:
-        st.session_state.recipe_error = "재료를 한 개 이상 입력해주세요."
+        notify("recipe", "재료를 한 개 이상 입력해주세요.", ok=False)
         return
 
     allergens = find_allergens(ingredients, profile["allergies"]) if profile else []
@@ -98,12 +119,11 @@ def run_recipe_generation(profile, exclude_titles=()):
             profile=profile,
         )
     except (OpenRouterError, RecipeError) as error:
-        st.session_state.recipe_error = str(error)
+        notify("recipe", str(error), ok=False)
         return
 
     st.session_state.recipes = recipes  # 저장 기능이 쓸 수 있게 JSON 원본 그대로 보관한다
     st.session_state.recipe_source_ingredients = ingredients
-    st.session_state.recipe_error = None
 
 
 # ----- 버튼 콜백 -----
@@ -131,9 +151,15 @@ def selected_nickname():
 def apply_default_servings():
     """선택한 프로필의 기본 인분을 레시피 조건의 인분에 채운다."""
     nickname = selected_nickname()
-    if nickname:
-        data, _ = load_data()
-        st.session_state.servings = data["profiles"][nickname]["default_servings"]
+    if not nickname:
+        return
+    try:
+        profile = get_profile(nickname)
+    except ProfileError as error:
+        notify("profile", str(error), ok=False)
+        return
+    if profile:  # 그사이 프로필이 사라졌으면 아무것도 하지 않는다
+        st.session_state.servings = profile["default_servings"]
 
 
 def on_create_profile():
@@ -149,14 +175,18 @@ def on_create_profile():
 
 
 def on_save_profile(nickname):
-    update_profile(
-        nickname,
-        allergies=parse_ingredients(st.session_state[f"allergies_{nickname}"]),
-        dislikes=parse_ingredients(st.session_state[f"dislikes_{nickname}"]),
-        diet=st.session_state[f"diet_{nickname}"],
-        skill=st.session_state[f"skill_{nickname}"],
-        default_servings=st.session_state[f"servings_{nickname}"],
-    )
+    try:
+        update_profile(
+            nickname,
+            allergies=parse_ingredients(st.session_state[f"allergies_{nickname}"]),
+            dislikes=parse_ingredients(st.session_state[f"dislikes_{nickname}"]),
+            diet=st.session_state[f"diet_{nickname}"],
+            skill=st.session_state[f"skill_{nickname}"],
+            default_servings=st.session_state[f"servings_{nickname}"],
+        )
+    except ProfileError as error:
+        notify("profile", str(error), ok=False)
+        return
     apply_default_servings()
     notify("profile", "프로필을 저장했어요!")
 
@@ -175,7 +205,11 @@ def on_save_recipe(index):
 
 
 def on_confirm_delete(nickname, recipe_id):
-    delete_recipe(nickname, recipe_id)
+    try:
+        delete_recipe(nickname, recipe_id)
+    except ProfileError as error:
+        notify("saved", str(error), ok=False)
+        return
     st.session_state.confirm_delete = None
     notify("saved", "삭제했어요.")
 
@@ -185,14 +219,15 @@ st.session_state.setdefault("message", ("info", "사진을 올리고 **재료 �
 st.session_state.setdefault("ingredients_text", "")
 st.session_state.setdefault("recipes", [])
 st.session_state.setdefault("recipe_source_ingredients", [])
-st.session_state.setdefault("recipe_error", None)
 st.session_state.setdefault("recipe_notice", None)
 st.session_state.setdefault("servings", DEFAULT_SERVINGS)
 st.session_state.setdefault("confirm_delete", None)
 
-data, was_corrupt = load_data()
-if was_corrupt:
-    notify("profile", "저장 데이터를 읽지 못해 새로 시작했어요. (원래 파일은 profiles.corrupt.json으로 보관했어요)", ok=False)
+try:
+    data = load_data()
+except ProfileError as error:  # 저장 파일이 손상됐거나 Drive 연결이 끊긴 경우. 사진 인식, 레시피 추천은 계속 쓸 수 있게 한다
+    notify("profile", str(error), ok=False)
+    data = empty_data()
 
 st.title("🧊 냉장고 레시피 추천")
 st.write("냉장고 사진을 올리면 AI가 재료를 찾고, 그 재료로 만들 수 있는 레시피를 추천해줘요.")
@@ -206,7 +241,7 @@ with st.container(border=True):
     profile_columns = st.columns([2, 2, 1])
     profile_columns[0].selectbox("👤 프로필", [NO_PROFILE] + nicknames, key="profile_name", on_change=apply_default_servings)
     profile_columns[1].text_input("새 닉네임 (1~20자)", key="new_nickname", placeholder="예: 요리초보")
-    profile_columns[2].button("새 프로필 만들기", on_click=on_create_profile, use_container_width=True)
+    profile_columns[2].button("새 프로필 만들기", on_click=on_create_profile, width="stretch")
     st.caption("⚠️ 비밀번호가 없어서 앱을 쓰는 누구나 모든 프로필을 볼 수 있어요. 실명 같은 개인정보는 넣지 마세요.")
     show_notice("profile")
 
@@ -240,15 +275,19 @@ with recommend_tab:
 
     with left:
         photo = st.file_uploader("냉장고 사진 (JPG, PNG, WEBP)", type=ALLOWED_EXTENSIONS)
-        if photo is not None:
-            st.image(photo, caption="미리보기", use_container_width=True)
+        st.caption("아이폰 HEIC 사진은 사진 앱에서 JPG로 내보내서 올려주세요. 파일 이름의 확장자만 바꾸면 열리지 않아요.")
+        photo_jpeg, photo_error = prepare_photo(photo) if photo is not None else (None, None)
+        if photo_error:
+            st.error(photo_error, icon="⚠️")
+        elif photo_jpeg:
+            st.image(photo_jpeg, caption="미리보기", width="stretch")
 
-        if st.button("재료 인식하기", type="primary", use_container_width=True):
-            if photo is None:
+        if st.button("재료 인식하기", type="primary", width="stretch", disabled=photo_error is not None):
+            if photo_jpeg is None:
                 st.session_state.message = ("error", "먼저 냉장고 사진을 올려주세요.")
             else:
                 with st.spinner(f"AI가 사진 속 재료를 찾고 있어요... ({WAIT_HINT})", show_time=True):
-                    run_recognition(photo)
+                    run_recognition(photo_jpeg)
 
     with right:
         kind, text = st.session_state.message
@@ -277,24 +316,23 @@ with recommend_tab:
     option_columns[3].selectbox("추천 개수", COUNT_OPTIONS, index=2, format_func=lambda n: f"{n}개", key="recipe_count")
 
     button_columns = st.columns(2)
-    if button_columns[0].button("레시피 추천받기", type="primary", use_container_width=True):
+    if button_columns[0].button("레시피 추천받기", type="primary", width="stretch"):
         with st.spinner(f"AI가 레시피를 만들고 있어요... ({WAIT_HINT})", show_time=True):
             run_recipe_generation(profile)
-    if button_columns[1].button("다른 레시피 보기", use_container_width=True, disabled=not st.session_state.recipes):
+    if button_columns[1].button("다른 레시피 보기", width="stretch", disabled=not st.session_state.recipes):
         with st.spinner(f"AI가 다른 레시피를 만들고 있어요... ({WAIT_HINT})", show_time=True):
             run_recipe_generation(profile, exclude_titles=[recipe["title"] for recipe in st.session_state.recipes])
 
     if st.session_state.recipe_notice:
         st.warning(st.session_state.recipe_notice, icon="🥜")
-    if st.session_state.recipe_error:
-        st.error(st.session_state.recipe_error, icon="⚠️")
+    show_notice("recipe")
 
     if st.session_state.recipes:
         card_columns = st.columns(len(st.session_state.recipes))
         for index, (column, recipe) in enumerate(zip(card_columns, st.session_state.recipes)):
             with column.container(border=True):
                 st.markdown(recipe_to_markdown(recipe))
-                st.button("⭐ 저장", key=f"save_{index}", on_click=on_save_recipe, args=(index,), use_container_width=True)
+                st.button("⭐ 저장", key=f"save_{index}", on_click=on_save_recipe, args=(index,), width="stretch")
                 show_notice(f"card_{index}")
 
 # ===== 내 레시피 탭 (3단계) =====
@@ -324,8 +362,8 @@ with saved_tab:
         if st.session_state.confirm_delete == chosen_id:
             st.warning("정말 삭제할까요?")
             confirm_columns = st.columns(2)
-            confirm_columns[0].button("네, 삭제할게요", type="primary", on_click=on_confirm_delete, args=(nickname, chosen_id), use_container_width=True)
-            if confirm_columns[1].button("취소", use_container_width=True):
+            confirm_columns[0].button("네, 삭제할게요", type="primary", on_click=on_confirm_delete, args=(nickname, chosen_id), width="stretch")
+            if confirm_columns[1].button("취소", width="stretch"):
                 st.session_state.confirm_delete = None
                 st.rerun()
         elif st.button("🗑️ 삭제"):

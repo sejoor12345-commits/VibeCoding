@@ -64,6 +64,11 @@ def find_allergens(texts, allergies):
     ]
 
 
+def basic_seasonings(allergies):
+    """집에 있다고 가정할 기본 양념. 알레르기 재료(예: 간장)는 빼서, AI에게 쓰라고 하지 않고 안전장치에도 걸리게 한다."""
+    return [name for name in BASIC_SEASONINGS if not find_allergens([name], allergies)]
+
+
 def with_other_names(names):
     """['계란'] → ['계란(달걀)']처럼 다른 이름을 괄호로 붙인다. AI에게 알려줄 때 쓴다."""
     result = []
@@ -97,6 +102,7 @@ def profile_conditions(profile):
 
 def build_prompt(ingredients, servings, time_limit, difficulty, count, exclude_titles, profile=None):
     """AI에게 보낼 레시피 요청 글을 만든다."""
+    seasonings = basic_seasonings(profile["allergies"] if profile else [])
     conditions = [f"- {servings}인분 기준으로 재료 양을 쓴다."]
     if time_limit:
         conditions.append(f"- 조리 시간은 {time_limit}분 이내여야 한다.")
@@ -126,7 +132,7 @@ def build_prompt(ingredients, servings, time_limit, difficulty, count, exclude_t
 
 규칙:
 - 냉장고 재료를 최대한 많이 쓰는 레시피를 우선한다.
-- {', '.join(BASIC_SEASONINGS)}은 집에 있다고 가정한다. 이것들은 missing_ingredients에 넣지 않는다.
+- {', '.join(seasonings)}은 집에 있다고 가정한다. 이것들은 missing_ingredients에 넣지 않는다.
 - 그 밖에 냉장고 재료에 없는 재료가 필요하면 missing_ingredients에 적는다. 레시피당 최대 2개까지만 허용한다.
 - used_ingredients에는 냉장고 재료 중 이 레시피에 쓰는 것을 양과 함께 적는다.
 - 조리 순서(steps)는 초보자도 따라 할 수 있게 한 단계에 한 동작씩 쓴다.
@@ -146,17 +152,24 @@ def to_text_list(value):
     return [str(item).strip() for item in value if str(item).strip()]
 
 
-def is_basic_seasoning(item):
-    """'간장 1큰술'처럼 기본 양념으로 시작하는 재료인지 확인한다."""
+def is_basic_seasoning(item, seasonings):
+    """'간장 1큰술'처럼 기본 양념(seasonings)으로 시작하는 재료인지 확인한다."""
     words = item.split()
-    return bool(words) and words[0] in BASIC_SEASONINGS
+    return bool(words) and words[0] in seasonings
 
 
-def normalize_recipes(data, count):
+def to_number(value):
+    """15, "15", "15분"처럼 온 값에서 숫자만 꺼낸다. 숫자가 없으면 None. ("15분분"처럼 보이지 않게)"""
+    match = re.search(r"\d+", str(value))
+    return int(match.group()) if match else None
+
+
+def normalize_recipes(data, count, allergies=()):
     """AI가 준 JSON에서 제목과 조리 순서가 있는 레시피만 골라 정리한다."""
     if not isinstance(data, dict) or not isinstance(data.get("recipes"), list):
         raise ValueError("recipes 목록이 없음")
 
+    seasonings = basic_seasonings(allergies)
     recipes = []
     for item in data["recipes"]:
         if not isinstance(item, dict):
@@ -169,15 +182,27 @@ def normalize_recipes(data, count):
         recipes.append({
             "title": title,
             "summary": str(item.get("summary") or "").strip(),
-            "servings": item.get("servings"),
-            "time_minutes": item.get("time_minutes"),
+            "servings": to_number(item.get("servings")),
+            "time_minutes": to_number(item.get("time_minutes")),
             "difficulty": str(item.get("difficulty") or "").strip(),
             "used_ingredients": to_text_list(item.get("used_ingredients")),
-            "missing_ingredients": [x for x in to_text_list(item.get("missing_ingredients")) if not is_basic_seasoning(x)],
+            "missing_ingredients": [x for x in to_text_list(item.get("missing_ingredients")) if not is_basic_seasoning(x, seasonings)],
             "steps": steps,
             "tip": str(item.get("tip") or "").strip(),
         })
     return recipes[:count]
+
+
+def has_allergen(recipe, allergies):
+    """레시피에 알레르기 재료가 들어 있는지 확인한다. 재료 목록과 제목, 조리 순서까지 본다.
+
+    조리 순서는 두 글자 이상인 알레르기만 본다. '게'처럼 한 글자는 '잘게', '노릇하게' 같은 말에도 걸리기 때문이다.
+    """
+    long_allergies = [allergy for allergy in allergies if len(allergy) >= 2]
+    return bool(
+        find_allergens(recipe["used_ingredients"] + recipe["missing_ingredients"] + [recipe["title"]], allergies)
+        or find_allergens(recipe["steps"], long_allergies)
+    )
 
 
 def generate_recipes(ingredients, servings, time_limit, difficulty, count, exclude_titles=(), profile=None):
@@ -197,7 +222,7 @@ def generate_recipes(ingredients, servings, time_limit, difficulty, count, exclu
 
     try:
         data = extract_json(answer)
-        recipes = normalize_recipes(data, count)
+        recipes = normalize_recipes(data, count, allergies)
     except ValueError:
         raise RecipeError("레시피를 만들지 못했어요. 다시 시도해주세요.")
 
@@ -207,10 +232,7 @@ def generate_recipes(ingredients, servings, time_limit, difficulty, count, exclu
         raise RecipeError("레시피를 만들지 못했어요. 다시 시도해주세요.")
 
     # 안전장치: AI가 규칙을 어기고 알레르기 재료를 넣은 레시피는 보여주지 않는다
-    safe_recipes = [
-        recipe for recipe in recipes
-        if not find_allergens(recipe["used_ingredients"] + recipe["missing_ingredients"], allergies)
-    ]
+    safe_recipes = [recipe for recipe in recipes if not has_allergen(recipe, allergies)]
     if not safe_recipes:
         raise RecipeError("알레르기 재료가 들어간 레시피만 나와서 보여드리지 않았어요. 다시 시도해주세요.")
     return safe_recipes

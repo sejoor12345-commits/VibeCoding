@@ -7,7 +7,6 @@ from datetime import datetime
 from pathlib import Path
 
 DATA_FILE_NAME = "profiles.json"
-CORRUPT_FILE_NAME = "profiles.corrupt.json"
 MAX_NICKNAME_LENGTH = 20
 
 DIET_OPTIONS = ["제한 없음", "채식", "비건", "저탄수화물"]
@@ -17,6 +16,10 @@ DEFAULT_SERVINGS = 2
 
 class ProfileError(Exception):
     """화면에 그대로 보여줘도 되는 안내 문구를 담은 오류."""
+
+
+# 파일을 읽거나 쓰다가 실패했을 때(예: Colab에서 Google Drive 연결이 끊김) 보여줄 안내 문구
+FILE_ERROR_MESSAGE = "저장 데이터를 읽거나 쓰지 못했어요. Google Drive 연결을 확인해주세요."
 
 
 def get_data_dir():
@@ -33,39 +36,49 @@ def now_text():
 
 
 def load_data():
-    """(데이터, 손상 여부)를 돌려준다. 파일이 없으면 빈 데이터, 손상됐으면 원본을 옮겨두고 빈 데이터."""
+    """저장 데이터를 읽어 돌려준다. 파일이 없으면 빈 데이터.
+
+    파일을 읽지 못하면 ProfileError를 낸다. 파일이 손상됐으면 원본을 옮겨두고 ProfileError를 내므로,
+    그다음에 부르면 빈 데이터로 시작한다.
+    """
     path = get_data_dir() / DATA_FILE_NAME
-    if not path.exists():
-        return empty_data(), False
+    try:
+        if not path.exists():
+            return empty_data()
+        text = path.read_text(encoding="utf-8")
+    except OSError:  # 잠깐 읽지 못한 것일 수 있으니 멀쩡할지도 모르는 파일을 옮기지 않는다
+        raise ProfileError(FILE_ERROR_MESSAGE)
 
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(text)
         if not isinstance(data, dict) or not isinstance(data.get("profiles"), dict):
             raise ValueError("profiles가 없음")
-        return data, False
-    except (ValueError, OSError):
-        os.replace(path, path.with_name(CORRUPT_FILE_NAME))  # 손상된 원본은 지우지 않고 따로 보관한다
-        return empty_data(), True
+        return data
+    except ValueError:
+        # 손상된 원본은 지우지 않고 따로 보관한다. 이름에 시간을 붙여 예전 백업을 덮어쓰지 않게 한다
+        backup_name = f"profiles.corrupt-{datetime.now():%Y%m%d-%H%M%S}.json"
+        try:
+            os.replace(path, path.with_name(backup_name))
+        except OSError:
+            raise ProfileError(FILE_ERROR_MESSAGE)
+        raise ProfileError(f"저장 데이터를 읽지 못해 새로 시작했어요. (원래 파일은 {backup_name}으로 보관했어요)")
 
 
 def save_data(data):
     """임시 파일에 먼저 쓴 뒤 바꿔치기한다. 저장 도중 끊겨도 기존 파일이 깨지지 않는다."""
     data_dir = get_data_dir()
-    data_dir.mkdir(parents=True, exist_ok=True)
     temp_path = data_dir / (DATA_FILE_NAME + ".tmp")
-    temp_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    os.replace(temp_path, data_dir / DATA_FILE_NAME)
+    try:
+        data_dir.mkdir(parents=True, exist_ok=True)
+        temp_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(temp_path, data_dir / DATA_FILE_NAME)
+    except OSError:
+        raise ProfileError(FILE_ERROR_MESSAGE)
 
 
 def get_profile(nickname):
     """닉네임에 해당하는 프로필을 돌려준다. 없으면 None."""
-    data, _ = load_data()
-    return data["profiles"].get(nickname)
-
-
-def list_nicknames():
-    data, _ = load_data()
-    return sorted(data["profiles"])
+    return load_data()["profiles"].get(nickname)
 
 
 def create_profile(nickname):
@@ -76,7 +89,7 @@ def create_profile(nickname):
     if len(nickname) > MAX_NICKNAME_LENGTH:
         raise ProfileError(f"닉네임은 {MAX_NICKNAME_LENGTH}자 이하로 써주세요.")
 
-    data, _ = load_data()
+    data = load_data()
     if nickname in data["profiles"]:
         raise ProfileError("이미 있는 닉네임이에요.")
 
@@ -96,7 +109,7 @@ def create_profile(nickname):
 
 def update_profile(nickname, allergies, dislikes, diet, skill, default_servings):
     """프로필 정보(알레르기, 싫어하는 재료, 식단, 실력, 기본 인분)를 바꿔 저장한다."""
-    data, _ = load_data()
+    data = load_data()
     profile = data["profiles"].get(nickname)
     if profile is None:
         raise ProfileError("프로필을 찾을 수 없어요.")
@@ -113,7 +126,7 @@ def update_profile(nickname, allergies, dislikes, diet, skill, default_servings)
 
 def save_recipe(nickname, recipe, source_ingredients):
     """레시피를 프로필에 저장한다. 같은 제목이 이미 있으면 ProfileError."""
-    data, _ = load_data()
+    data = load_data()
     profile = data["profiles"].get(nickname)
     if profile is None:
         raise ProfileError("먼저 프로필을 선택해주세요.")
@@ -130,7 +143,7 @@ def save_recipe(nickname, recipe, source_ingredients):
 
 
 def delete_recipe(nickname, recipe_id):
-    data, _ = load_data()
+    data = load_data()
     profile = data["profiles"].get(nickname)
     if profile is None:
         return

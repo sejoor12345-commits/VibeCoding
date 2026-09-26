@@ -14,6 +14,7 @@ VISION_MODEL = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"  # 사진을
 TIMEOUT_SECONDS = 120  # 요청 하나에 기다리는 최대 시간(초). 이 시간이 지나면 포기하고 "응답이 늦어요"를 띄운다
 SILENCE_SECONDS = 30  # 서버가 이 시간 동안 아무것도 안 보내면 연결이 끊긴 것으로 본다
 TIMEOUT_MESSAGE = f"응답이 {TIMEOUT_SECONDS}초 넘게 없어서 멈췄어요. 잠시 후 다시 시도해주세요."
+CONNECT_MESSAGE = "OpenRouter에 연결하지 못했어요. 인터넷 연결을 확인해주세요."
 
 # 상태 코드별로 사용자에게 보여줄 안내 문구
 STATUS_MESSAGES = {
@@ -61,14 +62,16 @@ def chat(messages, model=TEXT_MODEL):
             stream=True,  # 답을 한 번에 받지 않고 조금씩 받아서 전체 시간을 잴 수 있게 한다
         ) as response:
             body = read_body_with_deadline(response, deadline)
+    except requests.ConnectTimeout:  # 10초 안에 연결조차 못 한 경우. Timeout의 한 종류라서 Timeout보다 먼저 확인한다
+        raise OpenRouterError(CONNECT_MESSAGE)
     except requests.Timeout:
         raise OpenRouterError(TIMEOUT_MESSAGE)
     except requests.ConnectionError as error:
         if "timed out" in str(error).lower():  # 받는 도중에 서버가 조용해진 경우
             raise OpenRouterError(TIMEOUT_MESSAGE)
-        raise OpenRouterError("OpenRouter에 연결하지 못했어요. 인터넷 연결을 확인해주세요.")
+        raise OpenRouterError(CONNECT_MESSAGE)
     except requests.RequestException:
-        raise OpenRouterError("OpenRouter에 연결하지 못했어요. 인터넷 연결을 확인해주세요.")
+        raise OpenRouterError(CONNECT_MESSAGE)
 
     if response.status_code == 404:
         raise OpenRouterError(f"모델({model})을 찾을 수 없어요. 모델 이름을 확인해주세요.")
@@ -84,6 +87,8 @@ def chat(messages, model=TEXT_MODEL):
 
     # 생각하고 답하는 모델(reasoning)은 생각 과정을 <think>...</think>로 답 앞에 붙이기도 한다. 답만 남긴다.
     content = re.sub(r"<think>.*?</think>", "", content or "", flags=re.DOTALL).strip()
+    if "</think>" in content:  # 여는 <think> 없이 "생각...</think>답"으로 오는 경우도 있다
+        content = content.rsplit("</think>", 1)[1].strip()
     if not content:
         raise OpenRouterError("AI가 빈 답을 보냈어요. 생각하는 데 시간을 다 쓴 것 같아요. 다시 시도해주세요.")
     return content

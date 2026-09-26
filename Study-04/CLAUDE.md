@@ -26,10 +26,15 @@ handling). Build one step at a time; read the matching PRD first and treat its �
 All 3 steps are built: `vision.py` (1), `recipe.py` (2, plus profile rules + allergy filter for 3),
 `storage.py` (3: `profiles.json` under `RECIPE_DATA_DIR`, a Google Drive folder in Colab, else
 `fridge_recipe/data/` which is gitignored; atomic write via temp file + `os.replace`; a corrupt file is moved to
-`profiles.corrupt.json`). Streamlit reruns `app.py` top to bottom on every interaction, so state that must
-survive (`message`, `ingredients_text`, `recipes`, `recipe_source_ingredients`, `profile_name`, `notice`…)
-lives in `st.session_state`. Anything that changes an already-rendered widget's value (e.g. selecting the new
-profile, setting `servings`) happens in an `on_click`/`on_change` callback. User feedback uses inline
+`profiles.corrupt-YYYYmmdd-HHMMSS.json`; corruption and read/write `OSError`s (e.g. Drive disconnected) both
+surface as `ProfileError`, which the top-level load and every callback catch and show via `notify`). Streamlit
+reruns `app.py` top to bottom on every interaction, so state that must survive (`message`, `ingredients_text`,
+`recipes`, `recipe_source_ingredients`, `profile_name`, `notice`…) lives in `st.session_state`. Anything that
+changes an already-rendered widget's value (e.g. selecting the new profile, setting `servings`) happens in an
+`on_click`/`on_change` callback. The uploaded photo is resized once right after upload (`vision.prepare_image` →
+JPEG bytes, cached in `st.session_state` by the upload's `file_id`) and that copy feeds both the preview and
+recognition: `st.image` on the 12MP original re-decoded it on every rerun (~200ms each). An unreadable photo shows
+an error and disables the recognize button. User feedback (including recipe-generation errors) uses inline
 `notice`s shown next to the triggering button and cleared at the *end* of the script — not `st.toast`, which
 silently dropped a second toast while one was still visible, and not cleared at the start, because
 typing-then-clicking fires two back-to-back reruns and the first can be interrupted.

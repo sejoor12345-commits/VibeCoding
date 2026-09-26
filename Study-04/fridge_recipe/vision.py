@@ -8,7 +8,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from openrouter_client import VISION_MODEL, chat, extract_json
 
 MAX_SIDE = 1024  # 사진의 긴 변을 이 크기(px)까지 줄여서 보낸다
-ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
+ALLOWED_FORMATS = {"JPEG", "MPO", "PNG", "WEBP"}  # MPO: 휴대폰 JPG 중 사진 여러 장이 들어 있는 것 (인물 사진 모드 등)
 CONFIDENCE_LEVELS = ("높음", "보통", "낮음")
 
 PROMPT = """이 사진은 냉장고 안을 찍은 사진이야. 사진에 보이는 식재료를 찾아줘.
@@ -39,22 +39,25 @@ class UnreadableResultError(Exception):
 
 
 def prepare_image(photo):
-    """사진(파일 경로 또는 업로드된 파일)을 열어 방향을 바로잡고, 크기를 줄인 뒤 JPEG base64 문자열로 돌려준다."""
+    """사진(파일 경로 또는 업로드된 파일)을 열어 방향을 바로잡고, 크기를 줄인 JPEG 사진(bytes)으로 돌려준다.
+
+    열 수 없는 사진(확장자만 바꾼 파일, 중간이 잘린 파일, 너무 큰 사진)이면 UnsupportedImageError를 낸다.
+    """
     try:
         image = Image.open(photo)
-    except (UnidentifiedImageError, OSError):
+        if image.format not in ALLOWED_FORMATS:
+            raise UnsupportedImageError("JPG, PNG, WEBP 사진만 올릴 수 있어요. JPG나 PNG로 바꿔서 올려주세요.")
+
+        image = ImageOps.exif_transpose(image)  # 휴대폰 사진이 옆으로 누워 보이는 문제를 바로잡는다
+        image = image.convert("RGB")  # 투명 배경(PNG) 등을 JPEG로 저장할 수 있게 바꾼다
+        image.thumbnail((MAX_SIDE, MAX_SIDE))  # 비율을 유지하며 긴 변을 MAX_SIDE 이하로 줄인다
+
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG", quality=85)
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
+        # 사진을 실제로 풀어 보는 중에도(중간이 잘린 파일 등) 오류가 날 수 있어서, 여는 것부터 저장까지 한꺼번에 감싼다
         raise UnsupportedImageError("사진을 열 수 없어요. JPG나 PNG로 바꿔서 올려주세요.")
-
-    if image.format not in ALLOWED_FORMATS:
-        raise UnsupportedImageError("JPG, PNG, WEBP 사진만 올릴 수 있어요. JPG나 PNG로 바꿔서 올려주세요.")
-
-    image = ImageOps.exif_transpose(image)  # 휴대폰 사진이 옆으로 누워 보이는 문제를 바로잡는다
-    image = image.convert("RGB")  # 투명 배경(PNG) 등을 JPEG로 저장할 수 있게 바꾼다
-    image.thumbnail((MAX_SIDE, MAX_SIDE))  # 비율을 유지하며 긴 변을 MAX_SIDE 이하로 줄인다
-
-    buffer = io.BytesIO()
-    image.save(buffer, format="JPEG", quality=85)
-    return base64.b64encode(buffer.getvalue()).decode("ascii")
+    return buffer.getvalue()
 
 
 def normalize_result(data):
@@ -62,8 +65,12 @@ def normalize_result(data):
     if not isinstance(data, dict):
         raise ValueError("JSON 최상위가 객체가 아님")
 
+    items = data.get("ingredients") or []
+    if not isinstance(items, list):
+        raise ValueError("ingredients가 목록이 아님")
+
     ingredients = []
-    for item in data.get("ingredients") or []:
+    for item in items:
         if not isinstance(item, dict):
             continue
         name = str(item.get("name") or "").strip()
@@ -79,9 +86,9 @@ def normalize_result(data):
     return {"ingredients": ingredients, "note": str(data.get("note") or "").strip()}
 
 
-def recognize_ingredients(photo):
-    """사진(파일 경로 또는 업로드된 파일)을 받아 AI로 재료를 인식하고, 정리된 결과를 돌려준다."""
-    image_base64 = prepare_image(photo)
+def recognize_ingredients(image_jpeg):
+    """prepare_image로 줄인 사진(JPEG bytes)을 AI에게 보내 재료를 인식하고, 정리된 결과를 돌려준다."""
+    image_base64 = base64.b64encode(image_jpeg).decode("ascii")
     answer = chat([
         {
             "role": "user",
