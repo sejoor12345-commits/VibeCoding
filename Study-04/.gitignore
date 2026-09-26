@@ -1,8 +1,0 @@
-# API 키 같은 비밀 정보가 담긴 파일 — 절대 GitHub에 올리면 안 됨
-.env
-.env.*
-!.env.example
-
-# 파이썬 실행 시 자동으로 생기는 캐시 파일
-__pycache__/
-*.pyc
