@@ -1,0 +1,36 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project overview
+
+`Study-04` is where the book's API-based AI service practice lives ("혼자 공부하는 바이브코딩 with 클로드
+코드", repo root: `VibeCoding/`, alongside `Study-01/`–`Study-03/`). It calls LLMs through the
+**OpenRouter** API (OpenAI-compatible chat completions endpoint, `https://openrouter.ai/api/v1/chat/completions`)
+using plain Python + `requests` (preinstalled on Colab, so no install step).
+
+Current state: `hello_ai.py` only — sends one question to `MODEL` and prints the reply. Starting point
+for later exercises.
+
+## API key handling (important)
+
+- The key is read **only** from the `OPENROUTER_API_KEY` environment variable (`get_api_key()`). Never
+  hardcode a key in source or notebooks, never commit it.
+- The user runs everything in **Google Colab** (no local terminal). There the key lives in Colab's
+  보안 비밀(Secrets, key icon in the left sidebar) under the name `OPENROUTER_API_KEY`, and a notebook cell
+  copies it into the environment before running scripts:
+  ```python
+  import os
+  from google.colab import userdata
+  os.environ["OPENROUTER_API_KEY"] = userdata.get("OPENROUTER_API_KEY")
+  ```
+  (`userdata.get` only works inside notebook cells, not inside a `!python` subprocess — which is why the
+  scripts read the env var instead; env vars set in the kernel are inherited by `!python` / `%run`.)
+- `.env` is gitignored (`Study-04/.gitignore`) for the case of running locally someday; `.env.example`
+  is the committed template. Scripts don't load `.env` yet — add `python-dotenv` only if a local
+  workflow actually appears.
+
+## Models
+
+`MODEL` in `hello_ai.py` uses a `:free` model. OpenRouter's free model lineup changes often; if a request
+fails with a "model not found"/404-ish error, pick a current free model from https://openrouter.ai/models.
