@@ -36,9 +36,41 @@ def parse_ingredients(text):
     return names
 
 
+# 같은 재료를 부르는 다른 이름들. 한 묶음 안의 이름은 모두 같은 재료로 본다. 필요하면 여기에 묶음을 더한다.
+# ('파'처럼 짧은 이름은 '양파', '파프리카'에도 걸리므로 넣지 않는다.)
+SAME_INGREDIENT_NAMES = [
+    ["달걀", "계란"],
+    ["소고기", "쇠고기"],
+    ["땅콩", "피넛"],
+]
+
+
+def same_names(name):
+    """name과 같은 재료를 뜻하는 이름 목록 (name 포함)."""
+    for group in SAME_INGREDIENT_NAMES:
+        if name in group:
+            return group
+    return [name]
+
+
 def find_allergens(texts, allergies):
-    """texts(재료 이름 목록) 안에 들어 있는 알레르기 재료를 돌려준다. '달걀 2개'처럼 양이 붙어 있어도 찾는다."""
-    return [allergy for allergy in allergies if any(allergy in text for text in texts)]
+    """texts(재료 이름 목록) 안에 들어 있는 알레르기 재료를 돌려준다.
+
+    '달걀 2개'처럼 양이 붙어 있어도, '계란'처럼 다른 이름으로 써 있어도 찾는다.
+    """
+    return [
+        allergy for allergy in allergies
+        if any(name in text for name in same_names(allergy) for text in texts)
+    ]
+
+
+def with_other_names(names):
+    """['계란'] → ['계란(달걀)']처럼 다른 이름을 괄호로 붙인다. AI에게 알려줄 때 쓴다."""
+    result = []
+    for name in names:
+        others = [other for other in same_names(name) if other != name]
+        result.append(f"{name}({', '.join(others)})" if others else name)
+    return result
 
 
 def profile_conditions(profile):
@@ -49,7 +81,8 @@ def profile_conditions(profile):
     conditions = []
     if profile["allergies"]:
         conditions.append(
-            f"- 알레르기 재료({', '.join(profile['allergies'])})는 절대 쓰지 않는다. missing_ingredients에도 넣지 않는다."
+            f"- 알레르기 재료({', '.join(with_other_names(profile['allergies']))})는 절대 쓰지 않는다. "
+            "missing_ingredients에도 넣지 않는다."
         )
     if profile["dislikes"]:
         conditions.append(f"- 싫어하는 재료({', '.join(profile['dislikes'])})는 가능하면 쓰지 않는다.")
