@@ -7,7 +7,7 @@ Streamlit은 버튼을 누르는 등 화면에서 무언가 할 때마다 이 �
 
 import streamlit as st
 
-from openrouter_client import OpenRouterError
+from openrouter_client import TIMEOUT_SECONDS, OpenRouterError
 from recipe import (
     COUNT_OPTIONS,
     DIFFICULTY_OPTIONS,
@@ -34,6 +34,7 @@ from vision import UnreadableResultError, UnsupportedImageError, recognize_ingre
 
 ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"]
 NO_PROFILE = "(프로필 선택 안 함)"
+WAIT_HINT = f"보통 30초~1분, 최대 {TIMEOUT_SECONDS // 60}분 걸려요"  # 기다리는 동안 보여줄 안내
 CONFIDENCE_MARKS = {"높음": "", "보통": "", "낮음": " ❓"}
 
 
@@ -246,7 +247,7 @@ with recommend_tab:
             if photo is None:
                 st.session_state.message = ("error", "먼저 냉장고 사진을 올려주세요.")
             else:
-                with st.spinner("인식 중..."):
+                with st.spinner(f"AI가 사진 속 재료를 찾고 있어요... ({WAIT_HINT})", show_time=True):
                     run_recognition(photo)
 
     with right:
@@ -277,10 +278,10 @@ with recommend_tab:
 
     button_columns = st.columns(2)
     if button_columns[0].button("레시피 추천받기", type="primary", use_container_width=True):
-        with st.spinner("레시피 만드는 중..."):
+        with st.spinner(f"AI가 레시피를 만들고 있어요... ({WAIT_HINT})", show_time=True):
             run_recipe_generation(profile)
     if button_columns[1].button("다른 레시피 보기", use_container_width=True, disabled=not st.session_state.recipes):
-        with st.spinner("다른 레시피 만드는 중..."):
+        with st.spinner(f"AI가 다른 레시피를 만들고 있어요... ({WAIT_HINT})", show_time=True):
             run_recipe_generation(profile, exclude_titles=[recipe["title"] for recipe in st.session_state.recipes])
 
     if st.session_state.recipe_notice:

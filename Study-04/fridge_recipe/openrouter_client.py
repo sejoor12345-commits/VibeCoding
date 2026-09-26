@@ -3,12 +3,15 @@
 import json
 import os
 import re
+import time
 
 import requests
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = "stealth/space-bunny-alpha"  # 모델을 바꾸려면 이 한 줄만 고치면 된다
-TIMEOUT_SECONDS = 60
+TIMEOUT_SECONDS = 120  # 요청 하나에 기다리는 최대 시간(초). 이 시간이 지나면 포기하고 "응답이 늦어요"를 띄운다
+SILENCE_SECONDS = 30  # 서버가 이 시간 동안 아무것도 안 보내면 연결이 끊긴 것으로 본다
+TIMEOUT_MESSAGE = f"응답이 {TIMEOUT_SECONDS}초 넘게 없어서 멈췄어요. 잠시 후 다시 시도해주세요."
 
 # 상태 코드별로 사용자에게 보여줄 안내 문구
 STATUS_MESSAGES = {
@@ -29,29 +32,52 @@ def get_api_key():
     return key
 
 
+def read_body_with_deadline(response, deadline):
+    """응답 내용을 조금씩 받으면서, 전체 시간이 deadline을 넘으면 멈춘다.
+
+    requests의 timeout은 "서버가 조용한 시간"만 재기 때문에, OpenRouter처럼 답을 준비하는 동안
+    몇 초마다 빈 글자를 보내 연결을 유지하는 서버에서는 영원히 기다리게 된다. 그래서 전체 시간을 직접 잰다.
+    """
+    chunks = []
+    # 한 글자씩 받는다. 크게 받으면 빈 글자가 조금씩 올 때 그만큼 찰 때까지 기다리느라 시간을 못 잰다.
+    # (답 크기는 몇 KB 정도라 한 글자씩 받아도 느리지 않다)
+    for chunk in response.iter_content(chunk_size=1):
+        chunks.append(chunk)
+        if time.monotonic() > deadline:
+            raise OpenRouterError(TIMEOUT_MESSAGE)
+    return b"".join(chunks).decode("utf-8", errors="replace")
+
+
 def chat(messages):
     """AI에게 메시지를 보내고 답장 글자를 돌려준다. 실패하면 OpenRouterError를 낸다."""
+    deadline = time.monotonic() + TIMEOUT_SECONDS
     try:
-        response = requests.post(
+        with requests.post(
             API_URL,
             headers={"Authorization": f"Bearer {get_api_key()}"},
             json={"model": MODEL, "messages": messages},
-            timeout=TIMEOUT_SECONDS,
-        )
+            timeout=(10, SILENCE_SECONDS),  # (연결까지, 조용한 시간) 최대 초
+            stream=True,  # 답을 한 번에 받지 않고 조금씩 받아서 전체 시간을 잴 수 있게 한다
+        ) as response:
+            body = read_body_with_deadline(response, deadline)
     except requests.Timeout:
-        raise OpenRouterError("응답이 늦어요. 다시 시도해주세요.")
+        raise OpenRouterError(TIMEOUT_MESSAGE)
+    except requests.ConnectionError as error:
+        if "timed out" in str(error).lower():  # 받는 도중에 서버가 조용해진 경우
+            raise OpenRouterError(TIMEOUT_MESSAGE)
+        raise OpenRouterError("OpenRouter에 연결하지 못했어요. 인터넷 연결을 확인해주세요.")
     except requests.RequestException:
         raise OpenRouterError("OpenRouter에 연결하지 못했어요. 인터넷 연결을 확인해주세요.")
 
     if response.status_code in STATUS_MESSAGES:
         raise OpenRouterError(STATUS_MESSAGES[response.status_code])
     if response.status_code != 200:
-        raise OpenRouterError(f"요청이 실패했어요 (상태 코드 {response.status_code}): {response.text[:300]}")
+        raise OpenRouterError(f"요청이 실패했어요 (상태 코드 {response.status_code}): {body[:300]}")
 
     try:
-        return response.json()["choices"][0]["message"]["content"]
+        return json.loads(body)["choices"][0]["message"]["content"]
     except (ValueError, KeyError, IndexError, TypeError):
-        raise OpenRouterError(f"AI 응답을 읽지 못했어요: {response.text[:300]}")
+        raise OpenRouterError(f"AI 응답을 읽지 못했어요: {body.strip()[:300]}")
 
 
 def extract_json(text):

@@ -32,6 +32,11 @@ profile, setting `servings`) happens in an `on_click`/`on_change` callback. User
 `notice`s shown next to the triggering button and cleared at the *end* of the script — not `st.toast`, which
 silently dropped a second toast while one was still visible, and not cleared at the start, because
 typing-then-clicking fires two back-to-back reruns and the first can be interrupted.
+`openrouter_client.chat` enforces a *total* deadline (`TIMEOUT_SECONDS`, 120s): it posts with `stream=True`
+and reads the body 1 byte at a time, checking the clock. A plain `requests` `timeout` only bounds silence
+between bytes, and OpenRouter sends whitespace keep-alives while the model works, so the old 60s timeout never
+fired (the user saw recognition hang past a minute with no message). Fakes of `requests.post` must therefore
+return an object usable as a context manager with `status_code` and `iter_content()`.
 Verify without the real API by patching `requests.post` (e.g. a `sitecustomize.py` on `PYTHONPATH` that
 returns a canned OpenRouter JSON), then drive it with `streamlit.testing.v1.AppTest` or Playwright
 (`executable_path="/opt/pw-browsers/chromium"`).
