@@ -25,8 +25,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   안내한다. 예를 들어 `.env` 대신 Colab 보안 비밀을 쓴다 (`Study-04/CLAUDE.md` 참고). 나중에 로컬
   PC로 받아 쓸 때를 위해 `.gitignore`와 `.env.example`은 폴더별로 둔다.
 - 커밋 메시지는 `Study-NN: 한국어 요약` 형식을 따른다.
-- 서브에이전트는 저장소 맨 위 `.claude/agents/`에 둔다 (모든 Study 폴더에서 공통으로 쓰기 위해).
-  현재: `code-reviewer` (읽기 전용 코드 품질 검토자: 버그, 코딩 규칙, 성능 최적화 제안).
+- 서브에이전트(`.claude/agents/`)도 커스텀 명령어처럼 폴더 안에 둔다.
+  현재: `Study-04/.claude/agents/code-reviewer.md` (코드 품질 검토자: 버그, 코딩 규칙, 성능 최적화 제안).
 
 ## 사용자에게 설명할 때 지킬 것
 
