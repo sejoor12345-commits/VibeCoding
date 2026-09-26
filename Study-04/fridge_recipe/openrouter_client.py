@@ -10,7 +10,7 @@ import requests
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 # 사용할 AI 모델. 모델을 바꾸려면 여기만 고치면 된다
 TEXT_MODEL = "stealth/space-bunny-alpha"  # 글자만 주고받는 일 (레시피 생성)
-VISION_MODEL = "google/gemma-3-27b-it"  # 사진을 보는 일 (재료 인식)
+VISION_MODEL = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"  # 사진을 보는 일 (재료 인식)
 TIMEOUT_SECONDS = 120  # 요청 하나에 기다리는 최대 시간(초). 이 시간이 지나면 포기하고 "응답이 늦어요"를 띄운다
 SILENCE_SECONDS = 30  # 서버가 이 시간 동안 아무것도 안 보내면 연결이 끊긴 것으로 본다
 TIMEOUT_MESSAGE = f"응답이 {TIMEOUT_SECONDS}초 넘게 없어서 멈췄어요. 잠시 후 다시 시도해주세요."
@@ -78,9 +78,15 @@ def chat(messages, model=TEXT_MODEL):
         raise OpenRouterError(f"요청이 실패했어요 (상태 코드 {response.status_code}): {body[:300]}")
 
     try:
-        return json.loads(body)["choices"][0]["message"]["content"]
+        content = json.loads(body)["choices"][0]["message"]["content"]
     except (ValueError, KeyError, IndexError, TypeError):
         raise OpenRouterError(f"AI 응답을 읽지 못했어요: {body.strip()[:300]}")
+
+    # 생각하고 답하는 모델(reasoning)은 생각 과정을 <think>...</think>로 답 앞에 붙이기도 한다. 답만 남긴다.
+    content = re.sub(r"<think>.*?</think>", "", content or "", flags=re.DOTALL).strip()
+    if not content:
+        raise OpenRouterError("AI가 빈 답을 보냈어요. 생각하는 데 시간을 다 쓴 것 같아요. 다시 시도해주세요.")
+    return content
 
 
 def extract_json(text):
