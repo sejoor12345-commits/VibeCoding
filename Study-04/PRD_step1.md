@@ -33,7 +33,7 @@
 | 항목 | 선택 | 이유 |
 |---|---|---|
 | 언어 | Python | `api_test.py`와 같은 방식을 그대로 씀 |
-| 웹 화면 | Gradio | 파이썬만으로 웹 화면을 만들 수 있고, Colab 안에서 바로 열린다 (Study-01에서도 사용) |
+| 웹 화면 | Streamlit | 파이썬만으로 웹 화면을 만들 수 있고, 코드가 위에서 아래로 읽히는 구조라 초보자가 이해하기 쉽다 |
 | AI 호출 | `requests`로 OpenRouter 직접 호출 | `api_test.py`에서 이미 동작을 확인한 방식 |
 | 이미지 처리 | Pillow | 사진 크기 줄이기, 형식 변환 |
 | API 키 | 환경 변수 `OPENROUTER_API_KEY` | Colab 보안 비밀 → 환경 변수 (Study-04 `CLAUDE.md` 참고) |
@@ -41,7 +41,7 @@
 ## 5. 기능 요구사항
 
 ### F1. 사진 업로드
-- 화면에 사진을 끌어다 놓거나 선택하는 영역이 있다.
+- 화면에 사진을 끌어다 놓거나 선택하는 영역(`st.file_uploader`, 허용 확장자 jpg/jpeg/png/webp)이 있다.
 - 올린 사진은 미리보기로 보인다.
 - JPG, PNG, WEBP 이외의 파일(예: 아이폰 HEIC)은 "JPG나 PNG로 바꿔서 올려주세요" 안내를 띄운다.
 
@@ -52,7 +52,7 @@
 
 ### F3. 재료 인식 요청
 - "재료 인식하기" 버튼을 누르면 AI에 요청한다.
-- 요청하는 동안 버튼을 비활성화하고 "인식 중..." 상태를 보여준다.
+- 요청하는 동안 "인식 중..." 표시(`st.spinner`)를 보여준다.
 - AI에게는 아래 규칙을 지키도록 요청한다 (프롬프트에 포함):
   - 먹을 수 있는 식재료만 찾는다 (그릇, 용기, 냉장고 부품은 제외)
   - 재료 이름은 한국어 일반 명칭으로 쓴다 (예: "계란" 대신 "달걀"처럼 하나로 통일)
@@ -77,6 +77,8 @@
 
 ### F5. 재료 목록 수정
 - 인식 결과를 쉼표로 구분한 글자로 입력칸에 채워 둔다 (예: `달걀, 대파, 우유`).
+- Streamlit은 버튼을 누를 때마다 코드 전체를 처음부터 다시 실행하므로, 인식 결과와 입력칸 내용은
+  `st.session_state`에 보관해서 화면이 다시 그려져도 사라지지 않게 한다.
 - 사용자가 이 칸을 자유롭게 고칠 수 있다.
 - **2단계는 이 입력칸의 내용을 최종 재료 목록으로 사용한다.**
 
@@ -100,7 +102,7 @@
 Study-04/
 ├── api_test.py              # (기존) API 동작 확인용
 └── fridge_recipe/
-    ├── app.py               # Gradio 화면, 실행 시작점
+    ├── app.py               # Streamlit 화면, 실행 시작점
     ├── openrouter_client.py # OpenRouter 요청 공통 함수 (키 읽기, 요청, 오류 변환)
     └── vision.py            # 사진 전처리 + 재료 인식 프롬프트 + JSON 해석
 ```
@@ -110,23 +112,36 @@ Study-04/
 
 ## 8. Colab 실행 방법
 
+Streamlit은 Colab 셀 안에 바로 뜨지 않고, **별도 웹 서버로 실행한 뒤 Colab이 만들어 주는 주소로 접속**한다.
+
 ```python
-# 셀 1: 코드 받기/업데이트
+# 셀 1: 코드 받기/업데이트 + Streamlit 설치 (런타임마다 한 번)
 %cd /content/VibeCoding
 !git pull
+!pip install -q streamlit
 
 # 셀 2: 키 옮기기
 import os
 from google.colab import userdata
 os.environ["OPENROUTER_API_KEY"] = userdata.get("OPENROUTER_API_KEY")
 
-# 셀 3: 앱 실행
+# 셀 3: 앱 서버를 백그라운드로 실행
 %cd /content/VibeCoding/Study-04/fridge_recipe
-%run app.py
+!pkill -f "streamlit run" ; sleep 1
+!nohup streamlit run app.py --server.port 8501 --server.headless true --server.enableXsrfProtection false > streamlit.log 2>&1 &
+
+# 셀 4: 앱 화면 열기 (새 창)
+from google.colab import output
+output.serve_kernel_port_as_window(8501)
 ```
 
-- 앱 화면은 Colab 셀 아래에 바로 나타난다.
-- 공개 링크(`share=True`)는 기본으로 끈다. 링크를 아는 사람은 누구나 내 API 키로 AI를 쓸 수 있기 때문이다.
+- 셀 3의 `pkill` 줄은 이미 켜져 있던 앱을 끄고 새로 켜기 위한 것이다. 코드를 `git pull`로 바꾼 뒤에는
+  셀 3부터 다시 실행한다.
+- `--server.enableXsrfProtection false`: Colab 주소를 거쳐 접속하면 사진 업로드가 보안 검사에 막히는
+  경우가 있어서 끈다. Colab 주소는 내 구글 계정으로만 열리므로 괜찮다.
+- 공개 주소를 만드는 도구(ngrok, localtunnel 등)는 쓰지 않는다. 주소를 아는 사람은 누구나 내 API 키로 AI를
+  쓸 수 있게 되기 때문이다.
+- 앱이 안 뜨면 `!tail -20 streamlit.log`로 오류를 확인한다.
 
 ## 9. 완료 기준
 

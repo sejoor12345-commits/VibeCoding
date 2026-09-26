@@ -17,8 +17,14 @@ including the server's response body.
 Planned app: a fridge-photo → recipe web app, specified in three PRDs (Korean, user-facing):
 `PRD_step1.md` (photo → ingredient list via the vision model), `PRD_step2.md` (ingredients → recipe JSON),
 `PRD_step3.md` (nickname profiles + saved recipes in a JSON file, on Google Drive in Colab). Code goes in
-`fridge_recipe/` (Gradio UI, `openrouter_client.py` as the single place holding `MODEL` and request/error
+`fridge_recipe/` (Streamlit UI, run in Colab as a background server opened via
+`google.colab.output.serve_kernel_port_as_window(8501)` — see `PRD_step1.md` §8; `openrouter_client.py` as the single place holding `MODEL` and request/error
 handling). Build one step at a time; read the matching PRD first and treat its 완료 기준 as the checklist.
+Step 1 is built (`app.py`, `openrouter_client.py`, `vision.py`). Streamlit reruns `app.py` top to bottom on
+every interaction, so state that must survive (`message`, `ingredients_text`) lives in `st.session_state`.
+Verify without the real API by patching `requests.post` (e.g. a `sitecustomize.py` on `PYTHONPATH` that
+returns a canned OpenRouter JSON), then drive it with `streamlit.testing.v1.AppTest` or Playwright
+(`executable_path="/opt/pw-browsers/chromium"`).
 
 Claude's cloud container can't run these for real: it has no key, and its network policy blocks
 `openrouter.ai`. Hand the user Colab cells instead and ask them to paste the output back.
