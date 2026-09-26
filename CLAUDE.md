@@ -8,6 +8,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 `Study-NN/` 폴더가 독립된 실습 프로젝트이며, 폴더별 자세한 내용은 그 폴더 안의 `CLAUDE.md`를 먼저
 읽는다.
 
+| 폴더 | 내용 | 기술 |
+|---|---|---|
+| `Study-01/` | 손글씨 숫자 인식기 (`desktop_version/`, `web_version/` 두 빌드) | Python, scikit-learn, Gradio |
+| `Study-02/` | 할 일 관리 앱 (`todo-app/`, `todo-app/web_version/`) | HTML/CSS/JS, localStorage |
+| `Study-03/` | 상식 퀴즈 게임 + 문제 관리용 커스텀 명령어 | HTML/CSS/JS, localStorage |
+| `Study-04/` | API로 AI 서비스 사용하기 (OpenRouter) | Python |
+
+## 저장소 공통 규칙
+
+- 저장소 전체에 빌드 시스템, 테스트, 린터가 없다. 폴더끼리 코드를 공유하지 않으니, 작업은 해당
+  `Study-NN/` 안에서만 한다.
+- 커스텀 명령어(`.claude/commands/`)는 폴더 안에 둔다 (예: `Study-03/.claude/commands/`). 그 폴더를
+  작업 디렉터리로 열었을 때만 불러와진다.
+- 책은 로컬 PC 작업을 전제로 설명한다. 사용자는 Colab을 쓰니 책의 절차를 Colab 방식으로 바꿔서
+  안내한다. 예를 들어 `.env` 대신 Colab 보안 비밀을 쓴다 (`Study-04/CLAUDE.md` 참고). 나중에 로컬
+  PC로 받아 쓸 때를 위해 `.gitignore`와 `.env.example`은 폴더별로 둔다.
+- 커밋 메시지는 `Study-NN: 한국어 요약` 형식을 따른다.
+
 ## 사용자에게 설명할 때 지킬 것
 
 - 사용자는 코딩을 막 배우기 시작한 초보자이고, 바이브코딩 자체도 처음 배우는 중이다.
