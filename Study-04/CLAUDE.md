@@ -18,7 +18,9 @@ Planned app: a fridge-photo → recipe web app, specified in three PRDs (Korean,
 `PRD_step1.md` (photo → ingredient list via the vision model), `PRD_step2.md` (ingredients → recipe JSON),
 `PRD_step3.md` (nickname profiles + saved recipes in a JSON file, on Google Drive in Colab). Code goes in
 `fridge_recipe/` (Streamlit UI, run in Colab as a background server opened via
-`google.colab.output.serve_kernel_port_as_window(8501)` — see `PRD_step1.md` §8; `openrouter_client.py` as the single place holding `MODEL` and request/error
+`google.colab.output.serve_kernel_port_as_window(8501)`, with `--server.enableCORS false
+--server.enableXsrfProtection false` (without the CORS flag the Colab proxy's websocket is rejected
+intermittently → endless loading; the user hit this) — see `PRD_step1.md` §8; `openrouter_client.py` as the single place holding `MODEL` and request/error
 handling). Build one step at a time; read the matching PRD first and treat its 완료 기준 as the checklist.
 Steps 1–2 are built (`app.py`, `openrouter_client.py`, `vision.py`, `recipe.py`). Streamlit reruns `app.py`
 top to bottom on every interaction, so state that must survive (`message`, `ingredients_text`, `recipes` —
