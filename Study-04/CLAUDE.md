@@ -14,6 +14,12 @@ question, then an image question (a Pillow-generated PNG with a red circle, blue
 sent as a base64 `data:` URL in an `image_url` content part). Each test catches and prints its own error,
 including the server's response body.
 
+Planned app: a fridge-photo → recipe web app, specified in three PRDs (Korean, user-facing):
+`PRD_step1.md` (photo → ingredient list via the vision model), `PRD_step2.md` (ingredients → recipe JSON),
+`PRD_step3.md` (nickname profiles + saved recipes in a JSON file, on Google Drive in Colab). Code goes in
+`fridge_recipe/` (Gradio UI, `openrouter_client.py` as the single place holding `MODEL` and request/error
+handling). Build one step at a time; read the matching PRD first and treat its 완료 기준 as the checklist.
+
 Claude's cloud container can't run these for real: it has no key, and its network policy blocks
 `openrouter.ai`. Hand the user Colab cells instead and ask them to paste the output back.
 
