@@ -9,8 +9,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **OpenRouter** API (OpenAI-compatible chat completions endpoint, `https://openrouter.ai/api/v1/chat/completions`)
 using plain Python + `requests` (preinstalled on Colab, so no install step).
 
-Current state: setup only (`.gitignore`, `.env.example`) — no code yet. Exercises get added as the book
-goes on.
+Current state: `api_test.py` — smoke test for the API with model `stealth/space-bunny-alpha`: a text
+question, then an image question (a Pillow-generated PNG with a red circle, blue square and "HELLO 2026",
+sent as a base64 `data:` URL in an `image_url` content part). Each test catches and prints its own error,
+including the server's response body.
+
+Claude's cloud container can't run these for real: it has no key, and its network policy blocks
+`openrouter.ai`. Hand the user Colab cells instead and ask them to paste the output back.
 
 ## API key handling (important)
 
