@@ -8,7 +8,9 @@ import time
 import requests
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "stealth/space-bunny-alpha"  # 모델을 바꾸려면 이 한 줄만 고치면 된다
+# 사용할 AI 모델. 모델을 바꾸려면 여기만 고치면 된다
+TEXT_MODEL = "stealth/space-bunny-alpha"  # 글자만 주고받는 일 (레시피 생성)
+VISION_MODEL = "google/gemma-3-27b-it"  # 사진을 보는 일 (재료 인식)
 TIMEOUT_SECONDS = 120  # 요청 하나에 기다리는 최대 시간(초). 이 시간이 지나면 포기하고 "응답이 늦어요"를 띄운다
 SILENCE_SECONDS = 30  # 서버가 이 시간 동안 아무것도 안 보내면 연결이 끊긴 것으로 본다
 TIMEOUT_MESSAGE = f"응답이 {TIMEOUT_SECONDS}초 넘게 없어서 멈췄어요. 잠시 후 다시 시도해주세요."
@@ -16,7 +18,6 @@ TIMEOUT_MESSAGE = f"응답이 {TIMEOUT_SECONDS}초 넘게 없어서 멈췄어요
 # 상태 코드별로 사용자에게 보여줄 안내 문구
 STATUS_MESSAGES = {
     401: "API 키가 올바르지 않아요.",
-    404: "모델을 찾을 수 없어요. 모델 이름을 확인해주세요.",
     429: "요청이 많아요. 잠시 후 다시 시도해주세요.",
 }
 
@@ -48,14 +49,14 @@ def read_body_with_deadline(response, deadline):
     return b"".join(chunks).decode("utf-8", errors="replace")
 
 
-def chat(messages):
-    """AI에게 메시지를 보내고 답장 글자를 돌려준다. 실패하면 OpenRouterError를 낸다."""
+def chat(messages, model=TEXT_MODEL):
+    """AI(model)에게 메시지를 보내고 답장 글자를 돌려준다. 실패하면 OpenRouterError를 낸다."""
     deadline = time.monotonic() + TIMEOUT_SECONDS
     try:
         with requests.post(
             API_URL,
             headers={"Authorization": f"Bearer {get_api_key()}"},
-            json={"model": MODEL, "messages": messages},
+            json={"model": model, "messages": messages},
             timeout=(10, SILENCE_SECONDS),  # (연결까지, 조용한 시간) 최대 초
             stream=True,  # 답을 한 번에 받지 않고 조금씩 받아서 전체 시간을 잴 수 있게 한다
         ) as response:
@@ -69,6 +70,8 @@ def chat(messages):
     except requests.RequestException:
         raise OpenRouterError("OpenRouter에 연결하지 못했어요. 인터넷 연결을 확인해주세요.")
 
+    if response.status_code == 404:
+        raise OpenRouterError(f"모델({model})을 찾을 수 없어요. 모델 이름을 확인해주세요.")
     if response.status_code in STATUS_MESSAGES:
         raise OpenRouterError(STATUS_MESSAGES[response.status_code])
     if response.status_code != 200:

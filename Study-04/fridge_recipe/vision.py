@@ -5,7 +5,7 @@ import io
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-from openrouter_client import chat, extract_json
+from openrouter_client import VISION_MODEL, chat, extract_json
 
 MAX_SIDE = 1024  # 사진의 긴 변을 이 크기(px)까지 줄여서 보낸다
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
@@ -90,7 +90,7 @@ def recognize_ingredients(photo):
                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}},
             ],
         }
-    ])
+    ], model=VISION_MODEL)
 
     try:
         return normalize_result(extract_json(answer))

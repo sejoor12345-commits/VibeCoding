@@ -18,7 +18,7 @@
 
 ### 포함
 - 사진 1장 업로드 (JPG, PNG, WEBP)
-- `stealth/space-bunny-alpha` 모델로 사진 속 식재료 인식
+- `google/gemma-3-27b-it` 모델로 사진 속 식재료 인식 (레시피 생성은 2단계의 `stealth/space-bunny-alpha` 그대로)
 - 인식 결과를 목록으로 표시 (재료 이름, 대략적인 양, 확신 정도)
 - 사용자가 인식 결과를 **직접 고칠 수 있는** 입력칸 제공 (빠진 재료 추가, 잘못 본 재료 삭제)
 
@@ -110,7 +110,7 @@ Study-04/
     └── vision.py            # 사진 전처리 + 재료 인식 프롬프트 + JSON 해석
 ```
 
-- `openrouter_client.py`의 모델 이름은 상수 하나(`MODEL = "stealth/space-bunny-alpha"`)로 두어,
+- `openrouter_client.py`의 모델 이름은 상수(`VISION_MODEL`: 사진, `TEXT_MODEL`: 글자)로 두어,
   모델이 바뀌면 한 줄만 고치면 되게 한다.
 
 ## 8. Colab 실행 방법
