@@ -26,7 +26,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   PC로 받아 쓸 때를 위해 `.gitignore`와 `.env.example`은 폴더별로 둔다.
 - 커밋 메시지는 `Study-NN: 한국어 요약` 형식을 따른다.
 - 서브에이전트(`.claude/agents/`)도 커스텀 명령어처럼 폴더 안에 둔다.
-  현재: `Study-04/.claude/agents/code-reviewer.md` (코드 품질 검토자: 버그, 코딩 규칙, 성능 최적화 제안).
+  현재 `Study-04/.claude/agents/`에 세 개가 있다 (모두 `model: inherit`):
+  `code-reviewer` (코드 품질 검토, 읽기 전용), `performance-optimizer` (성능 최적화, 모든 도구),
+  `ux-designer` (화면·버튼·에러 메시지 개선, 모든 도구).
+  에이전트를 만들 때는 도구 권한과 모델을 사용자에게 먼저 물어본다.
 
 ## 사용자에게 설명할 때 지킬 것
 
