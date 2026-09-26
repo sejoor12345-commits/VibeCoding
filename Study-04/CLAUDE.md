@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **OpenRouter** API (OpenAI-compatible chat completions endpoint, `https://openrouter.ai/api/v1/chat/completions`)
 using plain Python + `requests` (preinstalled on Colab, so no install step).
 
-Current state: no code yet. Exercises get added as the book
+Current state: setup only (`.gitignore`, `.env.example`) — no code yet. Exercises get added as the book
 goes on.
 
 ## API key handling (important)
@@ -26,7 +26,8 @@ goes on.
   ```
   (`userdata.get` only works inside notebook cells, not inside a `!python` subprocess — which is why the
   scripts read the env var instead; env vars set in the kernel are inherited by `!python` / `%run`.)
-- No `.env` / `.gitignore` in this folder on purpose: the book assumes a local PC with a `.env` file, but
-  here Colab Secrets replace `.env` entirely. When the book says "put the key in `.env`", translate it to
-  the Colab cell above. If code uses `python-dotenv`'s `load_dotenv()`, that's fine — it just finds no
-  file and the env var set by the cell is used.
+- For when the user pulls this repo onto a local PC someday, `.gitignore` excludes `.env` and
+  `.env.example` is the committed template (copy it to `.env` locally and fill in the key). Never commit a
+  real `.env`. In Colab, `.env` isn't used — Colab Secrets replace it; when the book says "put the key in
+  `.env`", translate it to the Colab cell above. `load_dotenv()` in book code is harmless in Colab: it finds
+  no file and the env var set by the cell is used.
