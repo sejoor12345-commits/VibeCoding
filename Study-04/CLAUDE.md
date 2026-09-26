@@ -9,13 +9,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **OpenRouter** API (OpenAI-compatible chat completions endpoint, `https://openrouter.ai/api/v1/chat/completions`)
 using plain Python + `requests` (preinstalled on Colab, so no install step).
 
-Current state: `hello_ai.py` only — sends one question to `MODEL` and prints the reply. Starting point
-for later exercises.
+Current state: setup only (`.gitignore`, `.env.example`) — no code yet. Exercises get added as the book
+goes on.
 
 ## API key handling (important)
 
-- The key is read **only** from the `OPENROUTER_API_KEY` environment variable (`get_api_key()`). Never
-  hardcode a key in source or notebooks, never commit it.
+- Code should read the key **only** from the `OPENROUTER_API_KEY` environment variable. Never hardcode a
+  key in source or notebooks, never commit it.
 - The user runs everything in **Google Colab** (no local terminal). There the key lives in Colab's
   보안 비밀(Secrets, key icon in the left sidebar) under the name `OPENROUTER_API_KEY`, and a notebook cell
   copies it into the environment before running scripts:
@@ -29,8 +29,3 @@ for later exercises.
 - `.env` is gitignored (`Study-04/.gitignore`) for the case of running locally someday; `.env.example`
   is the committed template. Scripts don't load `.env` yet — add `python-dotenv` only if a local
   workflow actually appears.
-
-## Models
-
-`MODEL` in `hello_ai.py` uses a `:free` model. OpenRouter's free model lineup changes often; if a request
-fails with a "model not found"/404-ish error, pick a current free model from https://openrouter.ai/models.
