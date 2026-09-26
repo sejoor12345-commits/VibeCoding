@@ -11,15 +11,21 @@ API_URL = "https://openrouter.ai/api/v1/chat/completions"
 # 사용할 AI 모델. 모델을 바꾸려면 여기만 고치면 된다
 TEXT_MODEL = "stealth/space-bunny-alpha"  # 글자만 주고받는 일 (레시피 생성)
 VISION_MODEL = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"  # 사진을 보는 일 (재료 인식)
-TIMEOUT_SECONDS = 120  # 요청 하나에 기다리는 최대 시간(초). 이 시간이 지나면 포기하고 "응답이 늦어요"를 띄운다
+TIMEOUT_SECONDS = 120  # 요청 하나에 기다리는 최대 시간(초). 이 시간이 지나면 포기하고 TIMEOUT_MESSAGE를 띄운다
 SILENCE_SECONDS = 30  # 서버가 이 시간 동안 아무것도 안 보내면 연결이 끊긴 것으로 본다
-TIMEOUT_MESSAGE = f"응답이 {TIMEOUT_SECONDS}초 넘게 없어서 멈췄어요. 잠시 후 다시 시도해주세요."
-CONNECT_MESSAGE = "OpenRouter에 연결하지 못했어요. 인터넷 연결을 확인해주세요."
+# 사용자에게 보여줄 안내 문구. "무엇이 잘못됐는지 + 어떻게 하면 되는지"를 함께 쓴다
+TIMEOUT_MESSAGE = "AI 답이 너무 늦어서 기다리기를 멈췄어요. AI 서버가 바쁜 것 같아요. 잠시 후 다시 시도해주세요."
+CONNECT_MESSAGE = "AI 서버(OpenRouter)에 연결하지 못했어요. 잠시 후 다시 시도해주세요."
+# 앱(Streamlit 서버)은 켜질 때의 환경 변수만 본다. 그래서 키를 다시 불러온 뒤에는 앱을 켜는 셀도 다시 실행해야 한다
+NO_KEY_MESSAGE = "API 키가 없어요. Colab에서 키를 불러오는 셀을 실행한 다음, 앱을 켜는 셀(streamlit run)도 다시 실행해주세요."
 
 # 상태 코드별로 사용자에게 보여줄 안내 문구
 STATUS_MESSAGES = {
-    401: "API 키가 올바르지 않아요.",
-    429: "요청이 많아요. 잠시 후 다시 시도해주세요.",
+    401: (
+        "API 키가 올바르지 않아요. Colab 보안 비밀(🔑)에 넣은 OPENROUTER_API_KEY 값을 확인한 다음, "
+        "키를 불러오는 셀과 앱을 켜는 셀(streamlit run)을 다시 실행해주세요."
+    ),
+    429: "AI 요청이 몰려서 잠시 막혔어요. 1분쯤 뒤에 다시 시도해주세요. 계속 이러면 오늘 쓸 수 있는 무료 사용량을 다 쓴 것일 수 있어요.",
 }
 
 
@@ -30,8 +36,20 @@ class OpenRouterError(Exception):
 def get_api_key():
     key = os.environ.get("OPENROUTER_API_KEY")
     if not key:
-        raise OpenRouterError("API 키가 없어요. Colab에서 키를 불러오는 셀을 먼저 실행해주세요.")
+        raise OpenRouterError(NO_KEY_MESSAGE)
     return key
+
+
+def error_detail(body):
+    """오류 응답에서 원인 설명만 짧게 꺼낸다. 예: {"error": {"message": "Provider returned error"}} → "Provider returned error".
+
+    영어 원문 전체를 보여주면 읽기 어려우므로, 안내 문구 맨 뒤에 괄호로 짧게 덧붙이는 데 쓴다.
+    """
+    try:
+        detail = json.loads(body)["error"]["message"]
+    except (ValueError, KeyError, TypeError):
+        detail = body
+    return str(detail).strip()[:150] or "내용 없음"
 
 
 def read_body_with_deadline(response, deadline):
@@ -74,16 +92,22 @@ def chat(messages, model=TEXT_MODEL):
         raise OpenRouterError(CONNECT_MESSAGE)
 
     if response.status_code == 404:
-        raise OpenRouterError(f"모델({model})을 찾을 수 없어요. 모델 이름을 확인해주세요.")
+        raise OpenRouterError(
+            f"AI 모델({model})을 찾을 수 없어요. 모델 이름이 바뀌었거나 서비스가 끝났을 수 있어요. "
+            "openrouter_client.py의 모델 이름을 확인해주세요."
+        )
     if response.status_code in STATUS_MESSAGES:
         raise OpenRouterError(STATUS_MESSAGES[response.status_code])
     if response.status_code != 200:
-        raise OpenRouterError(f"요청이 실패했어요 (상태 코드 {response.status_code}): {body[:300]}")
+        raise OpenRouterError(
+            f"AI 서버가 요청을 처리하지 못했어요. 잠시 후 다시 시도해주세요. "
+            f"(상태 코드 {response.status_code}: {error_detail(body)})"
+        )
 
     try:
         content = json.loads(body)["choices"][0]["message"]["content"]
     except (ValueError, KeyError, IndexError, TypeError):
-        raise OpenRouterError(f"AI 응답을 읽지 못했어요: {body.strip()[:300]}")
+        raise OpenRouterError(f"AI 서버의 답을 읽지 못했어요. 잠시 후 다시 시도해주세요. (받은 내용: {error_detail(body)})")
 
     # 생각하고 답하는 모델(reasoning)은 생각 과정을 <think>...</think>로 답 앞에 붙이기도 한다. 답만 남긴다.
     content = re.sub(r"<think>.*?</think>", "", content or "", flags=re.DOTALL).strip()

@@ -34,10 +34,16 @@ changes an already-rendered widget's value (e.g. selecting the new profile, sett
 `on_click`/`on_change` callback. The uploaded photo is resized once right after upload (`vision.prepare_image` →
 JPEG bytes, cached in `st.session_state` by the upload's `file_id`) and that copy feeds both the preview and
 recognition: `st.image` on the 12MP original re-decoded it on every rerun (~200ms each). An unreadable photo shows
-an error and disables the recognize button. User feedback (including recipe-generation errors) uses inline
+an error and disables the recognize button. The recognize button sits right under the uploader, *above* a small
+preview (`PREVIEW_WIDTH` 320px): a full-width portrait phone photo pushed the button ~1500px down, so after clicking,
+the result (top of the right column) was off-screen. User feedback (including recipe-generation errors) uses inline
 `notice`s shown next to the triggering button and cleared at the *end* of the script — not `st.toast`, which
 silently dropped a second toast while one was still visible, and not cleared at the start, because
-typing-then-clicking fires two back-to-back reruns and the first can be interrupted.
+typing-then-clicking fires two back-to-back reruns and the first can be interrupted. `show_notice` always reserves an
+`st.empty()` slot even with no notice: a notice appearing/vanishing above the "프로필 정보 수정" expander shifted its
+position and Streamlit re-created it collapsed (losing typed text). User-facing errors say what happened + what to
+do, with raw English/status codes only as a short trailing detail (`error_detail`); key errors tell the user to
+re-run the key cell *and* the app cell, since the Streamlit server's env is fixed at launch.
 `openrouter_client.chat` enforces a *total* deadline (`TIMEOUT_SECONDS`, 120s): it posts with `stream=True`
 and reads the body 1 byte at a time, checking the clock. A plain `requests` `timeout` only bounds silence
 between bytes, and OpenRouter sends whitespace keep-alives while the model works, so the old 60s timeout never

@@ -213,7 +213,7 @@ def generate_recipes(ingredients, servings, time_limit, difficulty, count, exclu
     allergies = profile["allergies"] if profile else []
     ingredients = [item for item in ingredients if not find_allergens([item], allergies)]
     if not ingredients:
-        raise RecipeError("알레르기 재료를 빼고 나니 남은 재료가 없어요.")
+        raise RecipeError("알레르기 재료를 빼고 나니 남은 재료가 없어요. 재료 목록에 다른 재료를 더 써주세요.")
 
     answer = chat([{
         "role": "user",
@@ -228,7 +228,7 @@ def generate_recipes(ingredients, servings, time_limit, difficulty, count, exclu
 
     if not recipes:
         if not data["recipes"]:  # AI가 일부러 빈 목록을 준 경우 (음식 재료가 아님)
-            raise RecipeError("이 재료로는 레시피를 만들기 어려워요.")
+            raise RecipeError("이 재료로는 레시피를 만들기 어려워요. 재료 목록에 먹을 수 있는 재료가 들어 있는지 확인해주세요.")
         raise RecipeError("레시피를 만들지 못했어요. 다시 시도해주세요.")
 
     # 안전장치: AI가 규칙을 어기고 알레르기 재료를 넣은 레시피는 보여주지 않는다

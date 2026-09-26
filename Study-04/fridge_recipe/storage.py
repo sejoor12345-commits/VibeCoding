@@ -19,7 +19,10 @@ class ProfileError(Exception):
 
 
 # 파일을 읽거나 쓰다가 실패했을 때(예: Colab에서 Google Drive 연결이 끊김) 보여줄 안내 문구
-FILE_ERROR_MESSAGE = "저장 데이터를 읽거나 쓰지 못했어요. Google Drive 연결을 확인해주세요."
+FILE_ERROR_MESSAGE = (
+    "저장 데이터를 읽거나 쓰지 못했어요. Google Drive 연결이 끊겼을 수 있어요. "
+    "Colab에서 Drive를 연결하는 셀을 다시 실행해 보세요. (사진 인식과 레시피 추천은 그대로 쓸 수 있어요)"
+)
 
 
 def get_data_dir():
@@ -85,13 +88,13 @@ def create_profile(nickname):
     """새 프로필을 만들고 정리된 닉네임을 돌려준다."""
     nickname = nickname.strip()
     if not nickname:
-        raise ProfileError("닉네임을 입력해주세요.")
+        raise ProfileError("새 닉네임 칸에 닉네임을 먼저 써주세요.")
     if len(nickname) > MAX_NICKNAME_LENGTH:
         raise ProfileError(f"닉네임은 {MAX_NICKNAME_LENGTH}자 이하로 써주세요.")
 
     data = load_data()
     if nickname in data["profiles"]:
-        raise ProfileError("이미 있는 닉네임이에요.")
+        raise ProfileError("이미 있는 닉네임이에요. 다른 닉네임을 쓰거나, 프로필 목록에서 골라주세요.")
 
     data["profiles"][nickname] = {
         "nickname": nickname,
@@ -112,7 +115,7 @@ def update_profile(nickname, allergies, dislikes, diet, skill, default_servings)
     data = load_data()
     profile = data["profiles"].get(nickname)
     if profile is None:
-        raise ProfileError("프로필을 찾을 수 없어요.")
+        raise ProfileError("프로필을 찾을 수 없어요. 맨 위에서 프로필을 다시 선택해주세요.")
 
     profile.update({
         "allergies": allergies,
@@ -129,9 +132,9 @@ def save_recipe(nickname, recipe, source_ingredients):
     data = load_data()
     profile = data["profiles"].get(nickname)
     if profile is None:
-        raise ProfileError("먼저 프로필을 선택해주세요.")
+        raise ProfileError("프로필을 찾을 수 없어요. 맨 위에서 프로필을 다시 선택해주세요.")
     if any(saved["recipe"]["title"] == recipe["title"] for saved in profile["saved_recipes"]):
-        raise ProfileError("이미 저장된 레시피예요.")
+        raise ProfileError("이미 저장된 레시피예요. 맨 위 '⭐ 내 레시피' 탭에서 볼 수 있어요.")
 
     profile["saved_recipes"].append({
         "id": uuid.uuid4().hex,

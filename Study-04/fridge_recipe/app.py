@@ -36,16 +36,19 @@ from vision import UnreadableResultError, UnsupportedImageError, prepare_image, 
 
 ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"]
 NO_PROFILE = "(프로필 선택 안 함)"
-# 기다리는 동안 보여줄 안내. 기다리는 중에 화면을 건드리면 Streamlit이 실행을 멈춰서 AI 답이 버려지므로 그것도 알린다
-WAIT_HINT = f"보통 30초~1분, 최대 {TIMEOUT_SECONDS // 60}분 걸려요. 기다리는 동안 다른 칸을 바꾸거나 버튼을 누르면 요청이 취소돼요"
+PREVIEW_WIDTH = 320  # 미리보기 사진 폭(px). 세로로 긴 휴대폰 사진도 화면을 다 차지하지 않게 작게 보여준다
+START_MESSAGE = ("info", "사진을 올리고 **재료 인식하기**를 누르면, AI가 찾은 재료가 여기에 나와요.")
+# 기다리는 동안 보여줄 안내. 기다리는 중에 버튼이나 입력칸을 건드리면 Streamlit이 실행을 멈춰서 AI 답이 버려지므로
+# 그걸 굵은 글씨로 알린다 (스크롤은 다시 실행되지 않아서 괜찮다). "  \n"은 Markdown 줄바꿈이다
+WAIT_HINT = (
+    f"보통 30초~1분, 길면 {TIMEOUT_SECONDS // 60}분 걸려요.  \n"
+    "**⚠️ 끝날 때까지 다른 버튼이나 입력칸을 건드리지 마세요.** 건드리면 요청이 취소돼요 (스크롤은 괜찮아요)."
+)
 CONFIDENCE_MARKS = {"높음": "", "보통": "", "낮음": " ❓"}
 
 
 def result_to_markdown(result):
-    """인식 결과를 화면에 보여줄 표(Markdown)로 만든다."""
-    if not result["ingredients"]:
-        return "재료를 찾지 못했어요. 냉장고 안이 잘 보이게 다시 찍어주세요."
-
+    """인식 결과를 화면에 보여줄 표(Markdown)로 만든다. 재료가 하나 이상 있을 때만 부른다."""
     lines = [
         f"**찾은 재료 {len(result['ingredients'])}개** (❓ = 확실하지 않음)",
         "",
@@ -74,6 +77,8 @@ def prepare_photo(photo):
         except UnsupportedImageError as error:
             st.session_state.prepared_photo = (None, str(error))
         st.session_state.photo_id = photo.file_id
+        # 새 사진이면 결과 칸을 처음 안내로 되돌린다. 이전 사진의 결과나 오류가 새 사진 옆에 남아 있으면 헷갈린다
+        st.session_state.message = START_MESSAGE
     return st.session_state.prepared_photo
 
 
@@ -85,12 +90,21 @@ def run_recognition(photo_jpeg):
         st.session_state.message = ("error", str(error))
         return
     except UnreadableResultError as error:
-        st.session_state.message = ("error", f"{error} AI 답 원문을 그대로 보여드릴게요.\n\n```\n{error.raw_text}\n```")
+        st.session_state.message = ("error", (
+            f"{error} **재료 인식하기**를 한 번 더 누르거나, 아래 AI 답을 보고 재료 목록 칸에 직접 써주세요."
+            f"\n\n```\n{error.raw_text}\n```"
+        ))
+        return
+
+    if not result["ingredients"]:  # 찾은 게 없으면 사용자가 써 둔 재료 목록은 지우지 않는다
+        text = "사진에서 재료를 찾지 못했어요. 냉장고 안이 잘 보이게 밝은 곳에서 다시 찍어 올리거나, 아래 재료 목록 칸에 직접 써주세요."
+        if result["note"]:
+            text += f"\n\n📝 {result['note']}"
+        st.session_state.message = ("warning", text)
         return
 
     st.session_state.message = ("result", result_to_markdown(result))
-    if result["ingredients"]:  # 찾은 게 없으면 사용자가 써 둔 재료 목록은 지우지 않는다
-        st.session_state.ingredients_text = ", ".join(item["name"] for item in result["ingredients"])
+    st.session_state.ingredients_text = ", ".join(item["name"] for item in result["ingredients"])
 
 
 def run_recipe_generation(profile, exclude_titles=()):
@@ -101,7 +115,7 @@ def run_recipe_generation(profile, exclude_titles=()):
     st.session_state.recipe_notice = None
     ingredients = parse_ingredients(st.session_state.ingredients_text)
     if not ingredients:
-        notify("recipe", "재료를 한 개 이상 입력해주세요.", ok=False)
+        notify("recipe", "재료 목록이 비어 있어요. 위에서 사진으로 재료를 찾거나, 재료 목록 칸에 재료를 직접 써주세요 (예: 달걀, 대파).", ok=False)
         return
 
     allergens = find_allergens(ingredients, profile["allergies"]) if profile else []
@@ -136,11 +150,16 @@ def notify(where, text, ok=True):
 
 
 def show_notice(where):
-    """where 위치에 남겨진 알림이 있으면 보여준다."""
+    """where 위치에 남겨진 알림이 있으면 보여준다.
+
+    알림이 없어도 빈 자리(st.empty)는 늘 만들어 둔다. 알림이 생기거나 사라져서 아래 요소들의 순서가 바뀌면
+    Streamlit이 그 요소들을 새로 그리는데, 이때 펼쳐 둔 '프로필 정보 수정' 상자가 접혀 버리기 때문이다.
+    """
+    slot = st.empty()
     notice = st.session_state.get("notice")
     if notice and notice[0] == where:
         _, text, ok = notice
-        (st.success if ok else st.warning)(text, icon="✅" if ok else "⚠️")
+        (slot.success if ok else slot.warning)(text, icon="✅" if ok else "⚠️")
 
 
 def selected_nickname():
@@ -184,38 +203,38 @@ def on_save_profile(nickname):
             skill=st.session_state[f"skill_{nickname}"],
             default_servings=st.session_state[f"servings_{nickname}"],
         )
-    except ProfileError as error:
+    except ProfileError as error:  # 프로필이 사라졌거나 파일 오류면 수정 상자가 안 보일 수 있어서 맨 위에 띄운다
         notify("profile", str(error), ok=False)
         return
     apply_default_servings()
-    notify("profile", "프로필을 저장했어요!")
+    notify("profile_form", "프로필을 저장했어요!")  # 프로필 저장 버튼 바로 아래에 보여준다
 
 
 def on_save_recipe(index):
     nickname = selected_nickname()
     if not nickname:
-        notify(f"card_{index}", "먼저 맨 위에서 프로필을 선택해주세요.", ok=False)
+        notify(f"card_{index}", "저장하려면 맨 위에서 프로필을 선택하거나 새로 만들어주세요. 추천받은 레시피는 그대로 남아 있어요.", ok=False)
         return
     try:
         save_recipe(nickname, st.session_state.recipes[index], st.session_state.recipe_source_ingredients)
     except ProfileError as error:
         notify(f"card_{index}", str(error), ok=False)
         return
-    notify(f"card_{index}", "저장했어요! '⭐ 내 레시피' 탭에서 볼 수 있어요.")
+    notify(f"card_{index}", "저장했어요! 맨 위 '⭐ 내 레시피' 탭에서 볼 수 있어요.")
 
 
-def on_confirm_delete(nickname, recipe_id):
+def on_confirm_delete(nickname, recipe_id, title):
     try:
         delete_recipe(nickname, recipe_id)
     except ProfileError as error:
         notify("saved", str(error), ok=False)
         return
     st.session_state.confirm_delete = None
-    notify("saved", "삭제했어요.")
+    notify("saved", f"'{title}' 레시피를 삭제했어요.")
 
 
 st.set_page_config(page_title="냉장고 레시피", page_icon="🧊", layout="wide")
-st.session_state.setdefault("message", ("info", "사진을 올리고 **재료 인식하기**를 눌러주세요."))
+st.session_state.setdefault("message", START_MESSAGE)
 st.session_state.setdefault("ingredients_text", "")
 st.session_state.setdefault("recipes", [])
 st.session_state.setdefault("recipe_source_ingredients", [])
@@ -231,6 +250,7 @@ except ProfileError as error:  # 저장 파일이 손상됐거나 Drive 연결�
 
 st.title("🧊 냉장고 레시피 추천")
 st.write("냉장고 사진을 올리면 AI가 재료를 찾고, 그 재료로 만들 수 있는 레시피를 추천해줘요.")
+st.markdown("**이렇게 써요:** ① 사진 올리고 **재료 인식하기** → ② 재료 목록 확인 → ③ **레시피 추천받기** → ④ 마음에 들면 **⭐ 저장**")
 
 # ===== 프로필 =====
 nicknames = sorted(data["profiles"])
@@ -238,11 +258,14 @@ if st.session_state.get("profile_name") not in [NO_PROFILE] + nicknames:
     st.session_state.profile_name = NO_PROFILE  # 사라진 프로필이 선택돼 있으면 선택을 푼다
 
 with st.container(border=True):
-    profile_columns = st.columns([2, 2, 1])
+    profile_columns = st.columns([2, 2, 1], vertical_alignment="bottom")  # 버튼을 입력칸과 같은 높이에 맞춘다
     profile_columns[0].selectbox("👤 프로필", [NO_PROFILE] + nicknames, key="profile_name", on_change=apply_default_servings)
     profile_columns[1].text_input("새 닉네임 (1~20자)", key="new_nickname", placeholder="예: 요리초보")
     profile_columns[2].button("새 프로필 만들기", on_click=on_create_profile, width="stretch")
-    st.caption("⚠️ 비밀번호가 없어서 앱을 쓰는 누구나 모든 프로필을 볼 수 있어요. 실명 같은 개인정보는 넣지 마세요.")
+    st.caption(
+        "프로필은 없어도 돼요. 만들어 두면 알레르기·식단을 반영해서 추천받고, 마음에 드는 레시피를 저장할 수 있어요.  \n"
+        "⚠️ 비밀번호가 없어서 앱을 쓰는 누구나 모든 프로필을 볼 수 있어요. 실명 같은 개인정보는 넣지 마세요."
+    )
     show_notice("profile")
 
     nickname = selected_nickname()
@@ -265,6 +288,7 @@ with st.container(border=True):
                     format_func=lambda n: f"{n}인분", key=f"servings_{nickname}",
                 )
                 st.form_submit_button("프로필 저장", type="primary", on_click=on_save_profile, args=(nickname,))
+        show_notice("profile_form")  # 저장 결과는 펼침 상자 바로 아래(= 프로필 저장 버튼 바로 아래)에 보여준다
 
 recommend_tab, saved_tab = st.tabs(["🍳 레시피 추천", "⭐ 내 레시피"])
 
@@ -279,20 +303,26 @@ with recommend_tab:
         photo_jpeg, photo_error = prepare_photo(photo) if photo is not None else (None, None)
         if photo_error:
             st.error(photo_error, icon="⚠️")
-        elif photo_jpeg:
-            st.image(photo_jpeg, caption="미리보기", width="stretch")
 
+        # 버튼을 미리보기보다 위에 둔다. 세로로 긴 사진이면 버튼이 한참 아래로 밀려서,
+        # 버튼을 누른 자리에서는 오른쪽 위에 나온 결과가 화면 밖에 있어 안 보였다
         if st.button("재료 인식하기", type="primary", width="stretch", disabled=photo_error is not None):
             if photo_jpeg is None:
-                st.session_state.message = ("error", "먼저 냉장고 사진을 올려주세요.")
+                notify("recognize", "먼저 위에서 냉장고 사진을 올려주세요. 사진이 없으면 재료 목록 칸에 재료를 직접 써도 돼요.", ok=False)
             else:
-                with st.spinner(f"AI가 사진 속 재료를 찾고 있어요... ({WAIT_HINT})", show_time=True):
+                with st.spinner(f"AI가 사진 속 재료를 찾고 있어요. {WAIT_HINT}", show_time=True):
                     run_recognition(photo_jpeg)
+        show_notice("recognize")
+
+        if photo_jpeg:
+            st.image(photo_jpeg, caption="미리보기", width=PREVIEW_WIDTH)
 
     with right:
         kind, text = st.session_state.message
         if kind == "error":
             st.error(text, icon="⚠️")
+        elif kind == "warning":
+            st.warning(text, icon="🔍")
         else:
             st.markdown(text)
 
@@ -302,6 +332,7 @@ with recommend_tab:
             height=100,
             placeholder="예: 달걀, 대파, 우유",
         )
+        st.caption("재료 목록을 다 확인했으면 아래 **2. 레시피 추천**에서 **레시피 추천받기**를 눌러주세요.")
 
     st.divider()
     st.header("2. 레시피 추천")
@@ -317,10 +348,13 @@ with recommend_tab:
 
     button_columns = st.columns(2)
     if button_columns[0].button("레시피 추천받기", type="primary", width="stretch"):
-        with st.spinner(f"AI가 레시피를 만들고 있어요... ({WAIT_HINT})", show_time=True):
+        with st.spinner(f"AI가 레시피를 만들고 있어요. {WAIT_HINT}", show_time=True):
             run_recipe_generation(profile)
-    if button_columns[1].button("다른 레시피 보기", width="stretch", disabled=not st.session_state.recipes):
-        with st.spinner(f"AI가 다른 레시피를 만들고 있어요... ({WAIT_HINT})", show_time=True):
+    if button_columns[1].button(
+        "다른 레시피 보기", width="stretch", disabled=not st.session_state.recipes,
+        help="지금 보이는 레시피를 빼고 새로 추천받아요. 레시피를 한 번 추천받은 뒤에 누를 수 있어요.",
+    ):
+        with st.spinner(f"AI가 다른 레시피를 만들고 있어요. {WAIT_HINT}", show_time=True):
             run_recipe_generation(profile, exclude_titles=[recipe["title"] for recipe in st.session_state.recipes])
 
     if st.session_state.recipe_notice:
@@ -339,9 +373,9 @@ with recommend_tab:
 with saved_tab:
     show_notice("saved")
     if not profile:
-        st.info("프로필을 선택하면 저장한 레시피를 볼 수 있어요.")
+        st.info("맨 위에서 프로필을 선택하면 그 프로필에 저장한 레시피를 볼 수 있어요.")
     elif not profile["saved_recipes"]:
-        st.info("아직 저장한 레시피가 없어요. 레시피 카드의 ⭐ 저장 버튼을 눌러보세요.")
+        st.info("아직 저장한 레시피가 없어요. '🍳 레시피 추천' 탭에서 레시피를 받은 뒤, 마음에 드는 카드의 ⭐ 저장 버튼을 눌러보세요.")
     else:
         saved_list = sorted(profile["saved_recipes"], key=lambda saved: saved["saved_at"], reverse=True)  # 최신순
         saved_by_id = {saved["id"]: saved for saved in saved_list}
@@ -360,9 +394,12 @@ with saved_tab:
             st.caption(f"저장한 날: {chosen['saved_at'].replace('T', ' ')} · 그때 냉장고 재료: {', '.join(chosen['source_ingredients'])}")
 
         if st.session_state.confirm_delete == chosen_id:
-            st.warning("정말 삭제할까요?")
+            st.warning(f"'{chosen['recipe']['title']}' 레시피를 정말 삭제할까요? 삭제하면 되돌릴 수 없어요.")
             confirm_columns = st.columns(2)
-            confirm_columns[0].button("네, 삭제할게요", type="primary", on_click=on_confirm_delete, args=(nickname, chosen_id), width="stretch")
+            confirm_columns[0].button(
+                "네, 삭제할게요", type="primary", on_click=on_confirm_delete,
+                args=(nickname, chosen_id, chosen["recipe"]["title"]), width="stretch",
+            )
             if confirm_columns[1].button("취소", width="stretch"):
                 st.session_state.confirm_delete = None
                 st.rerun()
