@@ -53,9 +53,6 @@ Verify without the real API by patching `requests.post` (e.g. a `sitecustomize.p
 returns a canned OpenRouter JSON), then drive it with `streamlit.testing.v1.AppTest` or Playwright
 (`executable_path="/opt/pw-browsers/chromium"`).
 
-`backups/<YYYYMMDD-HHMMSS>/` holds read-only snapshots of the whole folder (see its `BACKUP.md`), like
-Study-03's `backups/`. Never edit files there; make a new timestamped folder for a new backup.
-
 Claude's cloud container can't run these for real: it has no key, and its network policy blocks
 `openrouter.ai`. Hand the user Colab cells instead and ask them to paste the output back.
 
