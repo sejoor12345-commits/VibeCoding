@@ -893,7 +893,8 @@ function emptyPlan() {
     allowPreLeaveNight: false,  // 휴가 출발 전날 야간 허용
     training: { day: 2, night: 1 }, // 신병 견습 횟수·조합 (2회 또는 3회)
     leaves: [],                 // [ { start: 출발일, end: 복귀일 } ]
-    outings: []                 // [ { date, type: '8h' | '4h' | '면회' } ]
+    outings: [],                // [ { date, type: '8h' | '4h' | '면회' } ]
+    prefs: []                   // 선호도 규칙 (PRD_step1 F1 저장 모양, 30개까지). 아래 '선호도 규칙' 참고
   };
 }
 
