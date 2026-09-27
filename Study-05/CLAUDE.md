@@ -67,3 +67,10 @@ working directory. Their prompts are in Korean and each ends with a Korean repor
 Intended flow per step: `product-manager` → `ai-integration-specialist` / `backend-developer` /
 `frontend-developer` → `qa-engineer`. None of them commit or push; the caller decides. Subagents can't ask the user
 directly, so open decisions come back in their reports ("사용자에게 물어볼 것") for the main session to relay.
+
+## Current state
+
+- Step 1 spec done: `PRD_step1.md` (4 closed rule types, preference penalty 20/60/150 capped below 2900 < 야야, `/api/*`
+  contracts, 선호도 tab, Colab cells on port 8765, QA scenario matrix). No step-1 code yet; `PRD.md` has "→ Study-05에서 변경" markers.
+- Next: `ai-integration-specialist` (`openrouter_client.py`, `preferences.py`) ∥ `backend-developer` (`server.py` + the calculation
+  section of `timetable.html`) → `frontend-developer` (UI section of `timetable.html`) → `qa-engineer` (PRD_step1 §9.2).
