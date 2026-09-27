@@ -362,7 +362,9 @@ class Handler(BaseHTTPRequestHandler):
     def send_json(self, status, data):
         if not data.get("ok", True):
             self.result_code = data.get("code", "")
-        body = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        # errors="replace": 요청에 반쪽짜리 이모지(\ud83d 같은 글자)가 섞여 와서 안내 문구에 들어가도
+        # 답을 못 보내고 연결이 끊기지 않게, 그 글자만 ?로 바꿔서 보낸다
+        body = json.dumps(data, ensure_ascii=False).encode("utf-8", errors="replace")
         self.send_bytes(status, body, "application/json; charset=utf-8")
 
     def read_json_body(self):

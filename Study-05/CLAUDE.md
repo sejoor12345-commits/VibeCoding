@@ -70,7 +70,14 @@ directly, so open decisions come back in their reports ("사용자에게 물어�
 
 ## Current state
 
-- Step 1 spec done: `PRD_step1.md` (4 closed rule types, preference penalty 20/60/150 capped below 2900 < 야야, `/api/*`
-  contracts, 선호도 tab, Colab cells on port 8765, QA scenario matrix). No step-1 code yet; `PRD.md` has "→ Study-05에서 변경" markers.
-- Next: `ai-integration-specialist` (`openrouter_client.py`, `preferences.py`) ∥ `backend-developer` (`server.py` + the calculation
-  section of `timetable.html`) → `frontend-developer` (UI section of `timetable.html`) → `qa-engineer` (PRD_step1 §9.2).
+- Step 1 (AI preference feature) is **built and QA'd**: `timetable_server/` (server + OpenRouter client + prompts) and
+  `timetable.html` (preference scoring, 선호도 tab, result card). `runTests()` = 221 passing; with no rules the auto-generator
+  is identical to the imported original (same seed → same roster). The user still has to check real-AI quality in Colab
+  (PRD_step1 §9.1) — the container has no key.
+- Known limits (not bugs, QA-measured): 야야/위로휴가 misses on tight setups (5명·4주·전원 목표 3) come from the time-boxed
+  search on slow PCs, same as the original; few weak rules barely move the result, and pressing [다시 생성] repeatedly
+  improves it (it only accepts a lower total penalty).
+- Open ideas the user hasn't decided: longer/better search, a "[다시 생성]을 더 누르면 나아질 수 있어요" hint, `aria-disabled`
+  on the parse button, an "예시 글 넣기" button.
+- Test scripts were kept out of the repo on purpose; QA's matrix is PRD_step1 §9.2. Browser checks use the global Node
+  Playwright; fake the AI by patching `requests.post` in the server process (e.g. `sitecustomize.py` on `PYTHONPATH`).

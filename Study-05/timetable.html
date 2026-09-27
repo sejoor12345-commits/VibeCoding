@@ -1471,6 +1471,14 @@ function preferenceTextLength(text) {
   return Array.from(String(text).trim()).length;
 }
 
+// 글자 수가 max 를 넘으면 max - 1 자 + '…' 로 자름. 한 글자씩 세어서(이모지도 1자) 이모지를 반으로 쪼개지 않음
+// (서버 preferences.py 의 shorten 과 같은 기준)
+function cutChars(text, max) {
+  text = String(text);
+  var chars = Array.from(text);
+  return chars.length > max ? chars.slice(0, max - 1).join('') + '…' : text;
+}
+
 // 받침에 맞는 조사 붙이기. 예: josa('휴가', '이라', '라') → '휴가라', josa('외출', '이라', '라') → '외출이라'
 // 한글이 아닌 글자(괄호·따옴표)는 건너뛰고 마지막 한글 글자로 정함
 function josa(word, withFinal, withoutFinal) {
@@ -1552,7 +1560,7 @@ function checkPreference(raw) {
   rule.strength = typeof raw.strength === 'string' && hasOwn(PREFERENCE_POINTS, raw.strength) ? raw.strength : '보통';
   // 인용: 줄바꿈·연속 공백은 한 칸으로, 60자를 넘으면 59자 + '…' (서버의 AI 답 검사와 같은 기준)
   var quote = typeof raw.quote === 'string' ? raw.quote.split(/\s+/).join(' ').trim() : '';
-  rule.quote = quote.length > PREFERENCE_QUOTE_MAX ? quote.slice(0, PREFERENCE_QUOTE_MAX - 1) + '…' : quote;
+  rule.quote = cutChars(quote, PREFERENCE_QUOTE_MAX);
   rule.on = raw.on !== false;
   return { rule: rule };
 }
@@ -1966,7 +1974,7 @@ function matchPreferenceResult(people, rules) {
   var byPerson = {};
   people.forEach(function (p) { byPerson[p.id] = []; });
   var notMatched = [];
-  function cut(text, max) { return text.length > max ? text.slice(0, max - 1) + '…' : text; }
+  var cut = cutChars;
   function skip(raw, reason) {
     var quote = isPlainObject(raw) && typeof raw.quote === 'string' ? raw.quote.trim() : '';
     var who = isPlainObject(raw) && typeof raw.person === 'string' ? raw.person + ': ' : '';
@@ -2012,7 +2020,7 @@ function countEmptySlots(people, shifts, dates) {
 function preferenceSummaryRequest(report, people, startDate, weeks, penalty, emptySlots) {
   var byId = {};
   people.forEach(function (p) { byId[p.id] = p; });
-  function cut(text, max) { text = String(text || ''); return text.length > max ? text.slice(0, max - 1) + '…' : text; }
+  function cut(text, max) { return cutChars(text || '', max); } // 서버 한도(글자 수)에 맞게, 이모지를 쪼개지 않고
   function num(x) { return Math.max(0, Math.min(100, Math.round(Number(x) || 0))); }
   function nameOf(id) { return cut(byId[id].name || '(이름 없음)', 20); }
   var sent = [];
@@ -4692,8 +4700,9 @@ function prefPeopleProblem() {
   for (var i = 0; i < state.people.length; i++) {
     var name = state.people[i].name;
     if (!name.trim()) return '이름이 빈 사람이 있어요. 설정 탭에서 이름을 넣어 주세요.';
-    if (name.length > AI_NAME_MAX) {
-      return '이름은 ' + AI_NAME_MAX + '자까지 쓸 수 있어요 (' + name.slice(0, AI_NAME_MAX) + '…). 설정 탭에서 이름을 줄여 주세요.';
+    var chars = Array.from(name); // 서버와 같은 기준으로 셈 (이모지도 1자)
+    if (chars.length > AI_NAME_MAX) {
+      return '이름은 ' + AI_NAME_MAX + '자까지 쓸 수 있어요 (' + chars.slice(0, AI_NAME_MAX).join('') + '…). 설정 탭에서 이름을 줄여 주세요.';
     }
     if (hasOwn(seen, name)) return '이름이 같은 사람이 있어요 (' + name + '). 설정 탭에서 이름을 서로 다르게 바꿔 주세요.';
     seen[name] = true;
@@ -6085,6 +6094,17 @@ function runTests() {
   check('새 사람·테스트용 사람도 빈 규칙 목록', [planOf({ id: 1 }).prefs, emptyPlan().prefs], [[], []]);
   var emojiText = new Array(1996).join('가') + '😀😀😀😀😀😀'; // 1995자 + 이모지 6개 = 2001자 (서버 기준)
   var emojiSaved = normalizeData(Object.assign({}, prefData, { preferenceText: emojiText })).preferenceText;
+  var lonely = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/; // 반쪽짜리 이모지
+  var emojiQuote60 = new Array(55).join('가') + '😀😀😀😀😀😀'; // 서버가 60자 안으로 준 인용 (54자 + 이모지 6개)
+  var emojiQuote61 = '가' + emojiQuote60;
+  var emojiPeople = [{ id: 1, name: new Array(26).join('😀'), prefs: [WEEKEND_DAY] }];
+  var emojiBody = preferenceSummaryRequest(preferenceReport(emojiPeople, {}, dates, null, {}), emojiPeople, '2026-09-28', 4, null);
+  check('이모지 자르기: 서버가 준 60자 인용은 그대로, 61자는 60자로 (이모지를 반으로 쪼개지 않음), 설명 요청의 이름도 20자로 쪼개짐 없이',
+    [normalizePreference(Object.assign({ quote: emojiQuote60 }, D_MOSTLY)).quote === emojiQuote60,
+      Array.from(normalizePreference(Object.assign({}, D_MOSTLY, { quote: emojiQuote61 })).quote).length,
+      lonely.test(normalizePreference(Object.assign({}, D_MOSTLY, { quote: emojiQuote61 })).quote),
+      Array.from(emojiBody.people[0].name).length, lonely.test(emojiBody.people[0].name), cutChars('가나다', 3), cutChars('가나다라', 3)],
+    [true, 60, false, 20, false, '가나다', '가나…']);
   check('선호도 글 글자 수는 서버와 같은 기준 (앞뒤 공백 빼고, 이모지도 1자), 2000자로 자를 때 이모지를 쪼개지 않음',
     [preferenceTextLength('  가나 😀\n'), preferenceTextLength(emojiText), preferenceTextLength(emojiSaved), emojiSaved.slice(-2)],
     [4, 2001, 2000, '😀']);
