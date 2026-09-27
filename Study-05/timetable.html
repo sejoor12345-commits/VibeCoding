@@ -1288,8 +1288,9 @@ function checkPreference(raw) {
     return bad('지원하지 않는 규칙 종류예요.');
   }
   rule.strength = typeof raw.strength === 'string' && hasOwn(PREFERENCE_POINTS, raw.strength) ? raw.strength : '보통';
-  var quote = typeof raw.quote === 'string' ? raw.quote.trim() : '';
-  rule.quote = quote.length > PREFERENCE_QUOTE_MAX ? quote.slice(0, PREFERENCE_QUOTE_MAX) + '…' : quote;
+  // 인용: 줄바꿈·연속 공백은 한 칸으로, 60자를 넘으면 59자 + '…' (서버의 AI 답 검사와 같은 기준)
+  var quote = typeof raw.quote === 'string' ? raw.quote.split(/\s+/).join(' ').trim() : '';
+  rule.quote = quote.length > PREFERENCE_QUOTE_MAX ? quote.slice(0, PREFERENCE_QUOTE_MAX - 1) + '…' : quote;
   rule.on = raw.on !== false;
   return { rule: rule };
 }
@@ -4850,6 +4851,276 @@ function runTests() {
   check('자동 생성 불가: 모두 휴가 가는 날 → 막힌 날짜·칸과 사람별 이유를 알려 줌',
     [away.ok, away.message.split('\n')[0], away.message.indexOf('A: 휴가 출발 전날 야간') !== -1],
     [false, '9/30(수) 야간: 넣을 수 있는 사람이 없습니다.', true]);
+
+  // --- 선호도 규칙 (PRD_step1 F1 저장 전 검사) ---
+  var PAT = { type: 'pattern', sequence: ['주', '비', '주', '비', '주', '야', '비'] }; // B의 흐름
+  var WEEKEND_DAY = { type: 'day_shift', days: '주말', shift: '주', want: 'prefer' };  // A 주말 주간 선호
+  var D_MOSTLY = { type: 'ratio', shift: '야', level: 'mostly' };                       // D 야간 위주
+  var d103 = dates[5].key; // 10/3(토)
+  check('선호도 검사: AI 규칙 → 저장 모양 (person·모르는 필드는 지우고 on: true 를 더함)',
+    normalizePreference({ person: 'A', type: 'day_shift', days: '주말', shift: '주', want: 'prefer', strength: '보통',
+      quote: 'A는 주말에는 주간이 좋대요', memo: 'x' }),
+    { type: 'day_shift', days: '주말', shift: '주', want: 'prefer', strength: '보통', quote: 'A는 주말에는 주간이 좋대요', on: true });
+  check('선호도 검사: 강도가 이상하면 보통, 틀린 요일만 빼고 월~일 순서, 인용 60자 넘으면 59자 + …, on 은 false 일 때만 꺼짐',
+    normalizePreference({ type: 'day_shift', days: ['수', '?', '월', '수'], shift: '야', want: 'avoid', strength: '아주',
+      quote: new Array(71).join('가'), on: 0 }),
+    { type: 'day_shift', days: ['월', '수'], shift: '야', want: 'avoid', strength: '보통', quote: new Array(60).join('가') + '…', on: true });
+  check('선호도 검사: 날짜 규칙은 틀린 날짜만 빼고 겹침 없이 날짜순 (기간 밖 날짜는 지우지 않음)',
+    normalizePreference({ type: 'date_shift', dates: ['2026-10-09', '10/3', '2026-10-03', '2026-10-09', '2026-02-30', '2027-01-05'],
+      shift: '근무', want: 'avoid', strength: '강함' }).dates, ['2026-10-03', '2026-10-09', '2027-01-05']);
+  check('선호도 검사: 받지 않는 규칙 → null (비번 피하기, 야→주 흐름, 끝에서 처음으로 이어지는 야→주·야야, 비만 있는 흐름, ' +
+    '15칸 흐름, 없는 종류, 날짜 없음, 틀린 비율, 규칙이 아닌 값)',
+    [{ type: 'day_shift', days: '주말', shift: '비', want: 'avoid' }, { type: 'pattern', sequence: ['야', '주', '비'] },
+      { type: 'pattern', sequence: ['주', '야'] }, { type: 'pattern', sequence: ['야', '비', '야'] },
+      { type: 'pattern', sequence: ['비', '비'] }, { type: 'pattern', sequence: PAT.sequence.concat(PAT.sequence, ['비']) },
+      { type: 'weekly', shift: '주' }, { type: 'date_shift', dates: ['x'], shift: '주', want: 'prefer' },
+      { type: 'ratio', shift: '야', level: 'most' }, '규칙', null].map(normalizePreference),
+    [null, null, null, null, null, null, null, null, null, null, null]);
+  check('선호도 검사 이유: 야간 다음 날 주간 / 야야',
+    [checkPreference({ type: 'pattern', sequence: ['야', '주', '비'] }).reason,
+      checkPreference({ type: 'pattern', sequence: ['주', '주', '야', '야', '비', '비'] }).reason],
+    ['지킬 수 없는 흐름이에요: 야간 다음 날 주간은 안 돼요.', '야야가 들어 있는 흐름은 받을 수 없어요.']);
+  var cleanOnce = normalizePreference({ type: 'date_shift', dates: ['2026-10-09', '2026-10-03'], shift: '야', want: 'prefer',
+    quote: '  10/3,\n10/9 야간 ' + new Array(70).join('나') });
+  check('선호도 검사: 정리된 규칙을 다시 검사해도 그대로 (줄바꿈은 한 칸으로)',
+    [JSON.stringify(normalizePreference(cleanOnce)) === JSON.stringify(cleanOnce), cleanOnce.quote.length, cleanOnce.quote.indexOf('10/3, 10/9')],
+    [true, 60, 0]);
+  check('선호도 규칙 이름 (화면에 영어 이름 없이)',
+    [WEEKEND_DAY, { type: 'day_shift', days: ['월'], shift: '야', want: 'avoid' }, { type: 'day_shift', days: '휴일', shift: '비', want: 'prefer' },
+      { type: 'date_shift', dates: [d103], shift: '근무', want: 'avoid' },
+      { type: 'date_shift', dates: ['2026-10-09', d103], shift: '야', want: 'prefer' }, PAT, D_MOSTLY,
+      { type: 'ratio', shift: '주', level: 'only' }, { type: 'ratio', shift: '주', level: 'more' }].map(preferenceLabel),
+    ['주말 주간 선호', '월요일 야간 피하기', '휴일 비번 선호', '10/3 근무 피하기', '10/3·10/9 야간 선호',
+      '근무 흐름: 주 비 주 비 주 야 비', '야간 위주', '주간만', '주간 조금 더']);
+
+  // --- 선호도 어긋남 세기 (F2). 사람 1명(A, id 1), 2026-09-28(월)부터 4주 ---
+  function prefRule(rule, values, extra, prevPeriod, hol) {
+    var person = Object.assign({ id: 1, name: 'A', target: 3, prefs: [rule] }, extra || {});
+    return preferenceReport([person], { 1: row(values) }, dates, prevPeriod || null, hol || {})[0].rules[0];
+  }
+  function prefMisses(rule, values, extra, prevPeriod, hol) { return prefRule(rule, values, extra, prevPeriod, hol).misses; }
+  check('흐름 규칙 (F2 확인용 예): 주 비 주 비 주 야 비 → 0, 주 주 야 비 → 모양 2, 야 비 야 비 → 모양 1 + 비율 1 = 2',
+    [prefMisses(PAT, ['주', '비', '주', '비', '주', '야', '비']), prefMisses(PAT, ['주', '주', '야', '비']),
+      prefMisses(PAT, ['야', '비', '야', '비'])], [0, 2, 2]);
+  check('흐름 규칙 설명', prefRule(PAT, ['야', '비', '야', '비']).note,
+    '흐름 어긋남 1번 + 비율 어긋남 1, 주간 0·야간 2 (원하는 비율 주 3 : 야 1)');
+  check('흐름 비율 어긋남 (주 3 : 야 1, 전체 13): 주간 9·10 → 0, 8·11 → 1, 7·12 → 2, 순수 주야비(주 6) → 3',
+    [[9, 4], [10, 3], [8, 5], [11, 2], [7, 6], [12, 1], [6, 7]].map(function (x) { return preferenceRatioGap(x[0], x[1], 3, 1); }),
+    [0, 0, 1, 1, 2, 2, 3]);
+  check('흐름 규칙: 첫날의 전날은 모르면 아무 기호와 맞고, 이전 기간 마지막 날 근무를 알면 그 기호 (주 → 통과, 비번 → 어긋남)',
+    [prefMisses(PAT, ['야']), prefMisses(PAT, ['야'], null, prevWith([{ '주': null, '야': null }, { '주': 1, '야': null }])),
+      prefMisses(PAT, ['야'], null, prevWith([{ '주': null, '야': null }, { '주': 2, '야': 3 }]))], [0, 0, 1]);
+  check('흐름 규칙: 견습은 셈에서 빼되 기호(견주 → 주)로는 봄',
+    [prefRule(PAT, ['견주', '야', '비']).misses, prefRule(PAT, ['견주', '야', '비']).checked], [0, 1]);
+
+  var wk = ['', '', '', '', '', '야', '주']; // 10/3(토) 야간, 10/4(일) 주간
+  var wkRule = prefRule(WEEKEND_DAY, wk);
+  check('요일 규칙: 주말 주간 선호 → 주말에 선 야간 1번당 1', [wkRule.misses, wkRule.checked, wkRule.note],
+    [1, 2, '주말 근무 2번 (주간 1·야간 1)']);
+  check('요일 규칙 표: 주말 야간 선호 1, 주말 비번 선호 2, 주말 주간 피하기 1, 주말 야간 피하기 1',
+    [['야', 'prefer'], ['비', 'prefer'], ['주', 'avoid'], ['야', 'avoid']].map(function (x) {
+      return prefMisses({ type: 'day_shift', days: '주말', shift: x[0], want: x[1] }, wk);
+    }), [1, 2, 1, 1]);
+  check('요일 규칙: 월요일 야간 피하기는 월요일만 셈, 견습(견야)은 뺌',
+    [prefMisses({ type: 'day_shift', days: ['월'], shift: '야', want: 'avoid' }, ['야', '야', '', '', '', '', '', '야']),
+      prefMisses(WEEKEND_DAY, ['', '', '', '', '', '견야'])], [2, 0]);
+  var hol2 = {};
+  hol2[dates[2].key] = '공휴일';
+  check('요일 규칙: 휴일 = 토·일·공휴일, 평일 = 휴일이 아닌 날',
+    [prefMisses({ type: 'day_shift', days: '휴일', shift: '비', want: 'prefer' }, ['주', '', '야', '', '', '주'], null, null, hol2),
+      prefMisses({ type: 'day_shift', days: '평일', shift: '비', want: 'prefer' }, ['주', '', '야', '', '', '주'], null, null, hol2)],
+    [2, 1]);
+
+  check('날짜 규칙 표 (10/3 주간 / 야간 / 비번일 때 어긋남): 주·야·근무·비 선호, 주·야·근무·비 피하기',
+    [['주', 'prefer'], ['야', 'prefer'], ['근무', 'prefer'], ['비', 'prefer'], ['주', 'avoid'], ['야', 'avoid'], ['근무', 'avoid'],
+      ['비', 'avoid']].map(function (x) {
+      var rule = { type: 'date_shift', dates: [d103], shift: x[0], want: x[1] };
+      return [['', '', '', '', '', '주'], ['', '', '', '', '', '야'], []].map(function (v) { return prefMisses(rule, v); }).join('');
+    }), ['011', '101', '001', '110', '100', '010', '110', '001']);
+  var C_AVOID = { type: 'date_shift', dates: [d103], shift: '근무', want: 'avoid', strength: '강함' }; // C 10/3 꼭 쉬기
+  var onLeave = { leaves: [{ start: dates[4].key, end: dates[7].key }] }; // 10/2 출발 ~ 10/5 복귀 → 10/3 휴가 중
+  var dr1 = prefRule(C_AVOID, ['', '', '', '', '', '야']);
+  var dr2 = prefRule(C_AVOID, []);
+  var dr3 = prefRule({ type: 'date_shift', dates: [d103], shift: '야', want: 'prefer' }, [], onLeave);
+  var dr4 = prefRule({ type: 'date_shift', dates: ['2026-11-05'], shift: '야', want: 'prefer' }, []);
+  check('날짜 규칙 상태·설명: 어긋남 / 지킴 / 일정 때문에 지킬 수 없음 / 이번 기간 밖',
+    [[dr1.status, dr1.misses, dr1.note], [dr2.status, dr2.misses, dr2.note], [dr3.status, dr3.misses, dr3.note],
+      [dr4.status, dr4.checked, dr4.outside]],
+    [['missed', 1, '10/3 야간'], ['kept', 0, '10/3 비번'], ['impossible', 1, '10/3 휴가라 야간 불가'], ['outside', 0, true]]);
+
+  function mixRow(day, night) { var v = []; for (var k = 0; k < day + night; k++) v.push(k < day ? '주' : '야'); return v; }
+  check('비율 규칙: 13개 중 야간 위주 → 주간 4개까지 괜찮음, 주간 6개면 2',
+    [prefMisses(D_MOSTLY, mixRow(4, 9)), prefMisses(D_MOSTLY, mixRow(6, 7))], [0, 2]);
+  check('비율 규칙: 주간만(야간 1개 → 1), 주간 조금 더(13개 중 야간 6개까지 0, 7개면 1), 근무 0개면 0',
+    [prefMisses({ type: 'ratio', shift: '주', level: 'only' }, mixRow(2, 1)),
+      prefMisses({ type: 'ratio', shift: '주', level: 'more' }, mixRow(7, 6)),
+      prefMisses({ type: 'ratio', shift: '주', level: 'more' }, mixRow(6, 7)), prefMisses(D_MOSTLY, [])], [1, 0, 1, 0]);
+  check('비율 규칙 설명', prefRule(D_MOSTLY, mixRow(4, 9)).note, '주간 4·야간 9 (허용 주간 4개까지)');
+
+  var C_KEPT = { type: 'date_shift', dates: [dates[1].key], shift: '근무', want: 'avoid' }; // 9/29 쉬기 (wk 에서 지킴)
+  var repTwo = preferenceReport([{ id: 1, name: 'A', prefs: [WEEKEND_DAY, Object.assign({ on: false }, D_MOSTLY), C_KEPT,
+    { type: 'date_shift', dates: ['2026-11-05'], shift: '주', want: 'prefer' }, '깨진 규칙'] }, { id: 2, name: 'B' }],
+  { 1: row(wk) }, dates, null, {});
+  check('사람별 선호도 결과: 켜져 있고 기간 안인 규칙만 셈 (꺼짐·기간 밖은 빼고), 깨진 규칙은 목록에서 뺌, 규칙 없는 사람은 0/0',
+    [repTwo[0].kept, repTwo[0].total, repTwo[0].rules.map(function (x) { return x.index + x.status; }), repTwo[1]],
+    [1, 2, ['0missed', '1off', '2kept', '3outside'], { id: 2, kept: 0, total: 0, rules: [] }]);
+
+  check('한 사람 안에서 부딪치는 규칙 (켜진 것만, 이번 기간 날짜만)',
+    preferenceConflicts({ id: 1, name: 'A', prefs: [
+      { type: 'date_shift', dates: [d103], shift: '야', want: 'prefer' }, { type: 'date_shift', dates: [d103], shift: '근무', want: 'avoid' },
+      { type: 'date_shift', dates: [d103], shift: '주', want: 'avoid' }, { type: 'ratio', shift: '주', level: 'only' }, PAT, D_MOSTLY,
+      { type: 'date_shift', dates: ['2026-11-05'], shift: '야', want: 'prefer' },
+      { type: 'ratio', shift: '야', level: 'more', on: false }] }, dates),
+    ['A: 10/3 야간 선호와 10/3 근무 피하기는 함께 지킬 수 없어요.', 'A: 주간만과 야간 위주는 함께 지킬 수 없어요.',
+      'A: 주간만과 10/3 야간 선호는 함께 지킬 수 없어요.', 'A: 주간만과 근무 흐름(주 비 주 비 주 야 비)는 함께 지킬 수 없어요.']);
+  check('부딪치지 않는 규칙은 안내 없음 (10/3 근무 선호 + 10/3 주간 피하기 → 야간이면 둘 다 지킴)',
+    preferenceConflicts({ id: 1, name: 'A', prefs: [{ type: 'date_shift', dates: [d103], shift: '근무', want: 'prefer' },
+      { type: 'date_shift', dates: [d103], shift: '주', want: 'avoid' }, WEEKEND_DAY, PAT] }, dates), []);
+  check('일정 때문에 지킬 수 없는 날짜 규칙 안내 (휴가·외출. 쉬기를 원하는 규칙은 해당 없음)',
+    preferenceBlockedNotes(Object.assign({ id: 3, name: 'C', outings: [{ date: dates[9].key, type: '8h' }], prefs: [
+      { type: 'date_shift', dates: [d103], shift: '야', want: 'prefer' }, C_AVOID,
+      { type: 'date_shift', dates: [dates[8].key, dates[9].key], shift: '주', want: 'prefer' }] }, onLeave), dates),
+    ["C: 10/3은 휴가라 '10/3 야간 선호'는 지킬 수 없어요.", "C: 10/7은 외출이라 '10/6·10/7 주간 선호'를 그날은 지킬 수 없어요."]);
+
+  // --- 선호도 벌점 (F3) ---
+  function prefPenalty(prefs, values) { return penaltyOf([{ id: 1, prefs: prefs }], { 1: row(values) }); }
+  var noPrefPen = prefPenalty([], wk);
+  check('선호도 강도 점수: 어긋남 1번당 약함 20 · 보통 60 · 강함 150 (총 벌점에 그대로 더함)',
+    ['약함', '보통', '강함'].map(function (s) {
+      var p = prefPenalty([Object.assign({ strength: s }, WEEKEND_DAY)], wk);
+      return [p.preference, p.preferenceScore, Math.round((p.total - noPrefPen.total) * 10) / 10];
+    }), [[20, 20, 20], [60, 60, 60], [150, 150, 150]]);
+  var prefPen = prefPenalty([WEEKEND_DAY, C_KEPT, Object.assign({ on: false }, D_MOSTLY)], wk);
+  check('computePenalty 선호도 항목: 어긋남 합 · 지킨 규칙 수 · 켜진 규칙 수', [prefPen.preferenceMisses, prefPen.preferenceKept,
+    prefPen.preferenceTotal], [1, 1, 2]);
+  var scoreBigOk = [2001, 2900, 5000, 1e5, 1e9, 1e15, Infinity].every(function (x) { return preferenceScore(x) < PREFERENCE_MAX; });
+  var scoreGrows = true;
+  var scoreLast = -1;
+  for (var sr = 0; sr <= 60000; sr += 10) {
+    if (preferenceScore(sr) < scoreLast) scoreGrows = false;
+    scoreLast = preferenceScore(sr);
+  }
+  check('선호도 점수 상한: 2000까지 그대로, 넘으면 천천히 늘고, 아주 큰 값에서도 2900 미만, 커지기만 함 (줄지 않음)',
+    [preferenceScore(0), preferenceScore(1500), preferenceScore(2000), preferenceScore(2900) > 2000 && preferenceScore(2900) < 2900,
+      preferenceScore(5000) > preferenceScore(2900), scoreBigOk, scoreGrows], [0, 1500, 2000, true, true, true, true]);
+  check('무게 순서: 선호도 합계 최대 < 야야, 강함 < 견습 부족, 주주주 < 강함, 약함 < 치우침, 보통 = 흐름 깨짐, 두 우선 방식 모두 선호도 무게 1',
+    [PREFERENCE_MAX < PENALTY_WEIGHTS.yaya, PREFERENCE_POINTS['강함'] < PENALTY_WEIGHTS.trainingShort,
+      PENALTY_WEIGHTS.jujuju < PREFERENCE_POINTS['강함'], PREFERENCE_POINTS['약함'] < PENALTY_WEIGHTS.weekMix,
+      PREFERENCE_POINTS['보통'] === PENALTY_WEIGHTS.flowBreak, weightsFor('flow').preference, weightsFor('fairness').preference],
+    [true, true, true, true, true, 1, 1]);
+  var fourDays = ['주', '', '주', '', '주', '', '주']; // 한 주 주간만 4번: 흐름 깨짐 4 + 치우침 2
+  function flowMix(prefs) { var p = prefPenalty(prefs, fourDays); return [p.flowBreaks, p.weekMix]; }
+  check('흐름·비율 규칙이 켜진 사람은 주야비 흐름 깨짐·치우침을 세지 않음 (요일 규칙만 있거나 흐름 규칙이 꺼지면 지금처럼 셈)',
+    [flowMix([]), flowMix([PAT]), flowMix([{ type: 'ratio', shift: '주', level: 'more' }]), flowMix([WEEKEND_DAY]),
+      flowMix([Object.assign({}, PAT, { on: false })])], [[4, 2], [0, 0], [0, 0], [4, 2], [4, 2]]);
+  var ownFlowPen = prefPenalty([PAT], ['주', '주', '야']);
+  check('흐름 규칙이 있는 사람: 주야비 흐름 깨짐 대신 본인 흐름 어긋남 × 강도 점수 (주 주 야 → 2 × 60)',
+    [ownFlowPen.flowBreaks, ownFlowPen.preference], [0, 120]);
+  check('벌점 캐시: 규칙마다 조건에 맞는 날짜 번호를 미리 계산 (4주 주말 = 8일)',
+    makePenaltyCache([{ id: 1, prefs: [WEEKEND_DAY] }], {}, dates, {}).prefs[1].active[0].idx.length, 8);
+
+  // 자동 생성: 가짜 시계(부를 때마다 1ms)로 돌려서 결과가 늘 같게
+  function clockRun(people, fixedShifts, seed, ticks) {
+    var tick = 0;
+    var f = createAutoFiller(people, fixedShifts, dates, null, {},
+      { random: seeded(seed), now: function () { return (tick += 1); }, timeLimitMs: ticks, patienceMs: ticks / 2 });
+    while (!f.step(50).done) { /* 끝날 때까지 */ }
+    return f.result();
+  }
+  var teamNo = [3, 3, 2, 2, 2].map(function (t, k) { return { id: k + 1, name: 'ABCDE'[k], target: t }; });
+  var teamOff = teamNo.map(function (p) {
+    return Object.assign({}, p, { prefs: [Object.assign({}, PAT, { on: false }), Object.assign({ on: false }, WEEKEND_DAY)] });
+  });
+  var genNo = clockRun(teamNo, {}, 11, 60);
+  var genOff = clockRun(teamOff, {}, 11, 60);
+  check('규칙이 없을 때와 모두 꺼져 있을 때: 같은 난수면 자동 생성 결과(근무표·벌점)가 똑같고 선호도 값은 0',
+    [JSON.stringify(genNo.assignments) === JSON.stringify(genOff.assignments), genNo.penalty.total === genOff.penalty.total,
+      genOff.penalty.preferenceScore, genOff.penalty.preferenceTotal], [true, true, 0, 0]);
+  // 5명이 주야비비비로 돌아가는 근무표에서 10/3(토) 주·야 두 칸만 비움. 규칙이 없으면 흐름대로 A 주간·E 야간(10/2 E 주간의 짝)
+  var cycle = {};
+  [1, 2, 3, 4, 5].forEach(function (id) { cycle[id] = {}; });
+  dates.forEach(function (d, i) {
+    if (i === 5) return;
+    cycle[i % 5 + 1][d.key] = ['주'];
+    cycle[(i + 4) % 5 + 1][d.key] = ['야'];
+  });
+  var five = [1, 2, 3, 4, 5].map(function (id) { return { id: id, name: 'ABCDE'[id - 1], target: 0 }; });
+  function nightOn103(people) {
+    var res = clockRun(people, cycle, 3, 40);
+    return res.assignments.filter(function (a) { return a.code === '야'; }).map(function (a) { return a.personId; });
+  }
+  check('선호도 반영: E "10/3 야간 피하기(강함)"를 켜면 E 대신 다른 사람이 10/3 야간 (규칙 없으면 흐름대로 E), 칸은 모두 채움',
+    [nightOn103(five), nightOn103(five.map(function (p) {
+      return p.id === 5 ? Object.assign({}, p, { prefs: [{ type: 'date_shift', dates: [d103], shift: '야', want: 'avoid', strength: '강함' }] }) : p;
+    })).map(function (id) { return id !== 5; })], [[5], [true]]);
+  var threeRest = three.map(function (p) {
+    return Object.assign({}, p, { prefs: [{ type: 'day_shift', days: '주말', shift: '비', want: 'prefer', strength: '강함' }] });
+  });
+  var genRest = clockRun(threeRest, {}, 5, 100);
+  var restStaff = countStaffByDate(threeRest, applyAssignments({}, genRest.assignments || []), dates.map(function (d) { return d.key; }));
+  check('선호도 때문에 후보에서 빼지 않음: 3명 모두 "주말 비번 선호(강함)"여도 모든 칸이 채워지고, 선호도 점수 < 2900, 어긋남은 숫자로 남음',
+    [genRest.ok, dates.every(function (d) { return restStaff[d.key].day === 1 && restStaff[d.key].night === 1; }),
+      genRest.penalty.preferenceScore < PREFERENCE_MAX, genRest.penalty.preferenceMisses > 0], [true, true, true, true]);
+
+  // --- 선호도 저장과 백업 (F7) ---
+  // 선호도 기능 전 버전(git 의 이전 timetable.html)에서 만든 백업 코드
+  var OLD_BACKUP = 'TT1:eyJ2ZXJzaW9uIjoxLCJzdGFydERhdGUiOiIyMDI2LTA5LTI4Iiwid2Vla3MiOjQsInBlb3BsZSI6W3siaWQiOjEsIm5hbWUiOiJBIiwidGFyZ2V0IjozLCJjb2xvciI6IiNmZmQ2ZDYiLCJyZWNydWl0IjpmYWxzZSwiam9pbkRhdGUiOm51bGwsImZpbmFsTGVhdmUiOm51bGwsImZpbmFsTGVhdmVTaGlmdHMiOjUsInJlY3J1aXRTaGlmdHMiOm51bGwsImFsbG93UHJlTGVhdmVOaWdodCI6ZmFsc2UsInRyYWluaW5nIjp7ImRheSI6MiwibmlnaHQiOjF9LCJsZWF2ZXMiOltdLCJvdXRpbmdzIjpbXX0seyJpZCI6MiwibmFtZSI6IkIiLCJ0YXJnZXQiOjIsImNvbG9yIjoiI2NmZTNmZiIsInJlY3J1aXQiOmZhbHNlLCJqb2luRGF0ZSI6bnVsbCwiZmluYWxMZWF2ZSI6bnVsbCwiZmluYWxMZWF2ZVNoaWZ0cyI6NSwicmVjcnVpdFNoaWZ0cyI6bnVsbCwiYWxsb3dQcmVMZWF2ZU5pZ2h0IjpmYWxzZSwidHJhaW5pbmciOnsiZGF5IjoyLCJuaWdodCI6MX0sImxlYXZlcyI6W3sic3RhcnQiOiIyMDI2LTEwLTA1IiwiZW5kIjoiMjAyNi0xMC0wOCJ9XSwib3V0aW5ncyI6W119XSwic2hpZnRzIjp7IjEiOnsiMjAyNi0wOS0yOCI6WyLso7wiXX0sIjIiOnsiMjAyNi0wOS0yOSI6WyLslbwiXX19LCJob2xpZGF5cyI6eyIyMDI2LTEwLTA5Ijoi6rO17Zy07J28In0sInByZXYiOlt7IuyjvCI6bnVsbCwi7JW8IjoyfSx7IuyjvCI6MSwi7JW8IjpudWxsfV0sImF1dG9GaWxsZWQiOlt7ImRhdGUiOiIyMDI2LTA5LTI4IiwiY29kZSI6IuyjvCIsInBlcnNvbklkIjoxfV0sInByaW9yaXR5IjoiZmFpcm5lc3MifQ==';
+  var oldRestored = parseBackupCode(OLD_BACKUP);
+  check('옛 백업 코드(선호도 기능 전)도 그대로 복원: 선호도 글 "", 사람마다 규칙 [], 나머지(휴가·자동 생성 기록·우선 방식)는 그대로',
+    [oldRestored.ok, oldRestored.data.preferenceText, oldRestored.data.people.map(function (p) { return p.prefs; }),
+      oldRestored.data.people[1].leaves.length, oldRestored.data.autoFilled.length, oldRestored.data.priority],
+    [true, '', [[], []], 1, 1, 'fairness']);
+  var prefData = { startDate: '2026-09-28', weeks: 4, shifts: {}, holidays: {}, prev: emptyPrevDays(),
+    preferenceText: 'A는 주말에는 주간이 좋대요.',
+    people: [{ id: 1, name: 'A', target: 3, prefs: [Object.assign({ strength: '강함', on: false }, WEEKEND_DAY), PAT] }] };
+  var prefRoundTrip = parseBackupCode(makeBackupCode(prefData));
+  check('선호도 글·규칙(켜기/끄기·강도 포함) 백업 → 복원하면 그대로',
+    [prefRoundTrip.ok, prefRoundTrip.data.preferenceText, prefRoundTrip.data.people[0].prefs],
+    [true, 'A는 주말에는 주간이 좋대요.',
+      [normalizePreference(Object.assign({ strength: '강함', on: false }, WEEKEND_DAY)), normalizePreference(PAT)]]);
+  var brokenPrefs = parseBackupCode(BACKUP_PREFIX + utf8ToBase64(JSON.stringify({ startDate: '2026-09-28', weeks: 4, shifts: {},
+    holidays: {}, prev: emptyPrevDays(), preferenceText: 42,
+    people: [{ id: 1, name: 'A', target: 3, prefs: [WEEKEND_DAY, { type: 'pattern', sequence: ['야', '주'] }, '깨짐', null, PAT, PAT,
+      Object.assign({}, PAT, { sequence: ['주', '야', '비'] })] }, { id: 2, name: 'B', target: 3, prefs: '규칙 아님' }] })));
+  check('규칙 일부가 깨진 백업 코드: 깨진 규칙만 빼고 복원 (같은 규칙은 하나만, 켜진 흐름은 하나만, 선호도 글이 글자가 아니면 "")',
+    [brokenPrefs.ok, brokenPrefs.data.preferenceText,
+      brokenPrefs.data.people[0].prefs.map(function (r) { return r.type + (r.on ? '' : '(꺼짐)'); }), brokenPrefs.data.people[1].prefs],
+    [true, '', ['day_shift', 'pattern', 'pattern(꺼짐)'], []]);
+  var manyPrefs = [];
+  for (var mp = 0; mp < 35; mp++) manyPrefs.push({ type: 'date_shift', dates: [dates[mp % 28].key], shift: mp < 28 ? '주' : '야', want: 'prefer' });
+  check('선호도 글은 2000자까지, 한 사람의 규칙은 30개까지 저장',
+    [normalizeData(Object.assign({}, prefData, { preferenceText: new Array(2102).join('가') })).preferenceText.length,
+      normalizeData(Object.assign({}, prefData, { people: [{ id: 1, name: 'A', target: 3, prefs: manyPrefs }] })).people[0].prefs.length],
+    [2000, 30]);
+  check('새 사람·테스트용 사람도 빈 규칙 목록', [planOf({ id: 1 }).prefs, emptyPlan().prefs], [[], []]);
+
+  // --- 화면에 넘겨주는 함수 (F6·F8) ---
+  var matched = matchPreferenceResult([{ id: 1, name: 'A' }, { id: 2, name: 'B' }, { id: 3, name: 'C' }], [
+    { person: 'A', type: 'day_shift', days: '주말', shift: '주', want: 'prefer', strength: '보통', quote: 'A는 주말에는 주간이 좋대요' },
+    { person: 'B', type: 'pattern', sequence: PAT.sequence, strength: '보통', quote: '주 비 주 비 주 야 비 흐름' },
+    { person: 'B', type: 'pattern', sequence: ['주', '야', '비'], strength: '보통', quote: '주야비도 좋아요' },
+    { person: 'A', type: 'day_shift', days: '주말', shift: '주', want: 'prefer', strength: '보통', quote: 'A는 주말에는 주간이 좋대요' },
+    { person: 'F', type: 'ratio', shift: '주', level: 'only', strength: '보통', quote: 'F는 평일 주간만 원해요' },
+    { person: 'A', type: 'ratio', shift: '야', level: '???', quote: '야간이 좋아요' }]);
+  check('AI 해석 결과를 이름으로 붙이기: 저장 모양·켜짐, 같은 규칙은 하나만, 흐름은 한 사람에 하나, 없는 이름·틀린 모양은 notMatched',
+    [matched.byPerson[1].length, matched.byPerson[1][0].on, 'person' in matched.byPerson[1][0], matched.byPerson[2].length,
+      matched.byPerson[3], matched.notMatched],
+    [1, true, false, 1, [], [{ text: '주야비도 좋아요', reason: '흐름 규칙은 한 사람에 하나만 받아요.' },
+      { text: 'F는 평일 주간만 원해요', reason: '인원 목록에 없는 이름이에요 (F). 설정 탭의 이름과 똑같이 써 주세요.' },
+      { text: '야간이 좋아요', reason: '얼마나 원하는지(~만·~위주·~조금 더) 알 수 없어요.' }]]);
+  var sumPeople = [{ id: 1, name: 'A', target: 3, prefs: [WEEKEND_DAY, Object.assign({ on: false }, D_MOSTLY)] },
+    { id: 2, name: 'B', target: 3, prefs: [] }];
+  var sumShifts = { 1: row(wk) };
+  var sumBody = preferenceSummaryRequest(preferenceReport(sumPeople, sumShifts, dates, null, {}), sumPeople, '2026-09-28', 4,
+    computePenalty(sumPeople, sumShifts, dates, null, {}), countEmptySlots(sumPeople, sumShifts, dates));
+  check('AI 결과 설명 요청 본문 (F6): 켜진 규칙만, 규칙 있는 사람만, 근무표는 넣지 않음',
+    sumBody, { period: { start: '2026-09-28', weeks: 4 },
+      people: [{ name: 'A', kept: 0, total: 1, rules: [{ label: '주말 주간 선호', strength: '보통', status: 'missed', misses: 1,
+        checked: 2, note: '주말 근무 2번 (주간 1·야간 1)' }] }],
+      context: { targetShort: ['A', 'B'], shiftGap: ['A', 'B'], yaya: 0, emptySlots: 54 } });
+  var longNamed = [{ id: 1, name: 'ABCDEABCDEABCDEABCDEABCDE', prefs: [WEEKEND_DAY] }];
+  check('AI 결과 설명 요청: 이름 20자 등 서버 한도에 맞게 자름',
+    preferenceSummaryRequest(preferenceReport(longNamed, {}, dates, null, {}), longNamed, '2026-09-28', 4, null).people[0].name.length, 20);
 
   var failed = results.filter(function (r) { return !r.ok; }).length;
   var summary = '결과: ' + results.length + '개 중 ' + (results.length - failed) + '개 통과, ' + failed + '개 실패';

@@ -22,8 +22,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from openrouter_client import TEXT_MODEL, OpenRouterError, has_api_key
-from preferences import explain_result, parse_preferences
+HERE = str(Path(__file__).resolve().parent)
+if HERE not in sys.path:  # 다른 방식으로 실행해도 같은 폴더의 AI 파일을 찾도록 (python server.py 면 이미 들어 있음)
+    sys.path.append(HERE)
+
+from openrouter_client import TEXT_MODEL, OpenRouterError, has_api_key  # noqa: E402 (위에서 경로를 먼저 정함)
+from preferences import explain_result, parse_preferences  # noqa: E402
 
 HOST = "0.0.0.0"  # Colab 통로가 확실히 닿게 (Colab 가상 머신은 Colab 통로로만 열림)
 DEFAULT_PORT = 8765
