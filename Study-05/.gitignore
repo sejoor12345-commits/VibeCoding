@@ -6,3 +6,5 @@ __pycache__/
 # 테스트 중 생기는 파일
 test-results/
 screenshots/
+# 근무표 서버 기록 (Colab 셀 3이 timetable_server/server.log 로 모음)
+server.log
