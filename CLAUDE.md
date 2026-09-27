@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `Study-02/` | 할 일 관리 앱 (`todo-app/`, `todo-app/web_version/`) | HTML/CSS/JS, localStorage |
 | `Study-03/` | 상식 퀴즈 게임 + 문제 관리용 커스텀 명령어 | HTML/CSS/JS, localStorage |
 | `Study-04/` | API로 AI 서비스 사용하기 (OpenRouter) | Python |
-| `Study-05/` | (아직 내용 없음) | |
+| `Study-05/` | OpenRouter로 AI 텍스트 생성·요약 (제품은 아직 정하지 않음), 개발 팀 서브에이전트 5개 | Python |
 
 ## 저장소 공통 규칙
 
@@ -30,6 +30,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   현재 `Study-04/.claude/agents/`에 세 개가 있다 (모두 `model: inherit`):
   `code-reviewer` (코드 품질 검토, 읽기 전용), `performance-optimizer` (성능 최적화, 모든 도구),
   `ux-designer` (화면·버튼·에러 메시지 개선, 모든 도구).
+  `Study-05/.claude/agents/`에는 개발 팀 역할 다섯 개가 있다 (모두 `model: inherit`, 모든 도구):
+  `product-manager`, `backend-developer`, `frontend-developer`, `qa-engineer`, `ai-integration-specialist`.
+  역할 나누기와 작업 순서는 `Study-05/CLAUDE.md`에 있다.
   에이전트를 만들 때는 도구 권한과 모델을 사용자에게 먼저 물어본다.
 
 ## 사용자에게 설명할 때 지킬 것
