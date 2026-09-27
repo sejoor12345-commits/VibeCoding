@@ -14,6 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `Study-02/` | 할 일 관리 앱 (`todo-app/`, `todo-app/web_version/`) | HTML/CSS/JS, localStorage |
 | `Study-03/` | 상식 퀴즈 게임 + 문제 관리용 커스텀 명령어 | HTML/CSS/JS, localStorage |
 | `Study-04/` | API로 AI 서비스 사용하기 (OpenRouter) | Python |
+| `Study-05/` | (아직 내용 없음) | |
 
 ## 저장소 공통 규칙
 
