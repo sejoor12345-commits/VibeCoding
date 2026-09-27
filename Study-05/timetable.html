@@ -1466,6 +1466,11 @@ function hasOwn(obj, key) {
   return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
+// 선호도 글 글자 수: 앞뒤 공백을 뺀 뒤 한 글자씩 셈 (이모지도 1자. 서버 server.py 의 len 과 같은 기준)
+function preferenceTextLength(text) {
+  return Array.from(String(text).trim()).length;
+}
+
 // 받침에 맞는 조사 붙이기. 예: josa('휴가', '이라', '라') → '휴가라', josa('외출', '이라', '라') → '외출이라'
 // 한글이 아닌 글자(괄호·따옴표)는 건너뛰고 마지막 한글 글자로 정함
 function josa(word, withFinal, withoutFinal) {
@@ -2879,7 +2884,9 @@ function normalizeData(data) {
     autoFilled: autoFilled,
     priority: PRIORITIES.indexOf(data.priority) !== -1 ? data.priority : 'flow',
     // 선호도 글 (PRD_step1 F7). 없거나 문자열이 아니면 '' (선호도 기능 전의 옛 데이터), 길면 2000자로 자름
-    preferenceText: typeof data.preferenceText === 'string' ? data.preferenceText.slice(0, PREFERENCE_TEXT_MAX) : ''
+    // (한 글자씩 잘라서 이모지가 반으로 쪼개지지 않게)
+    preferenceText: typeof data.preferenceText === 'string'
+      ? Array.from(data.preferenceText).slice(0, PREFERENCE_TEXT_MAX).join('') : ''
   };
 }
 
@@ -4518,6 +4525,7 @@ var aiRecheckButton = document.getElementById('ai-recheck');
 // 해석·설명의 진행 상태와 결과 (저장하지 않음: 새로 고침하면 사라짐)
 //   notice: { type: 'ok' | 'warn' | 'error' | 'info', text, toRoster(근무표 탭으로 가기 버튼) }
 var prefParse = { running: false, notice: null, unparsed: null };
+var prefSession = 0; // 백업을 복원할 때마다 1 늘어남. 복원 전에 보낸 해석 요청의 결과는 쓰지 않음 (복원한 규칙을 덮어쓰지 않게)
 var prefExplain = { running: false, notice: null, summary: null, sig: null };
 var prefFlash = null;    // { id: 사람id, text } 규칙 목록에 한 번만 보여 줄 안내 (예: 다른 흐름 규칙을 껐어요)
 var prefFocusKey = null; // 규칙 목록을 다시 그린 뒤 키보드 초점을 둘 곳 (data-focus-key)
@@ -4660,7 +4668,7 @@ function aiBlockedText(where) {
 // 글자 수 (앞뒤 공백 뺀 수. 서버와 같은 기준)와 계급·부대 이름 안내
 function updatePrefTextInfo() {
   var text = prefTextInput.value;
-  var length = text.trim().length;
+  var length = preferenceTextLength(text);
   var over = length > PREFERENCE_TEXT_MAX;
   var count = document.getElementById('pref-count');
   count.textContent = (over ? '✕ ' : '') + length + ' / ' + PREFERENCE_TEXT_MAX + '자' +
@@ -4698,10 +4706,10 @@ function prefParseBlock() {
   if (prefParse.running) return '해석하는 중이에요.';
   var why = aiBlockedText('prefs');
   if (why) return why;
-  var text = state.preferenceText.trim();
-  if (!text) return '선호도 문장을 먼저 써 주세요.';
-  if (text.length > PREFERENCE_TEXT_MAX) {
-    return '선호도 글은 ' + PREFERENCE_TEXT_MAX + '자까지 쓸 수 있어요. (지금 ' + text.length + '자)';
+  var length = preferenceTextLength(state.preferenceText);
+  if (!length) return '선호도 문장을 먼저 써 주세요.';
+  if (length > PREFERENCE_TEXT_MAX) {
+    return '선호도 글은 ' + PREFERENCE_TEXT_MAX + '자까지 쓸 수 있어요. (지금 ' + length + '자)';
   }
   return prefPeopleProblem();
 }
@@ -4747,10 +4755,14 @@ function runPrefParse() {
   renderPrefUnparsed();
   updatePrefButtons();
   var stopWaiting = startWaiting('pref-parse-wait', 'pref-parse-elapsed');
+  var session = prefSession;
   callServer('api/preferences', body, AI_REQUEST_TIMEOUT_MS).then(function (res) {
     stopWaiting();
     prefParse.running = false;
-    if (res.ok) {
+    if (res.ok && session !== prefSession) {
+      prefParse.notice = { type: 'info', text: '해석을 기다리는 동안 백업 코드를 복원해서 이번 해석 결과는 쓰지 않았어요. ' +
+        '복원한 규칙은 그대로예요. 새로 해석하려면 [AI로 해석하기]를 다시 눌러 주세요.' };
+    } else if (res.ok) {
       applyPrefResult(res.data);
     } else {
       noteAiFailure(res);
@@ -4821,6 +4833,7 @@ function renderPrefUnparsed() {
 
 // 백업 복원 뒤: 지난 해석·설명 안내는 복원한 데이터와 맞지 않으므로 지움
 function forgetPrefSession() {
+  prefSession++;
   prefParse.notice = null;
   prefParse.unparsed = null;
   prefExplain.notice = null;
@@ -6070,6 +6083,11 @@ function runTests() {
       normalizeData(Object.assign({}, prefData, { people: [{ id: 1, name: 'A', target: 3, prefs: manyPrefs }] })).people[0].prefs.length],
     [2000, 30]);
   check('새 사람·테스트용 사람도 빈 규칙 목록', [planOf({ id: 1 }).prefs, emptyPlan().prefs], [[], []]);
+  var emojiText = new Array(1996).join('가') + '😀😀😀😀😀😀'; // 1995자 + 이모지 6개 = 2001자 (서버 기준)
+  var emojiSaved = normalizeData(Object.assign({}, prefData, { preferenceText: emojiText })).preferenceText;
+  check('선호도 글 글자 수는 서버와 같은 기준 (앞뒤 공백 빼고, 이모지도 1자), 2000자로 자를 때 이모지를 쪼개지 않음',
+    [preferenceTextLength('  가나 😀\n'), preferenceTextLength(emojiText), preferenceTextLength(emojiSaved), emojiSaved.slice(-2)],
+    [4, 2001, 2000, '😀']);
 
   // --- 화면에 넘겨주는 함수 (F6·F8) ---
   var matched = matchPreferenceResult([{ id: 1, name: 'A' }, { id: 2, name: 'B' }, { id: 3, name: 'C' }], [
