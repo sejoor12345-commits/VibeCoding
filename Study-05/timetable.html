@@ -102,6 +102,7 @@
     border-radius: 0;
     margin-bottom: -3px;
     font-weight: bold;
+    white-space: nowrap;
   }
   .tab:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
   .tab.active { color: #fff; border-bottom-color: #f1d58a; background: rgba(255, 255, 255, 0.08); }
@@ -121,6 +122,7 @@
   .page-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin: 2px 0 14px; }
   .page-head h1 { margin: 0; font-size: 22px; }
   .eyebrow { font-size: 12px; font-weight: bold; letter-spacing: 0.2em; color: var(--olive-500); }
+  .page-head .eyebrow { color: var(--olive-600); } /* 회색 바탕 위에서도 명암비 4.5 이상 */
   .card {
     margin-bottom: 16px;
     background: var(--panel);
@@ -350,7 +352,7 @@
   /* 한국어는 낱말 중간에서 줄을 바꾸지 않음 (keep-all). 아주 긴 영문·숫자는 칸 안에서 끊음 */
   .pref-page, .pref-result-card, .auto-result { word-break: keep-all; overflow-wrap: anywhere; }
   .pref-page { max-width: 760px; font-size: 15px; line-height: 1.6; }
-  .steps { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: -4px 0 16px; padding: 0; list-style: none; font-size: 14px; }
+  .steps { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 0 0 16px; padding: 0; list-style: none; font-size: 14px; }
   .steps li { padding: 2px 10px; color: var(--olive-700); background: var(--olive-100); border: 1px solid #cdd3b5; border-radius: 12px; white-space: nowrap; }
   .pref-page .card-head h2 { font-size: 16px; }
   .pref-page .card-head .head-note { margin-left: auto; color: var(--muted); font-size: 14px; }
@@ -373,7 +375,7 @@
   .notice-box.error .mark { color: var(--error-text); }
 
   /* AI 서버 연결 상태 (한 줄) */
-  .ai-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 16px; padding: 10px 14px;
+  .ai-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 12px; padding: 10px 14px;
     background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--muted); border-radius: 4px; line-height: 1.6; }
   .ai-status-text { flex: 1 1 280px; }
   .ai-dot { color: var(--muted); }
@@ -474,6 +476,12 @@
   }
   @media screen and (max-width: 1100px) {
     .calendar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  /* 탭이 4개라 머리 막대 한 줄에 약 790px가 필요함: 그보다 좁으면 탭을 아래 한 줄에 따로 놓음 */
+  @media screen and (max-width: 860px) {
+    .topbar { flex-wrap: wrap; gap: 0 10px; padding: 0 12px; }
+    .tabs { order: 3; width: 100%; }
+    .tab { flex: 1; padding: 9px 0; }
   }
   @media screen and (max-width: 700px) {
     body { font-size: 15px; }
@@ -691,19 +699,19 @@
     <h1>선호도</h1><span class="eyebrow">PREFERENCES</span>
   </div>
   <div class="pref-page">
-    <ol class="steps" aria-label="사용 순서">
-      <li>① 쓰고 [AI로 해석하기]</li>
-      <li>② 규칙 확인·조정</li>
-      <li>③ 근무표 탭에서 [다시 생성]</li>
-      <li>④ '선호도 반영 결과' 보기</li>
-    </ol>
-
     <!-- 1. AI 서버 연결 상태 -->
     <div class="ai-status" id="ai-status" data-state="checking">
       <span class="ai-dot" aria-hidden="true">●</span>
       <span class="ai-status-text" id="ai-status-text" role="status" aria-live="polite">AI 서버 확인 중…</span>
       <button type="button" id="ai-recheck">다시 확인</button>
     </div>
+
+    <ol class="steps" aria-label="사용 순서">
+      <li>① 쓰고 [AI로 해석하기]</li>
+      <li>② 규칙 확인·조정</li>
+      <li>③ 근무표 탭에서 [다시 생성]</li>
+      <li>④ '선호도 반영 결과' 보기</li>
+    </ol>
 
     <!-- 2. 선호도 입력 -->
     <div class="card">
