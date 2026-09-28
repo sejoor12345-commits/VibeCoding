@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `Study-03/` | 상식 퀴즈 게임 + 문제 관리용 커스텀 명령어 | HTML/CSS/JS, localStorage |
 | `Study-04/` | API로 AI 서비스 사용하기 (OpenRouter) | Python |
 | `Study-05/` | 교대근무 근무표 작성기 + AI 선호도 반영 (OpenRouter), 개발 팀 서브에이전트 5개 | HTML/CSS/JS, Python |
-| `Study-06/` | 코드 자동 리뷰 스킬 (`.claude/skills/auto-review/`) | Claude Code 스킬 (Markdown) |
+| `Study-06/` | 코드 자동 리뷰 스킬 (`.claude/skills/auto-review/`), 외부 스킬 `vibeindex` | Claude Code 스킬 (Markdown) |
 
 ## 저장소 공통 규칙
 
@@ -36,7 +36,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   역할 나누기와 작업 순서는 `Study-05/CLAUDE.md`에 있다.
   에이전트를 만들 때는 도구 권한과 모델을 사용자에게 먼저 물어본다.
 - 스킬(`.claude/skills/<이름>/SKILL.md`)도 폴더 안에 둔다. 현재 `Study-06/.claude/skills/auto-review/`
-  (코드 자동 리뷰, 읽기 전용)가 있다.
+  (코드 자동 리뷰, 읽기 전용)와 외부 스킬 `Study-06/.claude/skills/vibeindex/`(도구 추천)가 있다.
 
 ## 사용자에게 설명할 때 지킬 것
 

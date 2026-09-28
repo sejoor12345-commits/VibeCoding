@@ -16,7 +16,15 @@ Study-06/
 │   ├── SKILL.md            # 스킬 본문: 이름·설명(언제 쓰는지)·허용 도구 + 리뷰 4단계 절차
 │   ├── checklist.md        # 점검표 (보안 > 버그 > 코딩 규칙 > 성능). SKILL.md가 필요할 때 읽음
 │   └── report-template.md  # 한국어 보고서 형식
+└── .claude/skills/vibeindex/SKILL.md  # 외부 스킬 (github.com/vibeindex/skills). 프로젝트에 맞는 스킬·MCP·플러그인 추천
 ```
+
+## `vibeindex` 스킬 (외부에서 받아 온 것)
+
+- 원래 `npx vibeindex add vibeindex/skills --skill vibeindex`로 설치한다. 이 컨테이너에서는 설치 도구가 쓰는
+  GitHub API가 막혀서(403) 저장소를 clone해 `SKILL.md`를 그대로 복사했다 (원본 커밋 `1955aab`). 내용은 고치지 않는다.
+- `/vibeindex`(프로젝트 분석 후 추천), `/vibeindex search <검색어>`, `/vibeindex top`, `/vibeindex trending`.
+- `vibeindex.ai`에 접속해야 동작한다. 이 컨테이너에서는 막혀 있어(403) 쓸 수 없다.
 
 ## `auto-review` 스킬 규칙
 
