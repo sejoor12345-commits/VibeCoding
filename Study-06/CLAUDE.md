@@ -19,7 +19,7 @@ Study-06/
 ├── .claude/skills/browser-check/SKILL.md  # Playwright MCP로 웹 앱을 실제 브라우저에서 눌러 보며 확인
 ├── .claude/skills/vibeindex/SKILL.md  # 외부 스킬 (github.com/vibeindex/skills). 프로젝트에 맞는 스킬·MCP·플러그인 추천
 ├── .claude/settings.json  # document-skills 플러그인 (project 범위 설치 기록, 로컬 CLI용)
-├── study-notes/  # 개념 정리 노트 (concepts.html 원본 → concepts.pdf, A4 35쪽). 1~6부 + 용어 사전
+├── study-notes/  # 개념 정리 노트 (concepts.html 원본 → concepts.pdf, A4 39쪽). 1~6부 + 용어 사전
 ├── ai-trends/  # AI 기술 트렌드 1페이지 요약 (ai-trends-summary.pptx + 만드는 스크립트 make_slide.js)
 └── shopping-list/index.html  # 쇼핑 리스트 앱 (추가·삭제·체크). 파일 하나, 더블클릭으로 브라우저에서 실행
 ```
@@ -64,6 +64,8 @@ Study-06/
 - 사용자가 코딩 없이 읽으며 복습하는 자료. `concepts.html`을 고친 뒤 Node Playwright의 `page.pdf()`(A4, 배경 인쇄,
   쪽 번호 꼬리말)로 `concepts.pdf`를 다시 만든다. 한글 글꼴은 `fonts-noto-cjk`(컨테이너에 없으면 설치).
 - 예시는 반드시 실제 실습(Study-01~06)에서 가져온다. 새 실습을 하면 5부(실습 되짚기)와 부록(용어 사전)에 덧붙인다.
+- 인쇄용: 여백 `@page` 25mm/20mm, 꼬리말은 `padding-bottom:12mm`로 올림(프린터가 가장자리를 자름). 사용자는 **흑백으로 인쇄**하므로
+  상자는 색이 아니라 테두리로 구분한다(비유 점선, 우리 실습 가는 실선, 기억할 것 굵은 실선, 주의 이중선).
 - `<pre>` 안에서 한글과 선 문자를 섞어 줄을 맞추지 않는다 (한글 폭이 달라 어긋남). 그림은 HTML 상자로 만든다.
 
 ## `auto-review` 스킬 규칙

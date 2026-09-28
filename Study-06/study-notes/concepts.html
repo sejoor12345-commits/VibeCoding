@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>바이브코딩 개념 정리 노트</title>
 <style>
-  @page { size: A4; margin: 16mm 15mm 18mm 15mm; }
+  @page { size: A4; margin: 25mm 20mm 25mm 20mm; }
   :root {
     --ink: #1d1b26;
     --muted: #5d5a6b;
@@ -97,7 +97,7 @@
   .skip { color: var(--muted); font-size: 9.6pt; border-left: 0.8mm solid var(--line); padding-left: 3mm; margin: 0 0 4mm; }
 
   /* 표지 */
-  .cover { height: 250mm; display: flex; flex-direction: column; justify-content: center; }
+  .cover { height: 235mm; display: flex; flex-direction: column; justify-content: center; }
   .cover .small { color: var(--accent); font-weight: 700; letter-spacing: 0.3mm; }
   .cover h1 { font-size: 30pt; margin: 3mm 0 5mm; line-height: 1.25; }
   .cover .sub { font-size: 12.5pt; color: var(--muted); margin-bottom: 14mm; }
@@ -133,6 +133,15 @@
   .nest .nest { margin-top: 2mm; }
   .nest b { color: var(--accent); }
   .n1 { background: #f6f4fc; margin: 0 0 4mm; break-inside: avoid; } .n2 { background: #ece7f9; } .n3 { background: #e1d9f5; } .n4 { background: #d3c8f0; }
+  /* 흑백 인쇄에서도 구분되도록 상자마다 테두리 모양을 다르게 */
+  .analogy { border: 0.45mm dashed #555; }
+  .ours { border: 0.35mm solid #555; }
+  .key { border: 1mm solid #111; }
+  .warn { border: 1.2mm double #333; }
+  .box .label { color: #111 !important; }
+  .skip { border-left-color: #999; }
+  th { border-bottom: 0.5mm solid #555; }
+  .legend-note { font-size: 9.4pt; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -155,6 +164,7 @@
   <div class="box analogy"><span class="label">🍱 비유</span>일상에 빗대어 감을 잡는 부분이에요.</div>
   <div class="box ours"><span class="label">🛠 우리 실습에서</span>그 개념이 우리 Study 폴더 어디에 나왔는지 보여 줘요.</div>
   <div class="box key"><span class="label">📌 기억할 것</span>딱 하나만 가져가면 되는 핵심이에요.</div>
+  <p class="legend-note">흑백으로 인쇄해도 구분되게 상자마다 테두리가 달라요: <b>비유</b> = 점선 · <b>우리 실습에서</b> = 가는 실선 · <b>기억할 것</b> = 굵은 실선 · <b>주의</b> = 이중선.</p>
   <p class="skip">회색 줄이 붙은 문단은 "지금은 몰라도 되는 부분"이에요. 가볍게 넘겨도 괜찮아요. 진행하다 보면 자연스럽게 익숙해질 부분이에요.</p>
 
   <h2>목차</h2>
