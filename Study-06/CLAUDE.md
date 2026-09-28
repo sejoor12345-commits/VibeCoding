@@ -19,6 +19,7 @@ Study-06/
 ├── .claude/skills/browser-check/SKILL.md  # Playwright MCP로 웹 앱을 실제 브라우저에서 눌러 보며 확인
 ├── .claude/skills/vibeindex/SKILL.md  # 외부 스킬 (github.com/vibeindex/skills). 프로젝트에 맞는 스킬·MCP·플러그인 추천
 ├── .claude/settings.json  # document-skills 플러그인 (project 범위 설치 기록, 로컬 CLI용)
+├── study-notes/  # 개념 정리 노트 (concepts.html 원본 → concepts.pdf, A4 35쪽). 1~6부 + 용어 사전
 ├── ai-trends/  # AI 기술 트렌드 1페이지 요약 (ai-trends-summary.pptx + 만드는 스크립트 make_slide.js)
 └── shopping-list/index.html  # 쇼핑 리스트 앱 (추가·삭제·체크). 파일 하나, 더블클릭으로 브라우저에서 실행
 ```
@@ -58,13 +59,20 @@ Study-06/
 - 글꼴은 `Malgun Gothic`. 이 컨테이너는 LibreOffice Impress와 한글 글꼴이 없어 `libreoffice-impress`,
   `fonts-noto-cjk`를 설치해서 미리보기를 확인했다 (미리보기의 글자 간격은 실제 PowerPoint와 조금 다르다).
 
+## `study-notes/` 개념 정리 노트
+
+- 사용자가 코딩 없이 읽으며 복습하는 자료. `concepts.html`을 고친 뒤 Node Playwright의 `page.pdf()`(A4, 배경 인쇄,
+  쪽 번호 꼬리말)로 `concepts.pdf`를 다시 만든다. 한글 글꼴은 `fonts-noto-cjk`(컨테이너에 없으면 설치).
+- 예시는 반드시 실제 실습(Study-01~06)에서 가져온다. 새 실습을 하면 5부(실습 되짚기)와 부록(용어 사전)에 덧붙인다.
+- `<pre>` 안에서 한글과 선 문자를 섞어 줄을 맞추지 않는다 (한글 폭이 달라 어긋남). 그림은 HTML 상자로 만든다.
+
 ## `auto-review` 스킬 규칙
 
 - 리뷰는 **읽기 전용**이다. 보고서를 보여준 뒤 사용자가 "고쳐줘"라고 할 때만 고친다.
 - `allowed-tools`는 읽기 도구, `git diff/status/log`, 문법 검사(`python3 -m py_compile`, `node --check`),
   브라우저 확인(`python3 -m http.server`, `mcp__playwright__*`)만 허락 없이 쓰게 해 둔 목록이다. 도구를 늘릴 때는 사용자에게 먼저 묻는다.
 - 스킬 이름은 Claude Code 기본 제공 `/code-review`와 겹치지 않게 `auto-review`로 했다.
-- 스킬은 이 폴더(`Study-06/`)를 작업 디렉터리로 열었을 때 불러와진다 (`.claude/commands/`와 같음).
+- 스킬은 `Study-06/`을 작업 디렉터리로 열었을 때, 또는 클라우드 세션에서 `Study-06/` 안의 파일을 다룰 때 불러와진다.
 - 연습용 예제 코드는 따로 만들지 않는다. 리뷰는 실제 코드(`shopping-list/` 등)에 쓴다.
 
 ## `shopping-list/` 앱 규칙
