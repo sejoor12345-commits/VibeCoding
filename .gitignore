@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# Playwright MCP가 만드는 스크린샷·페이지 기록
+.playwright-mcp/

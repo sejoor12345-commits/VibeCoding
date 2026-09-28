@@ -1,7 +1,7 @@
 ---
 name: auto-review
 description: 코드를 자동으로 리뷰한다. 버그, 보안(API 키 노출 등), 코딩 규칙, 읽기 쉬움, 성능을 점검하고 초보자도 이해할 수 있는 한국어 보고서로 정리한다. 사용자가 "코드 리뷰", "리뷰해줘", "검토해줘", "점검해줘", "이 코드 괜찮아?"라고 하거나, 코드를 새로 쓰거나 고친 작업을 마쳤을 때 사용한다.
-allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git status:*), Bash(git log:*), Bash(python3 -m py_compile:*), Bash(node --check:*)
+allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git status:*), Bash(git log:*), Bash(python3 -m py_compile:*), Bash(node --check:*), Bash(python3 -m http.server:*), Bash(pkill -f http.server:*), mcp__playwright__*
 ---
 
 # 자동 코드 리뷰
@@ -35,7 +35,10 @@ allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git status:*), Bash(git 
 
 확인 방법:
 - 문법 오류만 빠르게 확인할 수 있다: Python은 `python3 -m py_compile <파일>`, JS 파일은 `node --check <파일>`
-- 앱 실행이나 실제 API 호출이 필요한 확인은 하지 않는다. 보고서에 "Colab에서 직접 확인할 것"으로 적는다
+- **웹 화면(HTML/JS)이 리뷰 대상이면** [browser-check](../browser-check/SKILL.md) 스킬 순서대로 Playwright로 실제 브라우저에서
+  눌러 본다. 코드만 읽어서는 못 찾는 버그(버튼이 안 눌림, 콘솔 오류, 휴대폰 화면 깨짐)를 찾기 위해서다.
+  이때도 파일은 고치지 않는다. 찾은 문제는 🔴/🟡에 "브라우저에서 확인함"이라고 적는다
+- 실제 API 호출이나 Python 앱(Streamlit, Gradio) 실행이 필요한 확인은 하지 않는다. 보고서에 "Colab에서 직접 확인할 것"으로 적는다
 - 추측으로 문제를 만들지 않는다. 확실하지 않으면 "확인 필요"라고 따로 표시한다
 - 학습용 저장소다. 체감되지 않는 미세한 최적화나 취향 차이는 지적하지 않는다
 
