@@ -16,7 +16,6 @@ Study-06/
 │   ├── SKILL.md            # 스킬 본문: 이름·설명(언제 쓰는지)·허용 도구 + 리뷰 4단계 절차
 │   ├── checklist.md        # 점검표 (보안 > 버그 > 코딩 규칙 > 성능). SKILL.md가 필요할 때 읽음
 │   └── report-template.md  # 한국어 보고서 형식
-└── practice/score_report.py  # 스킬 시험용 예제. 일부러 버그·보안 문제를 넣어 뒀으니 고치지 않는다
 ```
 
 ## `auto-review` 스킬 규칙
@@ -26,4 +25,4 @@ Study-06/
   허락 없이 쓰게 해 둔 목록이다. 도구를 늘릴 때는 사용자에게 먼저 묻는다.
 - 스킬 이름은 Claude Code 기본 제공 `/code-review`와 겹치지 않게 `auto-review`로 했다.
 - 스킬은 이 폴더(`Study-06/`)를 작업 디렉터리로 열었을 때 불러와진다 (`.claude/commands/`와 같음).
-- `practice/score_report.py`의 가짜 키는 연습용이다. 진짜 키를 예제에 넣지 않는다.
+- 연습용 예제 코드는 따로 만들지 않는다. 리뷰는 다른 `Study-NN/` 폴더의 실제 코드에 쓴다.
