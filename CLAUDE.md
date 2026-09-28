@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `Study-03/` | 상식 퀴즈 게임 + 문제 관리용 커스텀 명령어 | HTML/CSS/JS, localStorage |
 | `Study-04/` | API로 AI 서비스 사용하기 (OpenRouter) | Python |
 | `Study-05/` | 교대근무 근무표 작성기 + AI 선호도 반영 (OpenRouter), 개발 팀 서브에이전트 5개 | HTML/CSS/JS, Python |
-| `Study-06/` | 코드 자동 리뷰 스킬 (`.claude/skills/auto-review/`), 외부 스킬 `vibeindex`, 쇼핑 리스트 앱 (`shopping-list/`) | HTML/CSS/JS, localStorage, Claude Code 스킬 |
+| `Study-06/` | 코드 자동 리뷰 스킬 (`.claude/skills/auto-review/`), 외부 스킬 `vibeindex`, 쇼핑 리스트 앱 (`shopping-list/`), AI 트렌드 1페이지 PPT (`ai-trends/`), `document-skills` 플러그인 설정 | HTML/CSS/JS, localStorage, Claude Code 스킬 |
 
 ## 저장소 공통 규칙
 

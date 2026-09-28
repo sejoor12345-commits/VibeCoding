@@ -18,6 +18,8 @@ Study-06/
 │   └── report-template.md  # 한국어 보고서 형식
 ├── .claude/skills/browser-check/SKILL.md  # Playwright MCP로 웹 앱을 실제 브라우저에서 눌러 보며 확인
 ├── .claude/skills/vibeindex/SKILL.md  # 외부 스킬 (github.com/vibeindex/skills). 프로젝트에 맞는 스킬·MCP·플러그인 추천
+├── .claude/settings.json  # document-skills 플러그인 (project 범위 설치 기록, 로컬 CLI용)
+├── ai-trends/  # AI 기술 트렌드 1페이지 요약 (ai-trends-summary.pptx + 만드는 스크립트 make_slide.js)
 └── shopping-list/index.html  # 쇼핑 리스트 앱 (추가·삭제·체크). 파일 하나, 더블클릭으로 브라우저에서 실행
 ```
 
@@ -39,6 +41,22 @@ Study-06/
 - `file://` 주소는 막혀 있다. 앱은 `python3 -m http.server 8765 --directory <앱 폴더>`로 띄우고
   `http://localhost:8765/`로 연다. 스크린샷 등 기록은 `.playwright-mcp/`에 생기고 `.gitignore`에 들어 있다.
 - `browser-check` 스킬이 확인 순서를 담고 있고, `auto-review`는 웹 화면을 리뷰할 때 이 스킬을 따른다.
+
+## `document-skills` 플러그인 (anthropics/skills 마켓플레이스)
+
+- `/plugin marketplace add anthropics/skills` 후 `document-skills`를 **project 범위**("install for all collaborators
+  on this repository")로 설치한 것과 같게 `Study-06/.claude/settings.json`에 `extraKnownMarketplaces`
+  (`anthropic-agent-skills`)와 `enabledPlugins`(`document-skills@anthropic-agent-skills`)를 적었다.
+- 로컬 PC에서 `Study-06`을 열면 Claude Code가 설치를 제안한다. **클라우드 세션은 플러그인을 설치하지 않는다.**
+  대신 클라우드 세션에는 같은 `pptx`, `docx`, `xlsx`, `pdf` 스킬이 계정 스킬로 들어 있어 그걸 쓴다.
+- 이 스킬들은 Anthropic 저작권(Apache 아님)이라 스킬 파일을 저장소에 복사해 넣지 않는다.
+
+## `ai-trends/` 슬라이드
+
+- `make_slide.js`(pptxgenjs)로 만든다. 패키지는 저장소에 넣지 않는다: 다른 폴더에서
+  `npm install pptxgenjs react react-dom react-icons sharp` 후 `NODE_PATH=<그 폴더>/node_modules node make_slide.js`.
+- 글꼴은 `Malgun Gothic`. 이 컨테이너는 LibreOffice Impress와 한글 글꼴이 없어 `libreoffice-impress`,
+  `fonts-noto-cjk`를 설치해서 미리보기를 확인했다 (미리보기의 글자 간격은 실제 PowerPoint와 조금 다르다).
 
 ## `auto-review` 스킬 규칙
 
