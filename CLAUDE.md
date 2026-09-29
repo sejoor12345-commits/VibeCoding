@@ -37,6 +37,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   에이전트를 만들 때는 도구 권한과 모델을 사용자에게 먼저 물어본다.
 - 스킬(`.claude/skills/<이름>/SKILL.md`)도 폴더 안에 둔다. 현재 `Study-06/.claude/skills/auto-review/`
   (코드 자동 리뷰, 읽기 전용), `browser-check`(Playwright로 브라우저 확인), 외부 스킬 `vibeindex`(도구 추천)가 있다.
+- Vercel 배포: 저장소 맨 위 `vercel.json`이 사이트 첫 주소(`/`)를 `Study-05/timetable.html`로 보여 준다
+  (Root Directory는 비워 둔다). 다른 폴더의 파일도 `/Study-NN/...` 주소로 그대로 열린다. AI 서버는 Colab에서만 돈다.
 - MCP 서버는 예외로 저장소 맨 위 `.mcp.json`에 둔다 (클라우드 세션이 맨 위에서 시작하기 때문).
   현재 `playwright`(공식 플러그인과 같은 `@playwright/mcp`) 하나. 자세한 건 `Study-06/CLAUDE.md`.
 

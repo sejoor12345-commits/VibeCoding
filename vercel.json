@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/Study-05/timetable.html" }
+  ]
+}
