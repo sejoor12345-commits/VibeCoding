@@ -16,6 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `Study-04/` | API로 AI 서비스 사용하기 (OpenRouter) | Python |
 | `Study-05/` | 교대근무 근무표 작성기 + AI 선호도 반영 (OpenRouter), 개발 팀 서브에이전트 5개 | HTML/CSS/JS, Python |
 | `Study-06/` | 코드 자동 리뷰 스킬 (`.claude/skills/auto-review/`), 외부 스킬 `vibeindex`, 쇼핑 리스트 앱 (`shopping-list/`), AI 트렌드 1페이지 PPT (`ai-trends/`), 개념 정리 노트 PDF (`study-notes/`), `document-skills` 플러그인 설정 | HTML/CSS/JS, localStorage, Claude Code 스킬 |
+| `Study-07/` | 디버깅 도장 (`debug-dojo/index.html`): 내 저장소 코드에서 꺼낸 버그 25문제, 예상 → 실행 → 비교, 버그 도감, F12 안내. 확인은 `verify.mjs` | HTML/CSS/JS, Web Worker, localStorage, Node Playwright |
 
 ## 저장소 공통 규칙
 
