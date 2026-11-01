@@ -1049,6 +1049,16 @@ function mergeMeals(local, remote) {
 </script>
 
 <script>
+// 두 번 눌러 확인하기 — 일부 화면(앱 안 미리보기 등)은 confirm() 창을 막아서, 버튼을 한 번 더 누르게 해요
+function tapConfirm(btn, msg) {
+  if (!btn) return true;
+  if (btn.dataset.armed === '1') { clearTimeout(btn._armT); btn.dataset.armed = ''; btn.textContent = btn._label; return true; }
+  btn._label = btn.textContent; btn.dataset.armed = '1';
+  btn.textContent = msg + ' 한 번 더 누르면 진행해요';
+  btn._armT = setTimeout(() => { btn.dataset.armed = ''; btn.textContent = btn._label; }, 4000);
+  return false;
+}
+
 'use strict';
 // ===================== 문제 설명 · 테스트 =====================
 // tests: run = 실행할 식(문제 코드 안의 함수·변수를 그대로 씀), expect = 나와야 하는 값
@@ -1968,7 +1978,7 @@ function exView(id, isToday) {
   });
   ta.addEventListener('input', () => { fit(); state.drafts[id] = ta.value; saveState(); });
   document.getElementById('reset').addEventListener('click', () => {
-    if (ta.value !== ex.bug && !confirm('고친 내용을 지우고 처음 버그 코드로 돌릴까요?')) return;
+    if (ta.value !== ex.bug && !tapConfirm(document.getElementById('reset'), '처음 버그 코드로 돌릴까요?')) return;
     ta.value = ex.bug; delete state.drafts[id]; saveState(); fit();
   });
 
@@ -2097,7 +2107,7 @@ function renderHints(ex) {
   btns.innerHTML = level < 3 && !state.solved[ex.id] ? `<button type="button" id="next-hint">${labels[level]}</button>` : '';
   const b = document.getElementById('next-hint');
   if (b) b.addEventListener('click', () => {
-    if (level === 2 && !confirm('정답을 볼까요? 조금 더 해 보고 싶으면 "취소".')) return;
+    if (level === 2 && !tapConfirm(b, '정답을 볼까요?')) return;
     state.hints[ex.id] = level + 1; saveState(); renderHints(ex);
     if (level + 1 >= 3) showCompare(ex, null);
   });
@@ -2236,7 +2246,7 @@ function dexView() {
       ['where', 'what', 'why'].forEach(f => { card.querySelector(`[data-f="${f}"]`).textContent = state.myBugs[k][f] || ''; });
     });
     box.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
-      if (!confirm('이 기록을 지울까요?')) return;
+      if (!tapConfirm(b, '지울까요?')) return;
       state.myBugs.splice(Number(b.dataset.del), 1); saveState(); renderMine();
     }));
   };
@@ -2260,7 +2270,7 @@ function dexView() {
     try {
       const s = JSON.parse(bk.value);
       if (!s || typeof s !== 'object' || typeof s.solved !== 'object') throw new Error('모양');
-      if (!confirm('지금 기록을 붙여넣은 기록으로 바꿀까요?')) return;
+      if (!tapConfirm(document.getElementById('bk-load'), '지금 기록을 바꿀까요?')) return;
       state = Object.assign(emptyState(), s); saveState(); dexView(); applyTheme();
       document.getElementById('bk-msg').textContent = '불러왔어요.';
     } catch (e) { msg.textContent = '진행 기록 글자가 아니에요. 복사한 글자 전체를 붙여넣어 주세요.'; }
