@@ -1753,7 +1753,7 @@ function saveState() {
 }
 let state = loadState();
 
-// 폰·PC 시간 기준 "YYYY-MM-DD" (toISOString은 UTC라 쓰지 않아요 — 16번 문제!)
+// 폰·PC 시간 기준 "YYYY-MM-DD" (toISOString은 UTC라 쓰지 않아요 — 22번 문제!)
 function localDay(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
@@ -1884,7 +1884,7 @@ function exView(id, isToday) {
     <section class="card step" aria-labelledby="h-predict">
       <h3 id="h-predict"><span class="n">①</span> 예상하기 <span class="muted small">(실행 전에!)</span></h3>
       <label class="f" for="pred-text">실행하면 어떤 결과가 나올까요? 어느 테스트가 왜 틀릴까요?</label>
-      <textarea class="plain" id="pred-text" placeholder="예: 테스트 1이 90 대신 85가 나올 것 같다. 8 > 8이 거짓이라서."></textarea>
+      <textarea class="plain" id="pred-text" placeholder="예: 테스트 2가 틀릴 것 같다. ○○가 □□로 나와서."></textarea>
       <div class="row" style="margin-top:8px">
         <label class="f" for="pred-line" style="margin:0">Q. 고칠 곳 찾기 — 몇 번째 줄?</label>
         <input class="plain line" id="pred-line" type="number" inputmode="numeric" min="1" max="${ex.bug.split('\n').length}" placeholder="줄">
