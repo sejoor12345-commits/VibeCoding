@@ -1,0 +1,2321 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="내 진짜 코드에서 꺼낸 버그 25개로 하는 디버깅 연습장. 예상 → 실행 → 비교.">
+<title>디버깅 도장</title>
+<style>
+:root {
+  --bg: #f5f4ef; --surface: #ffffff; --surface-2: #eeece5; --text: #1c1b18; --muted: #5d5a52; --line: #dcd9cf;
+  --accent: #27458f; --accent-text: #ffffff; --accent-soft: #e5eaf7;
+  --seal: #c3402a; --seal-soft: #fbe8e3;
+  --ok: #17703d; --ok-soft: #e2f3e8; --bad: #b0281c; --bad-soft: #fcebe9;
+  --warn: #7f5300; --warn-soft: #fff3d9;
+  --code-bg: #f2f0e9; --code-text: #1c1b18; --gutter: #948f83; --focus: #27458f;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131312; --surface: #1c1c1a; --surface-2: #262623; --text: #eeece5; --muted: #a8a498; --line: #35342f;
+    --accent: #93acff; --accent-text: #0f1730; --accent-soft: #1f2947;
+    --seal: #ff7f63; --seal-soft: #3a1f19;
+    --ok: #63d394; --ok-soft: #12301f; --bad: #ff8d84; --bad-soft: #3a1916;
+    --warn: #f1c56b; --warn-soft: #33290f;
+    --code-bg: #181816; --code-text: #ebe8de; --gutter: #6e6a60; --focus: #93acff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131312; --surface: #1c1c1a; --surface-2: #262623; --text: #eeece5; --muted: #a8a498; --line: #35342f;
+  --accent: #93acff; --accent-text: #0f1730; --accent-soft: #1f2947;
+  --seal: #ff7f63; --seal-soft: #3a1f19;
+  --ok: #63d394; --ok-soft: #12301f; --bad: #ff8d84; --bad-soft: #3a1916;
+  --warn: #f1c56b; --warn-soft: #33290f;
+  --code-bg: #181816; --code-text: #ebe8de; --gutter: #6e6a60; --focus: #93acff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Segoe UI", sans-serif;
+  font-size: 16px; line-height: 1.6; overflow-wrap: anywhere;
+}
+code, pre, textarea.code, .mono { font-family: ui-monospace, "D2Coding", "Cascadia Mono", Consolas, Menlo, monospace; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.wrap { max-width: 780px; margin: 0 auto; padding: 0 16px; }
+
+/* 맨 위 */
+header.top { background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 8px 0 4px; }
+.brand a.home { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); min-height: 44px; }
+.stamp { display: inline-grid; place-items: center; width: 34px; height: 34px; border: 2.5px solid var(--seal); color: var(--seal);
+  border-radius: 8px; font-weight: 800; font-size: 15px; transform: rotate(-6deg); flex: none; }
+.brand b { font-size: 18px; letter-spacing: -0.01em; }
+.brand .sp { flex: 1; }
+nav.tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 0 0 8px; }
+nav.tabs a { display: grid; place-items: center; min-height: 44px; border-radius: 10px; text-decoration: none; color: var(--muted);
+  font-size: 14px; font-weight: 600; text-align: center; line-height: 1.25; padding: 4px 2px; }
+nav.tabs a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+
+main { padding: 18px 0 72px; }
+h1 { font-size: 25px; line-height: 1.3; margin: 4px 0 6px; letter-spacing: -0.01em; }
+h2 { font-size: 19px; margin: 26px 0 10px; }
+h3 { font-size: 16px; margin: 18px 0 6px; }
+p { margin: 8px 0; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin: 12px 0; }
+.card > :first-child { margin-top: 0; }
+.card > :last-child { margin-bottom: 0; }
+
+button, .btn {
+  font: inherit; font-size: 15px; font-weight: 600; min-height: 44px; padding: 8px 14px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--text); display: inline-flex; align-items: center;
+  justify-content: center; gap: 6px; text-decoration: none; line-height: 1.25;
+}
+button.primary, .btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.row.end { justify-content: flex-end; }
+.grow { flex: 1; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; padding: 2px 9px; border-radius: 999px;
+  background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+.chip.level { color: var(--seal); border-color: var(--seal); background: var(--seal-soft); font-weight: 700; }
+.chip.src { font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+
+/* 통계 */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.stat b { display: block; font-size: 24px; line-height: 1.2; }
+.stat span { font-size: 13px; color: var(--muted); }
+
+/* 문제 목록 */
+.list { display: grid; gap: 8px; }
+.item { display: flex; gap: 12px; align-items: center; text-decoration: none; color: var(--text); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 56px; }
+.item .no { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: var(--surface-2);
+  font-weight: 700; font-size: 14px; color: var(--muted); }
+.item.solved .no { background: none; border: 2px solid var(--seal); color: var(--seal); transform: rotate(-6deg); }
+.item .t { flex: 1; min-width: 0; }
+.item .t b { display: block; font-size: 15px; line-height: 1.35; }
+.item .t span { font-size: 13px; color: var(--muted); }
+
+/* 문제 화면 */
+.story { font-size: 16px; }
+.step { border-left: 4px solid var(--accent); }
+.step h3 { margin-top: 0; display: flex; gap: 8px; align-items: baseline; }
+.step h3 .n { color: var(--accent); }
+label.f { display: block; font-size: 14px; color: var(--muted); margin: 8px 0 4px; }
+textarea.plain, input.plain { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--bg); color: var(--text); }
+textarea.plain { min-height: 76px; resize: vertical; }
+input.plain { min-height: 44px; }
+input.line { width: 96px; }
+
+.editor { display: grid; grid-template-columns: auto minmax(0, 1fr); border: 1px solid var(--line); border-radius: 12px;
+  background: var(--code-bg); overflow: hidden; margin: 8px 0; }
+.editor pre.gutter { margin: 0; padding: 12px 8px 12px 10px; text-align: right; color: var(--gutter); user-select: none;
+  border-right: 1px solid var(--line); font-size: 13.5px; line-height: 21px; }
+.editor textarea.code { display: block; width: 100%; border: 0; margin: 0; resize: none; background: transparent; color: var(--code-text);
+  font-size: 13.5px; line-height: 21px; padding: 12px; white-space: pre; overflow-x: auto; overflow-y: hidden; tab-size: 2; outline: none; }
+.editor:focus-within { outline: 3px solid var(--focus); outline-offset: 1px; }
+.kbd { font-size: 13px; color: var(--muted); }
+
+.tests { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 8px; }
+.tests li { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface); }
+.tests li.pass { border-color: var(--ok); background: var(--ok-soft); }
+.tests li.fail { border-color: var(--bad); background: var(--bad-soft); }
+.tests .head { display: flex; gap: 8px; align-items: baseline; font-weight: 600; }
+.tests .call { font-size: 13px; background: var(--code-bg); border-radius: 6px; padding: 4px 8px; margin: 6px 0; white-space: pre-wrap; display: block; }
+.tests .kv { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 2px 8px; font-size: 14px; }
+.tests .kv span:nth-child(odd) { color: var(--muted); }
+.tests .kv code { white-space: pre-wrap; }
+.summary { font-weight: 700; margin: 10px 0 4px; }
+.summary.ok { color: var(--ok); }
+.summary.bad { color: var(--bad); }
+.console { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13px;
+  white-space: pre-wrap; margin: 6px 0; max-height: 240px; overflow: auto; }
+.console .t { color: var(--muted); }
+
+.hint { background: var(--warn-soft); border-radius: 10px; padding: 10px 12px; margin: 8px 0; }
+.hint b { color: var(--warn); }
+.py { border: 1.5px dashed var(--line); border-radius: 12px; padding: 12px 14px; }
+.real { border: 1.5px solid var(--seal); border-radius: 12px; padding: 12px 14px; background: var(--seal-soft); }
+.real .k { font-weight: 700; color: var(--seal); }
+.diff { font-size: 13px; background: var(--code-bg); border-radius: 10px; padding: 8px 0; overflow-x: auto; margin: 8px 0; border: 1px solid var(--line); }
+.diff div { white-space: pre; padding: 0 12px; min-width: max-content; }
+.diff .del { background: var(--bad-soft); color: var(--bad); }
+.diff .add { background: var(--ok-soft); color: var(--ok); }
+.diff .gap { color: var(--muted); }
+.banner { background: var(--accent-soft); color: var(--text); border-radius: 12px; padding: 10px 14px; margin: 0 0 12px; }
+.solvedmark { display: inline-block; border: 2.5px solid var(--seal); color: var(--seal); border-radius: 10px; padding: 2px 10px;
+  font-weight: 800; transform: rotate(-4deg); }
+.pager { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; }
+details > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
+pre.prelude { font-size: 13px; background: var(--code-bg); border-radius: 10px; padding: 10px 12px; overflow-x: auto; margin: 6px 0; }
+
+/* 5단계 */
+ol.steps5 { list-style: none; padding: 0; margin: 0; counter-reset: s; display: grid; gap: 10px; }
+ol.steps5 > li { counter-increment: s; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px 14px 56px; position: relative; }
+ol.steps5 > li::before { content: counter(s); position: absolute; left: 14px; top: 14px; width: 30px; height: 30px; display: grid; place-items: center;
+  border-radius: 8px; background: var(--accent); color: var(--accent-text); font-weight: 800; }
+ol.steps5 h3 { margin: 2px 0 4px; }
+table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+th, td { text-align: left; vertical-align: top; padding: 7px 6px; border-top: 1px solid var(--line); }
+th { color: var(--muted); font-size: 13px; border-top: 0; }
+kbd { font-family: ui-monospace, Consolas, monospace; font-size: 13px; border: 1px solid var(--line); border-bottom-width: 2px;
+  border-radius: 6px; padding: 0 6px; background: var(--surface-2); white-space: nowrap; }
+.dexcat { margin-top: 18px; }
+.dexitem textarea { margin-top: 6px; }
+.notice { background: var(--warn-soft); border-radius: 12px; padding: 10px 14px; }
+@media (max-width: 420px) {
+  h1 { font-size: 22px; }
+  .stat b { font-size: 21px; }
+  .card { padding: 14px; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <a class="home" href="#home"><span class="stamp" aria-hidden="true">도</span><b>디버깅 도장</b></a>
+      <span class="sp"></span>
+      <button id="theme" type="button" aria-label="화면 밝기 바꾸기">🌓 자동</button>
+    </div>
+    <nav class="tabs" aria-label="메뉴">
+      <a href="#home" data-tab="home">홈</a>
+      <a href="#today" data-tab="today">오늘의 1문제</a>
+      <a href="#steps" data-tab="steps">5단계 · F12</a>
+      <a href="#dex" data-tab="dex">내 도감</a>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="app" tabindex="-1"></main>
+
+<!-- ===================== 문제 코드 =====================
+  문제마다 세 덩어리:  data-part="bug"(버그 있는 코드) · "fix"(정답) · "prelude"(테스트용 준비 코드, 없어도 됨)
+  type="text/plain"이라 브라우저가 실행하지 않고 글자로만 들고 있어요. 새 문제는 README의 틀을 보고 추가해요.
+======================================================== -->
+
+<script type="text/plain" data-ex="config-comma" data-part="bug">
+// config.js — 런처의 "데이터"
+const MODES = [
+  {
+    name: "의학공부",
+    emoji: "🩺",
+    items: [
+      { type: "site", label: "AnkiWeb", url: "https://ankiweb.net/decks" },
+      { type: "site", label: "Google", url: "https://www.google.com" },
+    ],
+  }
+  {
+    name: "코딩공부",
+    emoji: "💻",
+    items: [
+      { type: "site", label: "GitHub", url: "https://github.com" },
+      { type: "site", label: "Colab", url: "https://colab.research.google.com" },
+    ],
+  },
+];
+</script>
+<script type="text/plain" data-ex="config-comma" data-part="fix">
+// config.js — 런처의 "데이터"
+const MODES = [
+  {
+    name: "의학공부",
+    emoji: "🩺",
+    items: [
+      { type: "site", label: "AnkiWeb", url: "https://ankiweb.net/decks" },
+      { type: "site", label: "Google", url: "https://www.google.com" },
+    ],
+  },
+  {
+    name: "코딩공부",
+    emoji: "💻",
+    items: [
+      { type: "site", label: "GitHub", url: "https://github.com" },
+      { type: "site", label: "Colab", url: "https://colab.research.google.com" },
+    ],
+  },
+];
+</script>
+
+<script type="text/plain" data-ex="next-weight" data-part="bug">
+// 다음 무게 제안 (노트북 ⑧ next_weight를 JS로 옮긴 것)
+// reps: 본 세트들의 횟수,  low~high: 목표 횟수 범위
+function nextWeight(weight, reps, low, high, step, rpe) {
+  if (weight === 0)
+    return { weight: 0, reason: "맨몸 → 횟수 늘리기" };
+  if (Math.min(...reps) >= high && rpe === 10)
+    return { weight, reason: "다 채웠지만 RPE 10 → 굳히기" };
+  if (Math.min(...reps) > high)
+    return { weight: weight + step, reason: "증량" };
+  if (Math.max(...reps) < low)
+    return { weight: Math.max(weight - step, 0), reason: "감량" };
+  return { weight, reason: "같은 무게" };
+}
+</script>
+<script type="text/plain" data-ex="next-weight" data-part="fix">
+// 다음 무게 제안 (노트북 ⑧ next_weight를 JS로 옮긴 것)
+// reps: 본 세트들의 횟수,  low~high: 목표 횟수 범위
+function nextWeight(weight, reps, low, high, step, rpe) {
+  if (weight === 0)
+    return { weight: 0, reason: "맨몸 → 횟수 늘리기" };
+  if (Math.min(...reps) >= high && rpe === 10)
+    return { weight, reason: "다 채웠지만 RPE 10 → 굳히기" };
+  if (Math.min(...reps) >= high)
+    return { weight: weight + step, reason: "증량" };
+  if (Math.max(...reps) < low)
+    return { weight: Math.max(weight - step, 0), reason: "감량" };
+  return { weight, reason: "같은 무게" };
+}
+</script>
+
+<script type="text/plain" data-ex="parse-set" data-part="bug">
+// "60*10*3" → { w: 60, r: 10, count: 3 }
+// "60x10"   → { w: 60, r: 10, count: 1 }
+// 세트 모양이 아니면 null
+function parseSet(token) {
+  const parts = token.toLowerCase().replace(/[*×]/g, "x").split("x");
+  if (parts.length !== 2 && parts.length !== 3) return null;
+  if (!/^\d+(\.\d+)?$/.test(parts[0])) return null;   // 무게: 60, 62.5
+  if (!parts.slice(1).every(p => /^\d+$/.test(p))) return null;
+  return {
+    w: parts[0],
+    r: Number(parts[1]),
+    count: parts.length === 3 ? Number(parts[2]) : 1,
+  };
+}
+
+// 다음에 들 무게 = 지난 무게 + 증량 단위
+function nextLoad(token, step) {
+  return parseSet(token).w + step;
+}
+</script>
+<script type="text/plain" data-ex="parse-set" data-part="fix">
+// "60*10*3" → { w: 60, r: 10, count: 3 }
+// "60x10"   → { w: 60, r: 10, count: 1 }
+// 세트 모양이 아니면 null
+function parseSet(token) {
+  const parts = token.toLowerCase().replace(/[*×]/g, "x").split("x");
+  if (parts.length !== 2 && parts.length !== 3) return null;
+  if (!/^\d+(\.\d+)?$/.test(parts[0])) return null;   // 무게: 60, 62.5
+  if (!parts.slice(1).every(p => /^\d+$/.test(p))) return null;
+  return {
+    w: Number(parts[0]),
+    r: Number(parts[1]),
+    count: parts.length === 3 ? Number(parts[2]) : 1,
+  };
+}
+
+// 다음에 들 무게 = 지난 무게 + 증량 단위
+function nextLoad(token, step) {
+  return parseSet(token).w + step;
+}
+</script>
+
+<script type="text/plain" data-ex="json-save" data-part="prelude">
+// 테스트용 가짜 localStorage — 진짜처럼 무엇이든 '글자'로 바꿔서 저장해요
+const fakeStorage = {
+  box: {},
+  setItem(key, value) { this.box[key] = String(value); },
+  getItem(key) { return key in this.box ? this.box[key] : null; },
+};
+</script>
+<script type="text/plain" data-ex="json-save" data-part="bug">
+const STORAGE_KEY = "iwbm-data-v1";
+
+function save(data) {
+  fakeStorage.setItem(STORAGE_KEY, data);
+}
+
+function load() {
+  try {
+    const saved = JSON.parse(fakeStorage.getItem(STORAGE_KEY));
+    if (saved && Array.isArray(saved.workouts)) return saved;
+  } catch (e) { /* 깨졌으면 새로 시작 */ }
+  return { workouts: [] };
+}
+</script>
+<script type="text/plain" data-ex="json-save" data-part="fix">
+const STORAGE_KEY = "iwbm-data-v1";
+
+function save(data) {
+  fakeStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function load() {
+  try {
+    const saved = JSON.parse(fakeStorage.getItem(STORAGE_KEY));
+    if (saved && Array.isArray(saved.workouts)) return saved;
+  } catch (e) { /* 깨졌으면 새로 시작 */ }
+  return { workouts: [] };
+}
+</script>
+
+<script type="text/plain" data-ex="format-sets" data-part="bug">
+// [{w:85,r:8},{w:85,r:8},{w:80,r:10}] → "85*8,8 80*10"
+// 앞 세트와 무게가 같으면 횟수만 이어 쓰기
+function formatSets(sets) {
+  const groups = [];
+  for (const s of sets) {
+    const last = groups[groups.length];
+    if (last && last.w === s.w) last.reps.push(s.r);
+    else groups.push({ w: s.w, reps: [s.r] });
+  }
+  return groups.map(g => `${g.w}*${g.reps.join(",")}`).join(" ");
+}
+</script>
+<script type="text/plain" data-ex="format-sets" data-part="fix">
+// [{w:85,r:8},{w:85,r:8},{w:80,r:10}] → "85*8,8 80*10"
+// 앞 세트와 무게가 같으면 횟수만 이어 쓰기
+function formatSets(sets) {
+  const groups = [];
+  for (const s of sets) {
+    const last = groups[groups.length - 1];
+    if (last && last.w === s.w) last.reps.push(s.r);
+    else groups.push({ w: s.w, reps: [s.r] });
+  }
+  return groups.map(g => `${g.w}*${g.reps.join(",")}`).join(" ");
+}
+</script>
+
+<script type="text/plain" data-ex="streak" data-part="bug">
+// 쓴 날짜 목록 → 가장 길게 '연속으로' 쓴 날 수
+// dates: ["2026-01-01", "2026-01-02", ...]
+function longestStreak(dates) {
+  const sorted = [...dates].sort();
+  let longest = 0;
+  let streak = 0;
+  let prev = null;
+  for (const date of sorted) {
+    const gap = prev ? (Date.parse(date) - Date.parse(prev)) / 86400000 : 0;
+    streak = gap === 1 ? streak + 1 : 0;
+    longest = Math.max(longest, streak);
+    prev = date;
+  }
+  return longest;
+}
+</script>
+<script type="text/plain" data-ex="streak" data-part="fix">
+// 쓴 날짜 목록 → 가장 길게 '연속으로' 쓴 날 수
+// dates: ["2026-01-01", "2026-01-02", ...]
+function longestStreak(dates) {
+  const sorted = [...dates].sort();
+  let longest = 0;
+  let streak = 0;
+  let prev = null;
+  for (const date of sorted) {
+    const gap = prev ? (Date.parse(date) - Date.parse(prev)) / 86400000 : 0;
+    streak = gap === 1 ? streak + 1 : 1;
+    longest = Math.max(longest, streak);
+    prev = date;
+  }
+  return longest;
+}
+</script>
+
+<script type="text/plain" data-ex="speed-zero" data-part="bug">
+const DEFAULT_KG_PER_WEEK = -0.5;   // 처음 기본값: 주 0.5kg 감량
+
+// 인터넷 표(nutrition_settings)의 한 줄 → 폰의 목표 속도 (kg/주)
+// 한 번도 안 정했으면 칸이 null (Supabase 숫자 칸은 글자 "0.25"로 올 때가 있음)
+function speedFromRow(row) {
+  return Number(row.target_kg_per_week) || DEFAULT_KG_PER_WEEK;
+}
+</script>
+<script type="text/plain" data-ex="speed-zero" data-part="fix">
+const DEFAULT_KG_PER_WEEK = -0.5;   // 처음 기본값: 주 0.5kg 감량
+
+// 인터넷 표(nutrition_settings)의 한 줄 → 폰의 목표 속도 (kg/주)
+// 한 번도 안 정했으면 칸이 null (Supabase 숫자 칸은 글자 "0.25"로 올 때가 있음)
+function speedFromRow(row) {
+  return Number(row.target_kg_per_week ?? DEFAULT_KG_PER_WEEK);
+}
+</script>
+
+<script type="text/plain" data-ex="e1rm-zero" data-part="bug">
+const round1 = x => Math.round(x * 10) / 10;
+
+// 첫 기록 → 최근 기록, e1RM이 몇 % 변했나 (그래프 아래 한 줄)
+// first, last: e1RM(kg).  맨몸 운동은 e1RM이 0
+function changePct(first, last) {
+  return round1((last / first - 1) * 100);
+}
+</script>
+<script type="text/plain" data-ex="e1rm-zero" data-part="fix">
+const round1 = x => Math.round(x * 10) / 10;
+
+// 첫 기록 → 최근 기록, e1RM이 몇 % 변했나 (그래프 아래 한 줄)
+// first, last: e1RM(kg).  맨몸 운동은 e1RM이 0
+function changePct(first, last) {
+  if (!first) return null;
+  return round1((last / first - 1) * 100);
+}
+</script>
+
+<script type="text/plain" data-ex="penalty-nan" data-part="bug">
+var PENALTY_WEIGHTS = {
+  targetShort: 10000, // 위로휴가 목표 미달 1개당
+  yaya: 3000,         // 야야 1번당
+  jujuju: 100,        // 주주주 1번당
+  flowBreak: 10       // 주야비 흐름 깨짐 1번당
+};
+
+// 벌점 항목 r 과 무게 w 로 총 벌점
+function penaltyTotal(r, w) {
+  var shortSum = r.targetShort.reduce(function (a, t) {
+    return a + t.short;
+  }, 0);
+  return shortSum * w.targetShort + r.yaya * w.yaya +
+    r.jujuju * w.jujuju + r.flowBreaks * w.flowBreaks;
+}
+
+// 후보 근무표 두 개 중 벌점이 낮은 것
+function better(a, b) {
+  var pa = penaltyTotal(a, PENALTY_WEIGHTS);
+  var pb = penaltyTotal(b, PENALTY_WEIGHTS);
+  return pb < pa ? b : a;
+}
+</script>
+<script type="text/plain" data-ex="penalty-nan" data-part="fix">
+var PENALTY_WEIGHTS = {
+  targetShort: 10000, // 위로휴가 목표 미달 1개당
+  yaya: 3000,         // 야야 1번당
+  jujuju: 100,        // 주주주 1번당
+  flowBreak: 10       // 주야비 흐름 깨짐 1번당
+};
+
+// 벌점 항목 r 과 무게 w 로 총 벌점
+function penaltyTotal(r, w) {
+  var shortSum = r.targetShort.reduce(function (a, t) {
+    return a + t.short;
+  }, 0);
+  return shortSum * w.targetShort + r.yaya * w.yaya +
+    r.jujuju * w.jujuju + r.flowBreaks * w.flowBreak;
+}
+
+// 후보 근무표 두 개 중 벌점이 낮은 것
+function better(a, b) {
+  var pa = penaltyTotal(a, PENALTY_WEIGHTS);
+  var pb = penaltyTotal(b, PENALTY_WEIGHTS);
+  return pb < pa ? b : a;
+}
+</script>
+
+<script type="text/plain" data-ex="avg7-nan" data-part="bug">
+// addDays("2026-10-09", -7) → "2026-10-02"
+function addDays(day, n) {
+  const d = new Date(day + "T12:00:00");
+  d.setDate(d.getDate() + n);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+// 그날 포함 최근 7일에 잰 체중의 평균 (안 잰 날은 빼고)
+// 잰 날이 하나도 없으면 null → 다른 값(마지막 체중)으로 대신함
+// body: { "2026-10-09": { w: 83.6 }, ... }
+function avg7(body, day) {
+  const ws = Object.keys(body)
+    .filter(d => d <= day && d > addDays(day, -7))
+    .map(d => body[d].w);
+  return ws.reduce((a, b) => a + b, 0) / ws.length;
+}
+</script>
+<script type="text/plain" data-ex="avg7-nan" data-part="fix">
+// addDays("2026-10-09", -7) → "2026-10-02"
+function addDays(day, n) {
+  const d = new Date(day + "T12:00:00");
+  d.setDate(d.getDate() + n);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+// 그날 포함 최근 7일에 잰 체중의 평균 (안 잰 날은 빼고)
+// 잰 날이 하나도 없으면 null → 다른 값(마지막 체중)으로 대신함
+// body: { "2026-10-09": { w: 83.6 }, ... }
+function avg7(body, day) {
+  const ws = Object.keys(body)
+    .filter(d => d <= day && d > addDays(day, -7))
+    .map(d => body[d].w);
+  if (!ws.length) return null;
+  return ws.reduce((a, b) => a + b, 0) / ws.length;
+}
+</script>
+
+<script type="text/plain" data-ex="median-sort" data-part="bug">
+// 가운데 값 (대화 길이, 답장까지 걸린 시간 같은 숫자 목록)
+function median(list) {
+  if (list.length === 0) return 0;
+  const sorted = [...list].sort();
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? sorted[mid]
+    : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+</script>
+<script type="text/plain" data-ex="median-sort" data-part="fix">
+// 가운데 값 (대화 길이, 답장까지 걸린 시간 같은 숫자 목록)
+function median(list) {
+  if (list.length === 0) return 0;
+  const sorted = [...list].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? sorted[mid]
+    : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+</script>
+
+<script type="text/plain" data-ex="yaya-count" data-part="bug">
+// 칸 값: '주' 같은 글자 하나, 또는 ['휴', '야'] 같은 목록
+function cellCodes(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+function worksNight(value) {
+  var codes = cellCodes(value);
+  return codes.indexOf('야') !== -1 || codes.indexOf('견야') !== -1;
+}
+
+// 한 사람의 근무 줄에서 '야야'(야간 2번 연속) 횟수
+function countYaya(row) {
+  var count = 0;
+  for (var i = 0; i < row.length - 2; i++) {
+    if (worksNight(row[i]) && worksNight(row[i + 1])) count++;
+  }
+  return count;
+}
+</script>
+<script type="text/plain" data-ex="yaya-count" data-part="fix">
+// 칸 값: '주' 같은 글자 하나, 또는 ['휴', '야'] 같은 목록
+function cellCodes(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+function worksNight(value) {
+  var codes = cellCodes(value);
+  return codes.indexOf('야') !== -1 || codes.indexOf('견야') !== -1;
+}
+
+// 한 사람의 근무 줄에서 '야야'(야간 2번 연속) 횟수
+function countYaya(row) {
+  var count = 0;
+  for (var i = 0; i < row.length - 1; i++) {
+    if (worksNight(row[i]) && worksNight(row[i + 1])) count++;
+  }
+  return count;
+}
+</script>
+
+<script type="text/plain" data-ex="superset-loop" data-part="bug">
+// 슈퍼세트: ss = true면 바로 다음 종목과 묶임 (A.ss → A·B)
+// i번째 종목이 들어 있는 묶음의 '첫 종목 번호'
+function supersetStart(exercises, i) {
+  let start = i;
+  while (start > 0 && exercises[start - 1].ss) i--;
+  return start;
+}
+</script>
+<script type="text/plain" data-ex="superset-loop" data-part="fix">
+// 슈퍼세트: ss = true면 바로 다음 종목과 묶임 (A.ss → A·B)
+// i번째 종목이 들어 있는 묶음의 '첫 종목 번호'
+function supersetStart(exercises, i) {
+  let start = i;
+  while (start > 0 && exercises[start - 1].ss) start--;
+  return start;
+}
+</script>
+
+<script type="text/plain" data-ex="copy-day" data-part="bug">
+// 전날 식단을 이 날로 복사 (전날 것은 그대로 남아야 함)
+function copyDay(meals, fromDay, toDay) {
+  const copies = meals
+    .filter(m => m.day === fromDay)
+    .map(m => {
+      const copy = m;
+      copy.day = toDay;
+      copy.synced = false;
+      return copy;
+    });
+  return [...meals, ...copies];
+}
+</script>
+<script type="text/plain" data-ex="copy-day" data-part="fix">
+// 전날 식단을 이 날로 복사 (전날 것은 그대로 남아야 함)
+function copyDay(meals, fromDay, toDay) {
+  const copies = meals
+    .filter(m => m.day === fromDay)
+    .map(m => {
+      const copy = { ...m };
+      copy.day = toDay;
+      copy.synced = false;
+      return copy;
+    });
+  return [...meals, ...copies];
+}
+</script>
+
+<script type="text/plain" data-ex="shadow-data" data-part="bug">
+let data = { workouts: [{ id: "a" }] };   // 앱 전체 기록 (전역)
+
+// 인터넷에서 받은 결과 { data: [줄들], error } → 폰에 없는 운동만 추가
+function addRemote(result) {
+  const { data, error } = result;
+  if (error) throw error;
+  for (const row of data) {
+    if (!data.workouts.some(w => w.id === row.id)) data.workouts.push(row);
+  }
+  return data.workouts.length;
+}
+</script>
+<script type="text/plain" data-ex="shadow-data" data-part="fix">
+let data = { workouts: [{ id: "a" }] };   // 앱 전체 기록 (전역)
+
+// 인터넷에서 받은 결과 { data: [줄들], error } → 폰에 없는 운동만 추가
+function addRemote(result) {
+  const { data: rows, error } = result;
+  if (error) throw error;
+  for (const row of rows) {
+    if (!data.workouts.some(w => w.id === row.id)) data.workouts.push(row);
+  }
+  return data.workouts.length;
+}
+</script>
+
+<script type="text/plain" data-ex="same-ms-id" data-part="prelude">
+// 테스트용 시계: 늘 같은 시각을 돌려줘요
+// (진짜 Date.now()도 1밀리초 안에 여러 번 부르면 같은 값이에요)
+const frozenNow = () => 1793000000000;
+</script>
+<script type="text/plain" data-ex="same-ms-id" data-part="bug">
+// 식사 하나의 이름표(id)
+function makeId(now) {
+  return "f" + now().toString(36);
+}
+
+// 여러 끼를 한 번에 복사 (전날 식단 복사 버튼)
+function copyMeals(meals, now) {
+  return meals.map(m => ({ ...m, id: makeId(now) }));
+}
+</script>
+<script type="text/plain" data-ex="same-ms-id" data-part="fix">
+// 식사 하나의 이름표(id)
+function makeId(now) {
+  return "f" + now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// 여러 끼를 한 번에 복사 (전날 식단 복사 버튼)
+function copyMeals(meals, now) {
+  return meals.map(m => ({ ...m, id: makeId(now) }));
+}
+</script>
+
+<script type="text/plain" data-ex="tone-yo" data-part="bug">
+// 끝에 붙은 문장부호·이모티콘·ㅋㅠ 떼기
+const TRAILING_NOISE = /[^가-힣]+$/;
+const POLITE_ENDING = /(요|니다|세요|셔요|십시오|죠)$/;
+// '요'로 끝나지만 존댓말이 아닌 낱말 ("이거 필요", "이게 중요")
+const YO_NOUNS = /(^|\s)(불?필요|중요|주요|수요|개요)$/;
+
+// 메시지의 마지막 문장이 존댓말인지
+function isPolite(text) {
+  const lines = text
+    .split(/[\n.!?]+/)
+    .map(line => line.replace(TRAILING_NOISE, "").trim())
+    .filter(line => line.length > 0);
+  const last = lines[lines.length - 1] || "";
+  return POLITE_ENDING.test(last);
+}
+</script>
+<script type="text/plain" data-ex="tone-yo" data-part="fix">
+// 끝에 붙은 문장부호·이모티콘·ㅋㅠ 떼기
+const TRAILING_NOISE = /[^가-힣]+$/;
+const POLITE_ENDING = /(요|니다|세요|셔요|십시오|죠)$/;
+// '요'로 끝나지만 존댓말이 아닌 낱말 ("이거 필요", "이게 중요")
+const YO_NOUNS = /(^|\s)(불?필요|중요|주요|수요|개요)$/;
+
+// 메시지의 마지막 문장이 존댓말인지
+function isPolite(text) {
+  const lines = text
+    .split(/[\n.!?]+/)
+    .map(line => line.replace(TRAILING_NOISE, "").trim())
+    .filter(line => line.length > 0);
+  const last = lines[lines.length - 1] || "";
+  if (last.endsWith("요") && YO_NOUNS.test(last)) return false;
+  return POLITE_ENDING.test(last);
+}
+</script>
+
+<script type="text/plain" data-ex="thanks-regex" data-part="bug">
+// 고맙다는 말 횟수 세기
+const THANKS = /고마워|고맙|감사|ㄱㅅ|땡큐|thank/gi;
+
+function countThanks(text) {
+  return (text.match(THANKS) ?? []).length;
+}
+</script>
+<script type="text/plain" data-ex="thanks-regex" data-part="fix">
+// 고맙다는 말 횟수 세기
+const THANKS = /고마워|고맙|감사(?=합니|해|드리|드려|드립|하다|하네|함|요|용)|ㄱㅅ|땡큐|thank/gi;
+
+function countThanks(text) {
+  return (text.match(THANKS) ?? []).length;
+}
+</script>
+
+<script type="text/plain" data-ex="mean-kcal" data-part="bug">
+// 최근 며칠의 '평균 섭취 칼로리' (유지 칼로리 계산의 재료)
+// kcalByDay: { "2026-10-09": 2400, ... }  ("YYYY-MM-DD" 글자는 사전 순 = 날짜 순)
+// 기간 = start 다음 날부터 어제까지
+//   (start는 빼고, 오늘은 아직 다 안 먹었으니 뺌)
+function meanKcal(kcalByDay, start, today) {
+  const days = Object.keys(kcalByDay)
+    .filter(d => d > start && d <= today);
+  if (!days.length) return null;
+  const total = days.reduce((s, d) => s + kcalByDay[d], 0);
+  return total / days.length;
+}
+</script>
+<script type="text/plain" data-ex="mean-kcal" data-part="fix">
+// 최근 며칠의 '평균 섭취 칼로리' (유지 칼로리 계산의 재료)
+// kcalByDay: { "2026-10-09": 2400, ... }  ("YYYY-MM-DD" 글자는 사전 순 = 날짜 순)
+// 기간 = start 다음 날부터 어제까지
+//   (start는 빼고, 오늘은 아직 다 안 먹었으니 뺌)
+function meanKcal(kcalByDay, start, today) {
+  const days = Object.keys(kcalByDay)
+    .filter(d => d > start && d < today);
+  if (!days.length) return null;
+  const total = days.reduce((s, d) => s + kcalByDay[d], 0);
+  return total / days.length;
+}
+</script>
+
+<script type="text/plain" data-ex="parse-date" data-part="bug">
+// Date → "2026-10-31" (폰 시간 기준)
+function isoDay(d) {
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+// 메모의 "10/05" → 날짜. 연도가 없으니 올해로 보되,
+// 오늘보다 뒤면(아직 안 온 날) 작년 기록으로 봄
+// today: 지금 시각 (테스트에서 바꿔 넣으려고 받음)
+function parseDate(token, today) {
+  const m = /^(\d{1,2})\/(\d{1,2})$/.exec(token || "");
+  if (!m) return null;
+  const d = new Date(today.getFullYear(), Number(m[1]) - 1, Number(m[2]), 12, 0, 0);
+  if (d > today) d.setFullYear(d.getFullYear() - 1);
+  return d;
+}
+</script>
+<script type="text/plain" data-ex="parse-date" data-part="fix">
+// Date → "2026-10-31" (폰 시간 기준)
+function isoDay(d) {
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+// 메모의 "10/05" → 날짜. 연도가 없으니 올해로 보되,
+// 오늘보다 뒤면(아직 안 온 날) 작년 기록으로 봄
+// today: 지금 시각 (테스트에서 바꿔 넣으려고 받음)
+function parseDate(token, today) {
+  const m = /^(\d{1,2})\/(\d{1,2})$/.exec(token || "");
+  if (!m) return null;
+  const d = new Date(today.getFullYear(), Number(m[1]) - 1, Number(m[2]), 12, 0, 0);
+  if (isoDay(d) > isoDay(today)) d.setFullYear(d.getFullYear() - 1);
+  return d;
+}
+</script>
+
+<script type="text/plain" data-ex="leave-40h" data-part="bug">
+var SHIFT_HOURS = { '주': 10, '야': 14, '견주': 10, '견야': 14 };
+var LEAVE_MIN_HOURS = 40;      // 한 주 이 시간 이상이면 위로휴가 1개
+var LEAVE_MAX_PER_PERIOD = 3;  // 기간 전체 최대 3개
+
+function cellHours(value) {
+  var codes = !value ? [] : Array.isArray(value) ? value : [value];
+  return codes.reduce(function (sum, code) {
+    return sum + (SHIFT_HOURS[code] || 0);
+  }, 0);
+}
+
+// row: 월요일부터 하루 한 칸. 결과: 주별 근무시간 [48, 38, ...]
+function weeklyHours(row) {
+  var weeks = [];
+  for (var w = 0; w < row.length / 7; w++) weeks.push(0);
+  row.forEach(function (value, i) {
+    weeks[Math.round(i / 7)] += cellHours(value);
+  });
+  return weeks;
+}
+
+// 40시간 이상인 주마다 1개, 기간 전체 최대 3개
+function countLeave(weeks) {
+  var earned = weeks.filter(function (h) {
+    return h >= LEAVE_MIN_HOURS;
+  }).length;
+  return Math.min(earned, LEAVE_MAX_PER_PERIOD);
+}
+</script>
+<script type="text/plain" data-ex="leave-40h" data-part="fix">
+var SHIFT_HOURS = { '주': 10, '야': 14, '견주': 10, '견야': 14 };
+var LEAVE_MIN_HOURS = 40;      // 한 주 이 시간 이상이면 위로휴가 1개
+var LEAVE_MAX_PER_PERIOD = 3;  // 기간 전체 최대 3개
+
+function cellHours(value) {
+  var codes = !value ? [] : Array.isArray(value) ? value : [value];
+  return codes.reduce(function (sum, code) {
+    return sum + (SHIFT_HOURS[code] || 0);
+  }, 0);
+}
+
+// row: 월요일부터 하루 한 칸. 결과: 주별 근무시간 [48, 38, ...]
+function weeklyHours(row) {
+  var weeks = [];
+  for (var w = 0; w < row.length / 7; w++) weeks.push(0);
+  row.forEach(function (value, i) {
+    weeks[Math.floor(i / 7)] += cellHours(value);
+  });
+  return weeks;
+}
+
+// 40시간 이상인 주마다 1개, 기간 전체 최대 3개
+function countLeave(weeks) {
+  var earned = weeks.filter(function (h) {
+    return h >= LEAVE_MIN_HOURS;
+  }).length;
+  return Math.min(earned, LEAVE_MAX_PER_PERIOD);
+}
+</script>
+
+<script type="text/plain" data-ex="backup-kst" data-part="bug">
+// 백업 파일 이름: "iwbm-backup-2026-10-31.json"
+// 이름의 날짜는 '한국 날짜'여야 해요 (UTC보다 9시간 빠름)
+function backupName(now) {
+  return `iwbm-backup-${now.toISOString().slice(0, 10)}.json`;
+}
+</script>
+<script type="text/plain" data-ex="backup-kst" data-part="fix">
+// 백업 파일 이름: "iwbm-backup-2026-10-31.json"
+// 이름의 날짜는 '한국 날짜'여야 해요 (UTC보다 9시간 빠름)
+function backupName(now) {
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return `iwbm-backup-${kst.toISOString().slice(0, 10)}.json`;
+}
+</script>
+
+<script type="text/plain" data-ex="restore-myfoods" data-part="prelude">
+// 테스트용 백업 파일 내용 (JSON.parse를 마친 모양)
+const backup = {
+  workouts: [{ id: "a", synced: true }],
+  meals: [{ id: "f1", food: "현미밥", synced: true }],
+  custom: {},
+  body: { "2026-10-30": { w: 83.6, synced: true } },
+  myFoods: {
+    "닭가슴살 스테이크": { basis: 100, unit: "g", kcal: 165, c: 2, p: 31, f: 3 },
+  },
+};
+</script>
+<script type="text/plain" data-ex="restore-myfoods" data-part="bug">
+// 나중 버전에서 늘어난 칸들의 빈 값
+function EMPTY_EXTRAS() {
+  return { deleted: [], body: {}, meals: [], nutrition: null,
+    hiddenGraphs: [], hiddenDirty: false,
+    myFoods: {}, myFoodsDirty: false };
+}
+
+// 백업 파일 → 새 data (지금 기록을 통째로 바꿈)
+function restoreFrom(restored) {
+  if (!Array.isArray(restored.workouts)) throw new Error("모양이 달라요");
+  const data = { ...EMPTY_EXTRAS(),
+    workouts: restored.workouts,
+    custom: restored.custom || {}, customDirty: true,
+    body: restored.body || {},
+    meals: restored.meals || [],
+    nutrition: restored.nutrition || null,
+    hiddenGraphs: restored.hiddenGraphs || [], hiddenDirty: true };
+  data.workouts.forEach(w => { w.synced = false; });   // 다시 올리기
+  data.meals.forEach(m => { m.synced = false; });
+  return data;
+}
+</script>
+<script type="text/plain" data-ex="restore-myfoods" data-part="fix">
+// 나중 버전에서 늘어난 칸들의 빈 값
+function EMPTY_EXTRAS() {
+  return { deleted: [], body: {}, meals: [], nutrition: null,
+    hiddenGraphs: [], hiddenDirty: false,
+    myFoods: {}, myFoodsDirty: false };
+}
+
+// 백업 파일 → 새 data (지금 기록을 통째로 바꿈)
+function restoreFrom(restored) {
+  if (!Array.isArray(restored.workouts)) throw new Error("모양이 달라요");
+  const data = { ...EMPTY_EXTRAS(),
+    workouts: restored.workouts,
+    custom: restored.custom || {}, customDirty: true,
+    body: restored.body || {},
+    meals: restored.meals || [],
+    nutrition: restored.nutrition || null,
+    hiddenGraphs: restored.hiddenGraphs || [], hiddenDirty: true,
+    myFoods: restored.myFoods || {}, myFoodsDirty: true };
+  data.workouts.forEach(w => { w.synced = false; });   // 다시 올리기
+  data.meals.forEach(m => { m.synced = false; });
+  return data;
+}
+</script>
+
+<script type="text/plain" data-ex="forget-await" data-part="prelude">
+// 테스트용 가짜 인터넷: 0.03초 뒤에 답해요. bad: true인 운동은 실패
+function fakeUpload(w) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => (w.bad ? reject(new Error("인터넷 끊김")) : resolve()), 30);
+  });
+}
+</script>
+<script type="text/plain" data-ex="forget-await" data-part="bug">
+// 아직 안 올린 운동을 하나씩 올리기
+// 하나 올릴 때마다 synced = true → 중간에 끊겨도 다음에 이어서
+async function syncAll(workouts, upload) {
+  try {
+    for (const w of workouts.filter(w => !w.synced)) {
+      upload(w);
+      w.synced = true;
+    }
+    return "동기화 완료";
+  } catch (error) {
+    return "동기화 실패 — " + error.message;
+  }
+}
+</script>
+<script type="text/plain" data-ex="forget-await" data-part="fix">
+// 아직 안 올린 운동을 하나씩 올리기
+// 하나 올릴 때마다 synced = true → 중간에 끊겨도 다음에 이어서
+async function syncAll(workouts, upload) {
+  try {
+    for (const w of workouts.filter(w => !w.synced)) {
+      await upload(w);
+      w.synced = true;
+    }
+    return "동기화 완료";
+  } catch (error) {
+    return "동기화 실패 — " + error.message;
+  }
+}
+</script>
+
+<script type="text/plain" data-ex="meal-sync" data-part="bug">
+// 받기: 인터넷의 식사(remote)를 폰 목록(local)에 합치기
+//  ① 인터넷에만 있음 → 추가
+//  ② 둘 다 있음 → 폰 것이 아직 안 올린 수정(synced: false)이면 폰 것,
+//                  이미 올라간 것(synced: true)이면 인터넷 것이 최신
+//  ③ 폰에서 올라가 있던 것인데 인터넷에 없음 → 다른 기기에서 지움 → 빼기
+function mergeMeals(local, remote) {
+  const remoteIds = new Set(remote.map(r => r.id));
+  const localIds = new Set(local.map(m => m.id));
+  const out = [...local];
+  for (const r of remote) {
+    if (localIds.has(r.id)) continue;
+    out.push({ ...r, synced: true });
+  }
+  return out.filter(m => !m.synced || remoteIds.has(m.id));
+}
+</script>
+<script type="text/plain" data-ex="meal-sync" data-part="fix">
+// 받기: 인터넷의 식사(remote)를 폰 목록(local)에 합치기
+//  ① 인터넷에만 있음 → 추가
+//  ② 둘 다 있음 → 폰 것이 아직 안 올린 수정(synced: false)이면 폰 것,
+//                  이미 올라간 것(synced: true)이면 인터넷 것이 최신
+//  ③ 폰에서 올라가 있던 것인데 인터넷에 없음 → 다른 기기에서 지움 → 빼기
+function mergeMeals(local, remote) {
+  const remoteIds = new Set(remote.map(r => r.id));
+  const out = [...local];
+  for (const r of remote) {
+    const i = out.findIndex(m => m.id === r.id);
+    if (i === -1) out.push({ ...r, synced: true });
+    else if (out[i].synced) out[i] = { ...r, synced: true };
+  }
+  return out.filter(m => !m.synced || remoteIds.has(m.id));
+}
+</script>
+
+<script>
+// 두 번 눌러 확인하기 — 일부 화면(앱 안 미리보기 등)은 confirm() 창을 막아서, 버튼을 한 번 더 누르게 해요
+function tapConfirm(btn, msg) {
+  if (!btn) return true;
+  if (btn.dataset.armed === '1') { clearTimeout(btn._armT); btn.dataset.armed = ''; btn.textContent = btn._label; return true; }
+  btn._label = btn.textContent; btn.dataset.armed = '1';
+  btn.textContent = msg + ' 한 번 더 누르면 진행해요';
+  btn._armT = setTimeout(() => { btn.dataset.armed = ''; btn.textContent = btn._label; }, 4000);
+  return false;
+}
+
+'use strict';
+// ===================== 문제 설명 · 테스트 =====================
+// tests: run = 실행할 식(문제 코드 안의 함수·변수를 그대로 씀), expect = 나와야 하는 값
+// real.kind: fixed(실제로 일어나서 고친 것) · live(지금 앱 코드에 남아 있음) · notes(내 복습 노트에 있던 것) · whatif(이렇게 고치면 생기는 버그)
+const EXERCISES = [
+  {
+    id: 'config-comma', level: 1, cat: 'syntax',
+    title: '런처 화면이 통째로 하얘졌어요',
+    source: { repo: 'auto-starting-program', file: 'config.js', fn: 'MODES' },
+    story: '런처에 새 목적을 하나 더 넣었더니, 버튼이 하나도 안 나오고 화면이 하얗게 비었어요. 에러 창도 안 떴어요.',
+    tests: [
+      { name: '목적이 2개 만들어지나', run: `MODES.length`, expect: 2 },
+      { name: '두 번째 목적 이름', run: `MODES[1].name`, expect: '코딩공부' },
+      { name: '사이트가 모두 4개', run: `MODES.flatMap(m => m.items).length`, expect: 4 },
+    ],
+    hints: [
+      '테스트가 전부 같은 SyntaxError로 실패했죠? 문법 에러는 "한 줄도 실행되지 않았다"는 뜻이에요. 목적(사전) 두 개가 맞닿는 곳을 보세요.',
+      '"의학공부" 사전을 닫는 } 뒤에 쉼표가 없어요. 목록 [ ] 안의 칸과 칸 사이에는 항상 쉼표가 있어야 해요.',
+    ],
+    explain: 'JS는 파일 전체를 먼저 읽어서 문법을 검사한 뒤에 실행해요. 쉼표 하나가 빠지면 파일 전체가 실행되지 않아서 MODES가 아예 생기지 않고, index.html은 그릴 게 없으니 하얀 화면이 돼요. 이때 F12 → Console에는 빨간 글씨로 "Uncaught SyntaxError: Unexpected token \'{\'"와 config.js:줄 번호가 떠 있어요. 화면이 하얘지면 콘솔부터!',
+    python: 'Python도 [{...} {...}]는 SyntaxError예요. Python은 "Perhaps you forgot a comma?"라고 친절하게 알려 주지만, JS는 "Unexpected token \'{\'"(예상 못 한 { 가 나왔다)라고만 해요. 뜻은 같아요: 바로 앞 줄 끝에 뭔가 빠졌다.',
+    real: { kind: 'fixed', text: 'auto-starting-program 커밋 5487680 "Fix missing commas in config.js that blanked the launcher" (2026-10-26). 런처가 실제로 통째로 하얘졌던 사건이에요.' },
+  },
+  {
+    id: 'next-weight', level: 1, cat: 'compare',
+    title: '8회를 다 채웠는데 무게가 안 올라가요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/app.js', fn: 'nextWeight' },
+    story: '벤치 85kg로 4세트 모두 8회(목표 범위 6~8회의 최대)를 채웠어요. 그런데 다음 무게 제안이 계속 "같은 무게"예요.',
+    tests: [
+      { name: '다 8회 + RPE 9 → +5kg', run: `nextWeight(85, [8, 8, 8, 8], 6, 8, 5, 9).weight`, expect: 90 },
+      { name: '다 8회 + RPE 10 → 굳히기', run: `nextWeight(85, [8, 8, 8, 8], 6, 8, 5, 10).reason`, expect: '다 채웠지만 RPE 10 → 굳히기' },
+      { name: '8·7·6회 → 같은 무게', run: `nextWeight(85, [8, 7, 6], 6, 8, 5, 8).weight`, expect: 85 },
+      { name: '최고 5회 → -5kg', run: `nextWeight(85, [5, 4], 6, 8, 5, 8).weight`, expect: 80 },
+    ],
+    hints: [
+      '"모든 세트 high회 달성"을 묻는 줄이 두 개 있어요. 두 줄을 위아래로 나란히 비교해 보세요.',
+      '증량 줄은 Math.min(...reps) > high 예요. 8 > 8은 거짓이라 "딱 8회"는 증량이 안 돼요. 위 줄처럼 >= 여야 해요.',
+    ],
+    explain: '> 는 "보다 크다", >= 는 "크거나 같다"예요. 둘은 값이 딱 같을 때(8과 8)만 다르게 동작해서, 경계값으로 시험하지 않으면 안 보여요. 버그를 찾을 때 "딱 경계값"을 넣어 보는 습관이 중요해요.',
+    python: 'Python 노트북 ⑧의 min(reps) >= high 를 그대로 옮기면 돼요. 비교 연산자 >, >=, ==의 뜻은 Python과 JS가 같아요 (JS에는 === 가 더 있을 뿐).',
+    real: { kind: 'whatif', text: '실제 app.js nextWeight는 두 줄 모두 >= 로 맞게 되어 있어요. 노트북 → JS로 옮길 때 가장 실수하기 쉬운 자리라서 골랐어요.' },
+  },
+  {
+    id: 'parse-set', level: 1, cat: 'type',
+    title: '62.5kg 다음 무게가 "62.52.5"래요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/import.js', fn: 'parseSet' },
+    story: '메모에서 가져온 "62.5x8" 세트에 2.5kg를 더했더니 65가 아니라 이상한 글자가 나왔어요.',
+    tests: [
+      { name: '"60*10*3" 읽기', run: `parseSet("60*10*3")`, expect: { w: 60, r: 10, count: 3 } },
+      { name: '62.5 + 2.5', run: `nextLoad("62.5x8", 2.5)`, expect: 65 },
+      { name: '세트가 아닌 글자', run: `parseSet("Bench")`, expect: null },
+      { name: '세트 수 생략 → 1', run: `parseSet("60*10").count`, expect: 1 },
+    ],
+    hints: [
+      '첫 번째 테스트의 "실제 값"을 자세히 보세요. 60 둘레에 따옴표가 있나요?',
+      'split으로 자른 조각은 전부 글자예요. r과 count는 Number(...)로 바꿨는데 w만 안 바꿨어요.',
+    ],
+    explain: '글자 "62.5"에 숫자 2.5를 + 하면 JS는 덧셈 대신 글자 이어 붙이기를 해서 "62.52.5"가 돼요. 에러도 안 나요. 화면에 숫자처럼 보여도 따옴표가 붙어 있으면 글자예요. 이 도장의 결과 칸은 글자에 항상 "따옴표"를 붙여 보여 줘요.',
+    python: 'Python에서 "62.5" + 2.5 는 TypeError로 바로 멈춰요. JS는 멈추지 않고 이어 붙여요. 그래서 Python의 float("62.5")에 해당하는 Number("62.5")를 꼭 써야 해요.',
+    real: { kind: 'whatif', text: '실제 import.js parseSet은 Number(parts[0])로 바꿔 둬서 괜찮아요. 비슷한 일은 실제로 있었어요: el.dataset.i가 글자 "1"이라 1 === "1"이 거짓이 되는 문제 (v0.4 복습 노트 Q4-1).' },
+  },
+  {
+    id: 'json-save', level: 1, cat: 'json',
+    title: '새로 고침하면 운동 기록이 다 사라져요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/app.js', fn: 'save · load' },
+    story: '운동을 저장했는데 앱을 다시 열면 기록이 0개예요. 에러는 하나도 안 보여요.',
+    tests: [
+      { name: '저장 → 불러오기 (2개)', run: `(save({ workouts: [{ id: "a" }, { id: "b" }] }), load().workouts.length)`, expect: 2 },
+      { name: '보관함에 들어간 글자', run: `(save({ workouts: [{ id: "a" }] }), fakeStorage.getItem("iwbm-data-v1"))`, expect: '{"workouts":[{"id":"a"}]}' },
+      { name: '아무것도 없을 때', run: `load()`, expect: { workouts: [] } },
+    ],
+    hints: [
+      'save 다음에 fakeStorage.getItem(STORAGE_KEY)를 console.log로 찍어 보세요. 무엇이 저장됐나요?',
+      'localStorage는 글자만 담아요. 사전을 그대로 넣으면 "[object Object]"라는 글자가 돼요. 넣기 전에 JSON.stringify(data).',
+    ],
+    explain: '저장소에 사전을 그대로 넣으면 String({...}) = "[object Object]"가 저장돼요. 나중에 JSON.parse("[object Object]")는 에러 → load의 catch가 조용히 삼키고 → 빈 기록으로 새로 시작. "에러는 없는데 데이터가 사라짐"의 전형이에요. catch가 에러를 숨길 수 있다는 것도 기억해 두세요.',
+    python: 'json.dumps(d) 없이 str(d)로 파일에 쓰면 "{\'workouts\': ...}" 모양이라 json.loads가 실패하는 것과 비슷해요. JS는 더 심해서 내용이 아예 "[object Object]"로 사라져요. JSON.stringify = json.dumps, JSON.parse = json.loads.',
+    real: { kind: 'notes', text: 'v0.4 코드 복습 노트 8장 "조용한 버그 도감"의 첫 줄이에요. 실제 app.js save()는 JSON.stringify를 써요.' },
+  },
+  {
+    id: 'format-sets', level: 1, cat: 'offbyone',
+    title: '같은 무게 세트가 하나로 안 묶여요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/app.js', fn: 'formatSets' },
+    story: '85kg 8회 두 세트, 80kg 10회 한 세트를 메모 모양으로 바꾸면 "85*8,8 80*10"이어야 하는데 "85*8 85*8 80*10"이 나와요.',
+    tests: [
+      { name: '85·85·80', run: `formatSets([{ w: 85, r: 8 }, { w: 85, r: 8 }, { w: 80, r: 10 }])`, expect: '85*8,8 80*10' },
+      { name: '한 세트', run: `formatSets([{ w: 60, r: 12 }])`, expect: '60*12' },
+      { name: '세 세트 같은 무게', run: `formatSets([{ w: 60, r: 12 }, { w: 60, r: 12 }, { w: 60, r: 10 }])`, expect: '60*12,12,10' },
+    ],
+    hints: [
+      'for 안에 console.log(last)를 넣고 실행해 보세요. last가 한 번이라도 undefined가 아닌 적이 있나요?',
+      '목록의 마지막 칸 번호는 length가 아니라 length - 1이에요. groups[groups.length]는 늘 비어 있어요.',
+    ],
+    explain: '칸이 3개인 목록의 번호는 0, 1, 2예요. groups[3]은 없는 칸이라 undefined가 나오고, last && ... 가 늘 거짓이 돼서 매번 새 묶음을 만들었어요. "하나 차이(off-by-one)"는 가장 흔한 버그예요. 맨 끝은 length - 1 (또는 .at(-1)).',
+    python: 'Python의 groups[-1]이 JS에서는 groups[groups.length - 1] 또는 groups.at(-1)이에요. Python에서 groups[len(groups)]는 IndexError로 시끄럽게 멈추는데, JS는 조용히 undefined를 줘요.',
+    real: { kind: 'whatif', text: '실제 app.js formatSets는 groups[groups.length - 1]로 맞게 되어 있어요. 노트북 ① 메모 형식과 같은 모양을 만드는 함수예요.' },
+  },
+  {
+    id: 'streak', level: 1, cat: 'offbyone',
+    title: '3일 연속으로 썼는데 "최장 연속 2일"이래요',
+    source: { repo: 'ai-yearend', file: 'src/metrics/explore.js', fn: 'finish() — 최장 연속' },
+    story: '결산 미리보기에서 "최장 연속" 숫자가 늘 하루씩 모자라요. 하루만 쓴 사람은 0일이에요.',
+    tests: [
+      { name: '하루만', run: `longestStreak(["2026-03-01"])`, expect: 1 },
+      { name: '1·2일 연속, 5일 따로', run: `longestStreak(["2026-01-01", "2026-01-02", "2026-01-05"])`, expect: 2 },
+      { name: '달을 넘어 4일', run: `longestStreak(["2026-02-27", "2026-02-28", "2026-03-01", "2026-03-02"])`, expect: 4 },
+      { name: '빈 목록', run: `longestStreak([])`, expect: 0 },
+    ],
+    hints: [
+      '연속이 끊겼을 때 streak를 몇으로 다시 시작하나요? 그날도 "쓴 날"이에요.',
+      'streak = gap === 1 ? streak + 1 : 0 의 0을 1로. 끊긴 날도 새 연속의 첫날이라 1부터 세야 해요.',
+    ],
+    explain: '연속 세기는 "오늘 썼으면 최소 1일"이에요. 끊길 때 0으로 되돌리면 그날을 빼먹어서 모든 연속이 1씩 짧아져요. 맨 첫 날짜도 prev가 없어서 gap이 0 → 끊긴 것으로 처리돼 1부터 시작해야 해요.',
+    python: 'streak = streak + 1 if gap == 1 else 1 과 같아요. JS의 조건 ? 참일 때 : 거짓일 때 는 Python의 참일 때 if 조건 else 거짓일 때 를 순서만 바꾼 거예요.',
+    real: { kind: 'whatif', text: '실제 explore.js는 : 1로 맞게 되어 있어요. 결산에 "최장 연속" 숫자가 들어가니, 틀리면 바로 눈에 띄는 곳이에요.' },
+  },
+  {
+    id: 'speed-zero', level: 1, cat: 'nullish',
+    title: '"유지"로 정했는데 다른 폰에서는 "감량"이에요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/nutrition.js', fn: 'syncNutrition (받기)' },
+    story: '목표 속도를 0kg/주(유지)로 바꿨어요. 그런데 다른 기기에서 받아 오면 -0.5(감량)로 돌아가 있어요.',
+    tests: [
+      { name: '유지 (글자 "0")', run: `speedFromRow({ target_kg_per_week: "0" })`, expect: 0 },
+      { name: '증량 "0.25"', run: `speedFromRow({ target_kg_per_week: "0.25" })`, expect: 0.25 },
+      { name: '아직 안 정함 (null)', run: `speedFromRow({ target_kg_per_week: null })`, expect: -0.5 },
+      { name: '칸이 아예 없음', run: `speedFromRow({})`, expect: -0.5 },
+    ],
+    hints: [
+      '|| 는 왼쪽이 "거짓 같은 값"이면 오른쪽을 써요. 0은 거짓 같은 값일까요?',
+      '0 || -0.5 → -0.5 예요. null·undefined일 때만 기본값을 쓰는 ?? 를, Number로 바꾸기 전에 쓰세요: Number(row.target_kg_per_week ?? DEFAULT_KG_PER_WEEK)',
+    ],
+    explain: '|| 는 0, "", null, undefined, NaN, false를 모두 "없음"으로 봐요. 그런데 이 앱에서 0은 "유지"라는 진짜 값이에요. ?? 는 null과 undefined만 "없음"으로 봐요. 순서도 중요해요: Number(null)은 0이 되므로, ?? 를 Number보다 먼저 써야 해요.',
+    python: 'Python의 x or default 도 0을 거짓으로 봐서 똑같은 함정이 있어요. JS의 ?? 는 Python의 default if x is None else x 예요.',
+    real: { kind: 'notes', text: '복습 노트 Q2-3 "0 ?? 70 은 0, 0 || 70 은 70"에서 나온 버그예요. 실제 nutrition.js는 Number(r.target_kg_per_week)만 써서 괜찮아요. 0이 뜻있는 값인 곳(유지, 맨몸 0kg)에서 || 를 쓰면 이렇게 돼요.' },
+  },
+  {
+    id: 'e1rm-zero', level: 1, cat: 'nan',
+    title: '그래프 아래에 "+Infinity%"가 떴어요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/progress.js', fn: 'progressDetail — e1RM 변화 %' },
+    story: '맨몸 운동 그래프를 열었더니 e1RM 변화가 "Infinity%"나 "NaN%"로 보여요.',
+    tests: [
+      { name: '100 → 110', run: `changePct(100, 110)`, expect: 10 },
+      { name: '110.5 → 107.7', run: `changePct(110.5, 107.7)`, expect: -2.5 },
+      { name: '맨몸 (0 → 0)', run: `changePct(0, 0)`, expect: null },
+      { name: '0 → 50', run: `changePct(0, 50)`, expect: null },
+    ],
+    hints: [
+      '0으로 나누면 JS는 무엇을 돌려줄까요? 테스트 3·4의 실제 값을 보세요.',
+      '나누기 전에 first가 0이면 "계산할 수 없음"이라는 뜻으로 null을 돌려주세요: if (!first) return null;',
+    ],
+    explain: 'JS에서 50 / 0 은 Infinity, 0 / 0 은 NaN(숫자가 아님)이에요. 에러로 멈추지 않고 화면까지 그대로 가요. 나누기 앞에는 "0이면?"을 항상 물어보세요. 결과가 null이면 화면에서 "기록 1회"처럼 다른 글을 보여 주면 돼요.',
+    python: 'Python은 50 / 0 에서 ZeroDivisionError로 바로 멈춰요. JS는 멈추지 않고 Infinity·NaN을 돌려줘서, 화면에 찍힐 때까지 아무도 몰라요.',
+    real: { kind: 'fixed', text: 'Iwillbecomemonster v0.6-d 커밋 b7f3866 "B7: 운동 그래프 e1RM 변화가 +Infinity%로 보이던 것 막기". 맨몸으로 적던 종목을 나중에 무게 있는 종목으로 바꾸면 첫 e1RM이 0이라 실제로 "+Infinity%"가 화면에 나왔어요. 고친 코드도 이름이 changePct이고, if (!(first > 0)) return ""; 로 막아요.' },
+  },
+  {
+    id: 'penalty-nan', level: 2, cat: 'nan',
+    title: '자동 생성이 더 나은 근무표를 못 골라요',
+    source: { repo: 'timetable-ai', file: 'index.html', fn: 'penaltyTotal · PENALTY_WEIGHTS' },
+    story: '벌점 3000점짜리(야야 1번) 근무표와 50점짜리 근무표 중에서 자꾸 3000점짜리가 뽑혀요.',
+    tests: [
+      { name: '총 벌점 계산', run: `penaltyTotal({ targetShort: [{ short: 1 }], yaya: 1, jujuju: 2, flowBreaks: 3 }, PENALTY_WEIGHTS)`, expect: 13230 },
+      { name: '벌점 낮은 쪽 고르기', run: `better({ name: "A", targetShort: [], yaya: 1, jujuju: 0, flowBreaks: 0 }, { name: "B", targetShort: [], yaya: 0, jujuju: 0, flowBreaks: 5 }).name`, expect: 'B' },
+      { name: '벌점 0', run: `penaltyTotal({ targetShort: [], yaya: 0, jujuju: 0, flowBreaks: 0 }, PENALTY_WEIGHTS)`, expect: 0 },
+    ],
+    hints: [
+      '첫 테스트의 실제 값이 NaN이에요. 곱하기 네 개를 하나씩 console.log로 찍어 보세요.',
+      'PENALTY_WEIGHTS의 이름은 flowBreak(단수)인데 계산에서는 w.flowBreaks(복수)를 읽어요. 없는 이름 → undefined → 곱하면 NaN.',
+    ],
+    explain: '사전에 없는 이름을 읽으면 JS는 에러 대신 undefined를 줘요. undefined × 3 = NaN, 그리고 NaN이 섞인 덧셈은 전부 NaN. 게다가 NaN < 무엇 은 항상 거짓이라 "더 작은 쪽 고르기"가 늘 첫 후보를 고르게 돼요. 이름 한 글자가 근무표 자동 생성을 망가뜨리는 거예요.',
+    python: 'Python의 w["flowBreaks"]는 KeyError로 바로 멈춰요. JS의 w.flowBreaks 는 조용히 undefined. Python의 w.get("flowBreaks")처럼 동작한다고 생각하면 돼요.',
+    real: { kind: 'whatif', text: '실제 timetable-ai는 r.flowBreaks * w.flowBreak 로 맞게 써요. 결과 칸은 복수, 무게 칸은 단수라 한 글자 실수가 나기 딱 좋은 곳이에요.' },
+  },
+  {
+    id: 'avg7-nan', level: 2, cat: 'nan',
+    title: '일주일 체중을 안 쟀더니 유지 칼로리가 NaN',
+    source: { repo: 'Iwillbecomemonster', file: 'app/nutrition.js', fn: 'avg7' },
+    story: '휴가 다녀와서 일주일 넘게 체중을 안 쟀더니 유지 칼로리 칸에 "NaN kcal"이 떴어요.',
+    tests: [
+      { name: '이틀 평균', run: `avg7({ "2026-10-08": { w: 84 }, "2026-10-09": { w: 83 } }, "2026-10-09")`, expect: 83.5 },
+      { name: '최근 7일에 기록 없음', run: `avg7({ "2026-10-01": { w: 84 } }, "2026-10-09")`, expect: null },
+      { name: '기록이 아예 없음', run: `avg7({}, "2026-10-09")`, expect: null },
+      { name: '딱 7일 전은 빼기', run: `avg7({ "2026-10-02": { w: 80 }, "2026-10-03": { w: 82 } }, "2026-10-09")`, expect: 82 },
+    ],
+    hints: [
+      '기록이 없으면 ws는 빈 목록이에요. 그때 마지막 줄은 0 / 0 이 돼요.',
+      '빈 목록이면 먼저 null을 돌려주세요: if (!ws.length) return null; (주석에 "없으면 null"이라고 적혀 있어요)',
+    ],
+    explain: '빈 목록의 합은 0, 개수도 0이라 0 / 0 = NaN이에요. 더 무서운 건 다음 단계예요: 앱은 avg7(today) ?? lastWeight 처럼 "없으면 다른 값"을 쓰는데, NaN은 null이 아니라서 ?? 가 대신 값을 못 넣어요. NaN이 유지 칼로리까지 퍼져요.',
+    python: 'sum([]) / len([]) 은 Python에서 ZeroDivisionError예요. JS는 NaN을 돌려주고 계속 가요. 빈 목록 검사는 if not ws: (Python) = if (!ws.length) (JS). JS에서 빈 목록 [] 자체는 참이라서 if (!ws)로는 안 돼요!',
+    real: { kind: 'whatif', text: '실제 nutrition.js avg7은 ws.length ? … : null로 막아 두었고, baseMaintenance가 avg7(today) ?? lastWeightUpTo(today)로 이어 받아요.' },
+  },
+  {
+    id: 'median-sort', level: 2, cat: 'sort',
+    title: '9, 10, 100의 가운데 값이 100이래요',
+    source: { repo: 'ai-yearend', file: 'src/metrics/explore.js', fn: 'median' },
+    story: '대화 길이의 가운데 값(중앙값)이 이상하게 커요. 작은 목록으로 해 보니 [9, 10, 100]의 가운데가 100이에요.',
+    tests: [
+      { name: '[3, 1, 2]', run: `median([3, 1, 2])`, expect: 2 },
+      { name: '[9, 10, 100]', run: `median([9, 10, 100])`, expect: 10 },
+      { name: '[1, 5, 20, 300] (짝수 개)', run: `median([1, 5, 20, 300])`, expect: 12.5 },
+      { name: '빈 목록', run: `median([])`, expect: 0 },
+    ],
+    hints: [
+      'console.log([9, 10, 100].sort()) 를 찍어 보세요. 순서가 어떻게 나오나요?',
+      '.sort()에 비교 함수를 안 주면 숫자를 글자로 바꿔서 사전 순으로 정렬해요. 숫자 오름차순은 .sort((a, b) => a - b).',
+    ],
+    explain: '글자 사전 순으로는 "10" < "100" < "9"예요 (첫 글자 1이 9보다 앞). 작은 숫자만 시험하면 우연히 맞아서 잘 안 보여요. JS에서 숫자를 정렬할 때는 항상 (a, b) => a - b를 붙이세요.',
+    python: 'Python sorted([9, 10, 100])은 숫자로 정렬해요. JS .sort()는 sorted(map(str, ...))처럼 글자로 정렬해요. Python의 sorted(key=...)처럼 JS는 비교 함수를 넣어요.',
+    real: { kind: 'whatif', text: '실제 explore.js median과 시각 정렬(timestamps)은 모두 (a, b) => a - b로 맞게 되어 있어요.' },
+  },
+  {
+    id: 'yaya-count', level: 2, cat: 'offbyone',
+    title: '기간 마지막 날 야야가 벌점 없이 지나가요',
+    source: { repo: 'timetable-ai', file: 'index.html', fn: 'findViolations — 야야 검사' },
+    story: '근무표 마지막 이틀에 야간을 연속으로 넣었는데 노란색 경고가 안 떠요. 중간에 넣으면 잘 떠요.',
+    tests: [
+      { name: '처음 두 칸 야야', run: `countYaya(["야", "야", "휴", "주"])`, expect: 1 },
+      { name: '마지막 두 칸 야야', run: `countYaya(["주", "야", "휴", "야", "야"])`, expect: 1 },
+      { name: '목록 칸도 야간', run: `countYaya(["야", ["휴", "야"], "야"])`, expect: 2 },
+      { name: '하루뿐', run: `countYaya(["야"])`, expect: 0 },
+    ],
+    hints: [
+      '마지막 짝(i와 i + 1)이 검사되려면 i가 어디까지 가야 할까요? 5칸이면 마지막 짝은 3번·4번이에요.',
+      'i < row.length - 2 는 하나 일찍 멈춰요. 짝을 보려면 i < row.length - 1 (= i + 1 < row.length).',
+    ],
+    explain: '짝을 볼 때는 i + 1도 목록 안에 있어야 하니까 i는 length - 2까지(= length - 1 미만) 가야 해요. -2 미만으로 하면 마지막 짝 하나를 빼먹어요. 반복문의 끝 조건은 "마지막으로 검사할 칸 번호"를 손으로 적어 보면 바로 보여요.',
+    python: 'Python이라면 for i in range(len(row) - 1): 또는 for a, b in zip(row, row[1:]): 예요. zip처럼 "짝 짓기"로 생각하면 끝 번호를 셀 일이 없어요.',
+    real: { kind: 'whatif', text: '실제 timetable-ai는 i + 1 < allDates.length로 마지막 짝까지 검사해요. 이전 기간의 마지막 날도 앞에 붙여서 이어서 봐요.' },
+  },
+  {
+    id: 'superset-loop', level: 2, cat: 'loop',
+    title: '슈퍼세트 카드를 누르면 앱이 멈춰요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/app.js', fn: 'supersetStart' },
+    story: '슈퍼세트로 묶인 두 번째 종목을 누르면 화면이 굳어서 아무것도 안 눌려요. 묶이지 않은 종목은 괜찮아요.',
+    tests: [
+      { name: '묶이지 않음', run: `supersetStart([{ name: "A" }, { name: "B" }], 1)`, expect: 1 },
+      { name: 'A·B 묶음의 B', run: `supersetStart([{ name: "A", ss: true }, { name: "B" }], 1)`, expect: 0 },
+      { name: 'A·B·C 묶음의 C', run: `supersetStart([{ name: "A", ss: true }, { name: "B", ss: true }, { name: "C" }], 2)`, expect: 0 },
+    ],
+    hints: [
+      '⏱ 시간 초과가 났죠? while이 끝나려면 조건 안의 값이 바뀌어야 해요. 조건에 쓰인 변수와, 안에서 바꾸는 변수가 같은가요?',
+      '조건은 start를 보는데 몸통에서는 i를 줄여요. start는 영원히 그대로 → 무한 반복. i-- 를 start-- 로.',
+    ],
+    explain: 'while (조건) 은 조건이 거짓이 될 때까지 돌아요. 조건 안의 값이 안 바뀌면 영원히 돌고, 브라우저 화면이 통째로 굳어요. 이 도장은 2초가 넘으면 강제로 멈춰 줘요(진짜 앱은 안 그래요). while을 쓸 때는 "몸통이 조건의 무엇을 바꾸지?"를 꼭 확인하세요.',
+    python: 'Python도 똑같이 멈춰요. Colab에서 셀이 끝나지 않아서 ■ 정지 버튼을 누르던 그 상황이에요. while i > 0 and ...: i -= 1 처럼 조건 변수를 몸통에서 바꿔야 해요.',
+    real: { kind: 'whatif', text: '실제 app.js supersetStart는 while (i > 0 && w.exercises[i - 1].ss) i--; 로 변수 하나만 써서 맞아요. 변수를 하나 더 만들다가 생기기 쉬운 실수예요.' },
+  },
+  {
+    id: 'copy-day', level: 2, cat: 'mutation',
+    title: '전날 식단을 복사했더니 어제 식단이 사라졌어요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/nutrition.js', fn: 'copyPreviousDay · addMealCopy' },
+    story: '"어제 식단 복사"를 눌렀더니 오늘에는 잘 들어왔는데, 어제 날짜를 보니 텅 비었어요. 그리고 오늘에 같은 음식이 두 번씩 보여요.',
+    tests: [
+      { name: '어제 식단이 남아 있나', run: `(() => { const meals = [{ day: "10-08", food: "닭가슴살" }, { day: "10-08", food: "현미밥" }]; const out = copyDay(meals, "10-08", "10-09"); return out.filter(m => m.day === "10-08").length; })()`, expect: 2 },
+      { name: '원래 목록은 그대로', run: `(() => { const meals = [{ day: "10-08", food: "닭가슴살" }]; copyDay(meals, "10-08", "10-09"); return meals[0].day; })()`, expect: '10-08' },
+      { name: '모두 4개', run: `copyDay([{ day: "10-08", food: "a" }, { day: "10-08", food: "b" }], "10-08", "10-09").length`, expect: 4 },
+    ],
+    hints: [
+      'const copy = m; 에서 copy와 m은 서로 다른 사전일까요, 같은 사전에 붙은 이름표 두 개일까요?',
+      '= 는 복사가 아니라 이름표를 하나 더 붙이는 거예요. 새 사전을 만들려면 const copy = { ...m };',
+    ],
+    explain: 'JS에서 사전·목록을 = 로 넘기면 같은 물건을 가리키는 이름이 하나 더 생겨요. copy.day를 바꾸면 m.day도 바뀌어서, 어제 음식이 오늘로 "이사"를 가고 목록에는 같은 물건이 두 번 들어가요. { ...m } 은 칸을 펼쳐서 새 사전을 만들어요.',
+    python: 'Python도 같아요: copy = m 은 같은 dict, copy = dict(m) 또는 m.copy() 가 새 dict예요. JS의 { ...m } = Python의 {**m}.',
+    real: { kind: 'whatif', text: '실제 addMealCopy는 { id, day, slot, food: m.food, … }로 새 사전을 만들어서 괜찮아요. 복습 노트 2-4 "펼치기(...)"에서 배운 바로 그 문법이에요.' },
+  },
+  {
+    id: 'shadow-data', level: 2, cat: 'scope',
+    title: '받기 버튼을 누르면 "Cannot read properties of undefined"',
+    source: { repo: 'Iwillbecomemonster', file: 'app/sync.js', fn: 'downloadAll' },
+    story: '인터넷에서 받은 운동을 폰 기록에 더하는 함수가 빨간 에러를 내요. 분명 data.workouts는 있는데요.',
+    tests: [
+      { name: '새 운동 1개 추가', run: `addRemote({ data: [{ id: "a" }, { id: "b" }], error: null })`, expect: 2 },
+      { name: '받은 게 없을 때', run: `addRemote({ data: [], error: null })`, expect: 1 },
+    ],
+    hints: [
+      '함수 안에서 data는 어떤 data일까요? 맨 위의 앱 기록일까요, 방금 꺼낸 줄 목록일까요?',
+      'const { data, error } = result 가 함수 안에 data라는 새 이름을 만들어서 바깥 data를 가려요. 꺼낼 때 이름을 바꾸세요: const { data: rows, error } = result; 그리고 for (const row of rows).',
+    ],
+    explain: '함수 안에서 같은 이름을 새로 만들면, 함수 안에서는 바깥 것이 안 보여요(가려짐). 그래서 data.workouts는 "줄 목록.workouts" = undefined가 되고, undefined.some(...)에서 에러가 나요. 실제 앱도 그래서 이름을 rows로 바꿔 꺼내요.',
+    python: 'Python도 함수 안에서 data = ... 하면 지역 변수가 생겨서 전역 data가 가려져요. 다만 Python은 global data로 바깥 것을 쓰겠다고 말할 수 있고, JS는 이름을 다르게 짓는 게 답이에요.',
+    real: { kind: 'notes', text: '실제 sync.js downloadAll은 const { data: rows, error } = … 로 이 함정을 피해요. 복습 노트 Q5-4 "왜 rows로 바꿔서 꺼내?"의 답이 바로 이 버그예요.' },
+  },
+  {
+    id: 'same-ms-id', level: 2, cat: 'id',
+    title: '복사한 음식 하나를 지웠더니 셋이 같이 사라져요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/nutrition.js', fn: 'addMealCopy (id 만들기)' },
+    story: '어제 식단 3개를 복사한 다음 하나만 지웠는데 3개가 한꺼번에 지워졌어요.',
+    tests: [
+      { name: 'id 3개가 모두 다른가', run: `new Set(copyMeals([{ food: "a" }, { food: "b" }, { food: "c" }], frozenNow).map(m => m.id)).size`, expect: 3 },
+      { name: 'id는 f로 시작', run: `copyMeals([{ food: "a" }], frozenNow)[0].id.startsWith("f")`, expect: true },
+      { name: 'id는 글자', run: `copyMeals([{ food: "a" }, { food: "b" }], frozenNow).every(m => typeof m.id === "string")`, expect: true },
+    ],
+    hints: [
+      '복사는 반복문 안에서 순식간에 일어나요. 그동안 now()(= Date.now())가 바뀔까요?',
+      '시각만으로 만든 id는 같은 밀리초에 겹쳐요. 뒤에 무작위 꼬리를 붙이세요: + Math.random().toString(36).slice(2, 7)  (또는 1, 2, 3 세는 번호)',
+    ],
+    explain: '컴퓨터는 1밀리초에 반복을 수천 번 돌아요. 그래서 반복문 안에서 Date.now()로 만든 id는 모두 같아요. id가 같으면 "이 id 지우기"가 같은 id를 가진 걸 다 지워요. 무작위 꼬리나 순번을 붙이면 겹치지 않아요.',
+    python: 'Python에서 반복문 안에서 str(time.time())으로 id를 만들면 생기는 문제와 같아요. Python은 보통 uuid.uuid4(), JS에는 crypto.randomUUID()가 있어요.',
+    real: { kind: 'notes', text: '실제 nutrition.js addMealCopy는 Math.random() 꼬리를 붙여서 막아 뒀어요(그래서 정답도 같은 모양). app.js startWorkout의 운동 id는 Date.now().toString(36)만 써요 — 버튼을 한 번씩 누르니 지금은 괜찮지만, 여러 개를 한 번에 만들게 바뀌면 같은 문제가 생겨요.' },
+  },
+  {
+    id: 'tone-yo', level: 2, cat: 'regex',
+    title: '"이거 필요"가 존댓말로 세어져요',
+    source: { repo: 'ai-yearend', file: 'src/metrics/tone.js', fn: 'isPolite' },
+    story: '반말로 "이거 필요"라고만 쳤는데 존댓말 비율이 올라가요. "이게 중요?!"도 존댓말로 셌어요.',
+    tests: [
+      { name: '고마워요', run: `isPolite("고마워요")`, expect: true },
+      { name: '이거 필요', run: `isPolite("이거 필요")`, expect: false },
+      { name: '이 함수 왜 중요?!', run: `isPolite("이 함수 왜 중요?!")`, expect: false },
+      { name: '알려 주세요 ㅠㅠ', run: `isPolite("알려 주세요 ㅠㅠ")`, expect: true },
+      { name: '정말 필요해요', run: `isPolite("정말 필요해요")`, expect: true },
+    ],
+    hints: [
+      'YO_NOUNS는 만들어 놓고 어디서 쓰고 있나요? 찾기(Ctrl+F)로 이름을 검색해 보세요.',
+      'return 직전에 한 줄: if (last.endsWith("요") && YO_NOUNS.test(last)) return false;',
+    ],
+    explain: '정규식 /요$/ 는 "요로 끝난다"는 글자 모양만 봐요. "필요", "중요"도 요로 끝나니 존댓말로 잡혀요. 이렇게 "모양은 맞는데 뜻은 아닌 것"을 잡는 걸 오탐(false positive)이라고 해요. 예외 목록(YO_NOUNS)을 만들어 놓고 안 쓰는 것도 흔한 실수예요.',
+    python: 'Python re.search(r"(요|니다)$", s)도 똑같이 "필요"를 잡아요. 정규식은 Python과 JS가 거의 같아요: re.search(p, s) = /p/.test(s).',
+    real: { kind: 'fixed', text: 'ai-yearend 커밋 0fedba3 "말투 규칙: 존댓말·고마워·ㅋ을 잘못 세던 경우 고침" (2026-10-31)에서 실제로 고친 버그예요. 진짜 코드는 예외 낱말이 10개예요.' },
+  },
+  {
+    id: 'thanks-regex', level: 2, cat: 'regex',
+    title: '"회계 감사"가 고맙다는 말로 세어져요',
+    source: { repo: 'ai-yearend', file: 'src/metrics/tone.js', fn: 'THANKS' },
+    story: '회계 감사 자료를 정리해 달라고 한 대화가 "고맙다는 말" 숫자에 들어갔어요. "감사원 보고서"도요.',
+    tests: [
+      { name: '감사합니다!', run: `countThanks("감사합니다!")`, expect: 1 },
+      { name: '회계 감사', run: `countThanks("회계 감사 자료 좀 정리해줘")`, expect: 0 },
+      { name: '감사원 + 고마워', run: `countThanks("감사원 보고서 요약, 고마워")`, expect: 1 },
+      { name: '감사해요 + thank', run: `countThanks("정말 감사해요 thank you")`, expect: 2 },
+      { name: 'ㄱㅅㄱㅅ', run: `countThanks("ㄱㅅㄱㅅ")`, expect: 2 },
+    ],
+    hints: [
+      '"감사"라는 두 글자만으로는 고맙다는 뜻인지 알 수 없어요. 고맙다는 뜻일 때 "감사" 뒤에는 어떤 글자가 오나요?',
+      '앞보기 (?=...)를 써요: 감사(?=합니|해|드리|드려|드립|하다|하네|함|요|용) — "뒤에 이 글자가 오는 감사만"이라는 뜻이에요.',
+    ],
+    explain: '(?=...)는 "뒤에 이게 와야 함"을 검사만 하고 그 글자는 잡지 않아요. 그래서 "감사합니다"는 1번으로 세고, "감사원"(뒤에 원)과 "회계 감사"(뒤에 공백)는 빼요. 단어를 셀 때는 늘 "이 글자가 다른 뜻으로 쓰이는 문장"을 테스트로 넣어 보세요.',
+    python: 'Python re도 똑같이 (?=...) 앞보기를 써요. re.findall(r"감사(?=합니|해)", s) 처럼요.',
+    real: { kind: 'fixed', text: 'ai-yearend 커밋 0fedba3에서 실제로 고친 버그예요. 결산의 "고마워" 숫자가 부풀려지던 문제였어요.' },
+  },
+  {
+    id: 'mean-kcal', level: 2, cat: 'boundary',
+    title: '아침만 먹었을 때 유지 칼로리가 뚝 떨어져요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/nutrition.js', fn: 'maintenanceInfo — 평균 섭취' },
+    story: '아침에 500kcal만 적어 놓고 보면 유지 칼로리가 몇백 kcal 낮게 나와요. 저녁까지 다 적으면 다시 올라가요.',
+    tests: [
+      { name: '오늘(500)은 빼고 평균', run: `meanKcal({ "2026-10-07": 2400, "2026-10-08": 2600, "2026-10-09": 500 }, "2026-09-25", "2026-10-09")`, expect: 2500 },
+      { name: 'start 날은 빼기', run: `meanKcal({ "2026-09-25": 3000, "2026-10-01": 2000 }, "2026-09-25", "2026-10-09")`, expect: 2000 },
+      { name: '오늘만 있으면 없음', run: `meanKcal({ "2026-10-09": 800 }, "2026-09-25", "2026-10-09")`, expect: null },
+    ],
+    hints: [
+      '주석에는 "오늘은 아직 다 안 먹었으니 뺌"이라고 되어 있어요. filter 조건은 오늘을 빼고 있나요?',
+      'd <= today 는 오늘을 넣어요. d < today 로.',
+    ],
+    explain: '기간의 양 끝(start와 today)을 넣을지 뺄지가 "경계" 문제예요. 오늘은 하루가 안 끝나서 칼로리가 적게 적혀 있으니 평균을 끌어내리고, 그러면 유지 칼로리(= 평균 섭취 − 체중 변화)도 같이 내려가요. 주석에 적은 규칙과 코드의 < / <= 가 같은지 확인하는 습관을 들이세요.',
+    python: 'Python은 start < d < today 처럼 이어 쓸 수 있지만, JS는 d > start && d < today 로 나눠 써야 해요. "YYYY-MM-DD" 글자 비교는 Python에서도 날짜 순서와 같아요.',
+    real: { kind: 'notes', text: 'v0.4 복습 노트 도감 "오늘 칼로리를 평균에 포함 → 평균↓ → 유지 칼로리↓ (d < today)"에 있던 버그예요. 실제 nutrition.js maintenanceInfo는 d < today로 맞아요.' },
+  },
+  {
+    id: 'parse-date', level: 2, cat: 'boundary',
+    title: '오전에 가져온 오늘 메모가 작년 기록이 돼요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/import.js', fn: 'parseDate' },
+    story: '오전 9시에 "가슴 10/31" 메모를 가져왔더니 2025년 10월 31일로 들어갔어요. 오후에 해 보면 멀쩡해요.',
+    tests: [
+      { name: '지난 날짜 (10/05, 10/31 오전)', run: `isoDay(parseDate("10/05", new Date(2026, 9, 31, 9)))`, expect: '2026-10-05' },
+      { name: '해 넘김 (12/31, 1/1 오전)', run: `isoDay(parseDate("12/31", new Date(2027, 0, 1, 9)))`, expect: '2026-12-31' },
+      { name: '오늘 날짜, 오전 9시', run: `isoDay(parseDate("10/31", new Date(2026, 9, 31, 9)))`, expect: '2026-10-31' },
+      { name: '오늘 날짜, 오후 3시', run: `isoDay(parseDate("10/31", new Date(2026, 9, 31, 15)))`, expect: '2026-10-31' },
+      { name: '내일 날짜 → 작년', run: `isoDay(parseDate("11/01", new Date(2026, 9, 31, 23)))`, expect: '2025-11-01' },
+    ],
+    hints: [
+      '메모 날짜는 정오(12시)로 만들어요. 지금이 오전 9시면, "오늘 12시"는 지금보다 뒤일까요 앞일까요?',
+      'd > today 는 시각까지 비교해요. 날짜만 비교하세요: if (isoDay(d) > isoDay(today)) …',
+    ],
+    explain: 'Date끼리 > 로 비교하면 날짜뿐 아니라 시·분·초까지 비교해요. 오늘 정오(12:00)는 오전 9시보다 "미래"라서, 오늘 메모가 "아직 안 온 날 → 작년"으로 처리됐어요. 날짜만 비교하고 싶으면 "YYYY-MM-DD" 글자로 바꿔서 비교하면 돼요. 오후에는 괜찮다는 게 결정적인 단서였어요(재현 조건!).',
+    python: 'Python datetime 비교도 시각까지 봐요. 날짜만 비교하려면 d.date() > today.date(). JS에는 .date()가 없어서 isoDay 같은 함수로 글자를 만들어 비교해요.',
+    real: { kind: 'live', text: '이 버그 코드는 실제 import.js parseDate와 같아요(v0.6-d 브랜치, 2026-11-01 확인). 오전에 그날 날짜가 적힌 메모를 가져오면 1년 전으로 들어가요. 내 손으로 고칠 후보예요 → "다음 단계" 참고.' },
+  },
+  {
+    id: 'leave-40h', level: 2, cat: 'offbyone',
+    title: '48시간 근무한 주인데 위로휴가가 0개래요',
+    source: { repo: 'timetable-ai', file: 'index.html', fn: 'weeklyHours · countLeave' },
+    story: '월 주간, 화 야간, 목 주간, 금 야간 = 48시간인데 위로휴가(40시간 이상인 주마다 1개)가 안 생겨요.',
+    tests: [
+      { name: '첫 주 48시간', run: `weeklyHours(["주", "야", "", "주", "야", "", "", "", "", "", "", "", "", ""])`, expect: [48, 0] },
+      { name: '7일 내리 주간', run: `weeklyHours(["주", "주", "주", "주", "주", "주", "주"])`, expect: [70] },
+      { name: '위로휴가 개수', run: `countLeave(weeklyHours(["주", "야", "", "주", "야", "", "", "", "", "", "", "", "", ""]))`, expect: 1 },
+      { name: '최대 3개', run: `countLeave([40, 39, 54, 48, 40])`, expect: 3 },
+    ],
+    hints: [
+      'i번째 날은 몇 번째 주일까요? i = 4(금요일)일 때 i / 7 = 0.57 이에요. 이걸 반올림하면?',
+      'Math.round(0.57)은 1이라 금요일이 다음 주로 가요. 몇 주째인지는 버림: Math.floor(i / 7).',
+    ],
+    explain: '"몇 번째 묶음인가"는 나눈 뒤 버림(floor)이에요. 0~6일 → 0주, 7~13일 → 1주. 반올림(round)을 쓰면 목·금·토(4~6일)가 다음 주로 넘어가고, 마지막 주는 없는 칸에 더해져 NaN이 돼요. 결과에 [40, NaN] 같은 게 보이면 칸 번호 계산을 의심하세요.',
+    python: 'Python의 i // 7 이 JS의 Math.floor(i / 7)이에요. JS에는 // 가 없어요 (JS에서 // 는 주석!).',
+    real: { kind: 'whatif', text: '실제 timetable-ai weeklyHours는 Math.floor(i / 7)로 맞아요. 위로휴가 규칙(40시간·주당 1개·기간 최대 3개)은 index.html 1011줄 countLeave 그대로예요.' },
+  },
+  {
+    id: 'backup-kst', level: 2, cat: 'boundary',
+    title: '아침에 받은 백업 파일 이름이 어제 날짜예요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/app.js', fn: 'downloadBackup (파일 이름)' },
+    story: '10월 31일 아침 8시 반에 백업을 받았는데 파일 이름이 iwbm-backup-2026-10-30.json이에요. 밤에 받으면 맞아요.',
+    tests: [
+      { name: '아침 8:30 (한국)', run: `backupName(new Date("2026-10-31T08:30:00+09:00"))`, expect: 'iwbm-backup-2026-10-31.json' },
+      { name: '밤 21:00 (한국)', run: `backupName(new Date("2026-10-31T21:00:00+09:00"))`, expect: 'iwbm-backup-2026-10-31.json' },
+      { name: '새해 0:05 (한국)', run: `backupName(new Date("2027-01-01T00:05:00+09:00"))`, expect: 'iwbm-backup-2027-01-01.json' },
+    ],
+    hints: [
+      'console.log(new Date("2026-10-31T08:30:00+09:00").toISOString()) 를 찍어 보세요. 끝의 Z는 무슨 뜻일까요?',
+      'toISOString()은 늘 세계 표준시(UTC, 한국보다 9시간 느림)로 적어요. 9시간을 더한 다음 자르세요: new Date(now.getTime() + 9 * 60 * 60 * 1000).',
+    ],
+    explain: 'toISOString()의 끝 Z는 "UTC 기준"이라는 표시예요. 한국 00:00~08:59는 UTC로는 아직 전날이라 날짜가 하루 밀려요. 자정 근처, 새해 첫날 같은 "경계 시각"으로 시험해야 보이는 버그예요. 진짜 앱에서는 폰 시간대를 쓰는 isoDay(new Date())(nutrition.js)로 바꾸면 돼요.',
+    python: 'Python datetime.utcnow().date()와 datetime.now().date()의 차이와 같아요. 한국에서는 오전 9시 전에만 둘이 달라요.',
+    real: { kind: 'live', text: 'app.js downloadBackup이 지금 new Date().toISOString().slice(0, 10)으로 파일 이름을 만들어요(v0.6-d 브랜치, 2026-11-01 확인). ai-yearend period.js 맨 위 주석 "그대로 쓰면 한국 시각과 9시간 어긋납니다"도 같은 이야기예요.' },
+  },
+  {
+    id: 'restore-myfoods', level: 3, cat: 'sync',
+    title: '백업을 되살렸더니 "내 음식"이 다 없어졌어요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/app.js', fn: 'restoreBackup' },
+    story: '폰을 바꾸고 백업 파일로 기록을 되살렸어요. 운동·체중·식사는 다 왔는데, 직접 등록한 "내 음식"이 하나도 없어요.',
+    tests: [
+      { name: '내 음식이 돌아오나', run: `Object.keys(restoreFrom(backup).myFoods)`, expect: ['닭가슴살 스테이크'] },
+      { name: '되살린 내 음식도 다시 올리기', run: `restoreFrom(backup).myFoodsDirty`, expect: true },
+      { name: '옛 백업(내 음식 칸 없음)', run: `restoreFrom({ workouts: [] }).myFoods`, expect: {} },
+      { name: '운동은 다시 올리기', run: `restoreFrom(backup).workouts[0].synced`, expect: false },
+    ],
+    hints: [
+      'restoreFrom이 새 data를 만들 때 백업에서 옮겨 담는 칸을 하나씩 세어 보세요. EMPTY_EXTRAS의 칸과 비교하면 빠진 게 보여요.',
+      'myFoods를 안 옮겨서 EMPTY_EXTRAS의 빈 {}가 그대로 남아요. custom처럼 두 칸을 더하세요: myFoods: restored.myFoods || {}, myFoodsDirty: true',
+    ],
+    explain: '칸을 하나하나 골라 옮기는 코드는 나중에 새 칸(v0.6-a의 myFoods)이 생기면 같이 고쳐야 해요. 안 고치면 에러 없이 그 칸만 조용히 사라져요. 새 칸을 만들 때는 "이 칸을 저장·불러오기·백업·되살리기·올리기·받기 하는 곳"을 모두 검색(Ctrl+F로 custom 같은 비슷한 칸 찾기)해 보는 게 좋아요.',
+    python: 'dict에서 필요한 키만 골라 새 dict를 만들 때 키 하나를 빠뜨리는 것과 같아요. {**EMPTY, "workouts": r["workouts"], ...} 처럼 쓰면 빠진 키는 빈 값으로 남아요.',
+    real: { kind: 'live', text: '지금 app.js restoreBackup에 myFoods가 빠져 있어요(v0.6-d 브랜치, 2026-11-01 확인). 버그 목록의 B2이고, 일부러 내 손으로 고치라고 Iwillbecomemonster docs/owner-fixes.md 1번에 남겨 둔 바로 그 버그예요. 여기서 먼저 연습하고 진짜 파일을 고쳐 보세요.' },
+  },
+  {
+    id: 'forget-await', level: 3, cat: 'async',
+    title: '인터넷이 끊겼는데 "동기화 완료"래요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/sync.js', fn: 'syncNow' },
+    story: '사지방 인터넷이 중간에 끊겼는데 앱은 "동기화 완료"라고 하고, 그 운동은 다시는 안 올라가요.',
+    tests: [
+      { name: '다 성공할 때', run: `(async () => { const ws = [{ id: "a" }, { id: "b" }]; const status = await syncAll(ws, fakeUpload); return [status, ws.map(w => w.synced)]; })()`, expect: ['동기화 완료', [true, true]] },
+      { name: '두 번째에서 끊길 때', run: `(async () => { const ws = [{ id: "a" }, { id: "b", bad: true }, { id: "c" }]; const status = await syncAll(ws, fakeUpload); return [status, ws.map(w => !!w.synced)]; })()`, expect: ['동기화 실패 — 인터넷 끊김', [true, false, false]] },
+      { name: '하나씩 순서대로', run: `(async () => { const log = []; const slow = w => new Promise(r => setTimeout(() => { log.push(w.id); r(); }, w.id === "a" ? 40 : 5)); await syncAll([{ id: "a" }, { id: "b" }], slow); return log; })()`, expect: ['a', 'b'] },
+    ],
+    hints: [
+      'upload(w)는 바로 답이 오지 않고 "나중에 답할게"(Promise)를 돌려줘요. 다음 줄은 답을 기다릴까요?',
+      'upload(w) 앞에 await를 붙이세요. 그래야 실패가 catch로 오고, 성공한 뒤에만 synced = true가 돼요.',
+    ],
+    explain: 'await 없이 부르면 "보내기만 하고" 바로 다음 줄로 가요. 그래서 실패하기 전에 synced = true가 되고 "완료"를 돌려줘요. 나중에 도착한 실패는 아무도 받지 않아서 콘솔에 "처리 안 된 Promise 에러"로만 남아요(아래 콘솔 칸을 보세요). async 함수 안에서 인터넷·저장 함수를 부를 때는 await를 먼저 의심하세요.',
+    python: 'Python asyncio에서 await upload(w) 대신 upload(w)만 쓰면 "coroutine was never awaited" 경고가 나요. JS는 경고도 없이 그냥 지나가요.',
+    real: { kind: 'notes', text: '실제 sync.js syncNow는 await uploadWorkout(w) 후에 w.synced = true; save(); 로 하나씩 저장해요. 복습 노트 Q5-5 "5번째에서 끊기면?"의 답이 이 순서 덕분이에요.' },
+  },
+  {
+    id: 'meal-sync', level: 3, cat: 'sync',
+    title: '폰에서 고친 칼로리가 PC에는 안 바뀌어요',
+    source: { repo: 'Iwillbecomemonster', file: 'app/nutrition.js', fn: 'syncNutrition (받기)' },
+    story: '폰에서 현미밥을 300 → 450kcal로 고쳤어요. 동기화는 성공했는데, 사지방 PC에서 열면 계속 300kcal예요.',
+    tests: [
+      { name: '인터넷에만 있음 → 추가', run: `mergeMeals([], [{ id: "f1", food: "현미밥", kcal: 300 }])`, expect: [{ id: 'f1', food: '현미밥', kcal: 300, synced: true }] },
+      { name: '다른 기기에서 고친 것 받기', run: `mergeMeals([{ id: "f1", food: "현미밥", kcal: 300, synced: true }], [{ id: "f1", food: "현미밥", kcal: 450 }])[0].kcal`, expect: 450 },
+      { name: '안 올린 내 수정은 지키기', run: `mergeMeals([{ id: "f1", kcal: 200, synced: false }], [{ id: "f1", kcal: 450 }])[0].kcal`, expect: 200 },
+      { name: '다른 기기에서 지운 것', run: `mergeMeals([{ id: "f1", kcal: 300, synced: true }, { id: "f2", kcal: 100, synced: false }], []).map(m => m.id)`, expect: ['f2'] },
+      { name: '겹치지 않게 2개', run: `mergeMeals([{ id: "f1", kcal: 300, synced: true }], [{ id: "f1", kcal: 450 }, { id: "f2", kcal: 100 }]).length`, expect: 2 },
+    ],
+    hints: [
+      '규칙 ②를 코드에서 찾아보세요. id가 이미 폰에 있으면 무엇을 하나요?',
+      'if (localIds.has(r.id)) continue; 가 "있으면 무조건 건너뛰기"라서 다른 기기의 수정을 버려요. 폰 것이 synced: true일 때는 인터넷 것으로 바꿔야 해요. (같은 파일의 체중 받기 코드가 이미 if (!local || local.synced)로 그렇게 해요.)',
+    ],
+    explain: '"이미 있으면 건너뛰기"는 새 기록만 있을 때는 맞지만, 기록을 고칠 수 있게 되는 순간(v0.6-a 식사 수정) 틀려져요. 받기 규칙은 세 경우로 나눠요: 없음 → 추가 / 있음 + 이미 올림 → 인터넷 것 / 있음 + 아직 안 올림 → 내 것. 기능을 추가하면 예전 규칙이 여전히 맞는지 다시 물어봐야 해요.',
+    python: 'dict로 생각하면 local.update(remote)는 무조건 덮어쓰기, if k not in local: local[k] = v 는 무조건 건너뛰기예요. 맞는 답은 그 사이: 아직 안 올린(synced False) 것만 지키기.',
+    real: { kind: 'fixed', text: 'v0.6-a(식사 수정 기능)부터 nutrition.js 받기 코드가 if (localIds.has(r.id)) continue; 였어요. v0.6-d 커밋 71b416c "B1: 다른 기기에서 고친 식사 · 운동이 이 폰에도 반영되게"에서 정답과 같은 규칙(synced면 인터넷 값, 아니면 폰 값)으로 고쳤어요. 진짜 코드는 방금 올린 것(justUploaded)도 같이 지켜요.' },
+  },
+];
+
+// ===================== 이름표 =====================
+const CATS = {
+  syntax: '문법 에러 (쉼표)', compare: '비교 연산자', type: '글자 vs 숫자', json: 'JSON 저장', offbyone: '하나 차이 (off-by-one)',
+  nullish: '0과 null (|| 와 ??)', nan: 'NaN · Infinity', sort: '정렬 비교 함수', loop: '무한 반복', mutation: '같은 객체 (참조)',
+  scope: '이름 가림 (scope)', id: '같은 시각 id 충돌', regex: '정규식 오탐', boundary: '경계 (오늘 · 자정 · 12/31)',
+  async: 'await 빠뜨림', sync: '데이터 동기화 · 빠뜨린 칸',
+};
+const REAL_KIND = { fixed: '실제 사건 (이미 고침)', live: '지금 앱 코드에 있음', notes: '내 복습 노트·실제 코드에 나온 것', whatif: '가상 — 이렇게 고치면 생기는 버그' };
+const STARS = n => '★'.repeat(n) + '☆'.repeat(3 - n);
+const TIME_LIMIT = 2000;   // 테스트 하나가 이보다 오래 걸리면 무한 반복으로 보고 멈춤 (ms)
+
+// 문제 코드 붙이기 (위의 <script type="text/plain"> 덩어리들)
+function readPart(id, part) {
+  const el = document.querySelector(`script[data-ex="${id}"][data-part="${part}"]`);
+  return el ? el.textContent.replace(/^\n/, '').replace(/\s+$/, '') : '';
+}
+EXERCISES.forEach((ex, i) => {
+  ex.no = i + 1;
+  ex.bug = readPart(ex.id, 'bug');
+  ex.fix = readPart(ex.id, 'fix');
+  ex.prelude = readPart(ex.id, 'prelude');
+});
+const byId = id => EXERCISES.find(e => e.id === id);
+
+// ===================== 값 보여 주기 · 같은지 비교 (워커 안에서도 씀) =====================
+function dojoFmt(v, quote, depth) {
+  depth = depth || 0;
+  if (typeof v === 'string') return quote ? JSON.stringify(v) : v;
+  if (v === undefined) return 'undefined';
+  if (v === null) return 'null';
+  if (typeof v === 'number') return Object.is(v, -0) ? '0' : String(v);
+  if (typeof v === 'bigint') return v + 'n';
+  if (typeof v === 'function') return 'ƒ ' + (v.name || '(이름 없는 함수)');
+  if (typeof v !== 'object') return String(v);
+  if (depth > 4) return '…';
+  if (v instanceof Date) return isNaN(v) ? 'Invalid Date' : 'Date(' + v.toISOString() + ')';
+  if (v instanceof Error) return v.name + ': ' + v.message;
+  if (v instanceof RegExp) return String(v);
+  if (typeof Promise !== 'undefined' && v instanceof Promise) return 'Promise { … }';
+  if (v instanceof Set) return 'Set(' + v.size + ') ' + dojoFmt([...v], true, depth + 1);
+  if (v instanceof Map) return 'Map(' + v.size + ') {' + [...v].map(([k, x]) => dojoFmt(k, true, depth + 1) + ' => ' + dojoFmt(x, true, depth + 1)).join(', ') + '}';
+  if (Array.isArray(v)) return '[' + v.map(x => dojoFmt(x, true, depth + 1)).join(', ') + ']';
+  const keys = Object.keys(v);
+  if (!keys.length) return '{}';
+  return '{ ' + keys.map(k => (/^[A-Za-z_$][\w$]*$/.test(k) ? k : JSON.stringify(k)) + ': ' + dojoFmt(v[k], true, depth + 1)).join(', ') + ' }';
+}
+function dojoSame(a, b) {
+  if (a === b) return true;
+  if (typeof a === 'number' && typeof b === 'number') return a !== a && b !== b;   // NaN끼리는 같다고 봄
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (a instanceof Date || b instanceof Date) return a instanceof Date && b instanceof Date && a.getTime() === b.getTime();
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const ka = Object.keys(a), kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  return ka.every(k => Object.prototype.hasOwnProperty.call(b, k) && dojoSame(a[k], b[k]));
+}
+
+// ===================== 테스트 돌리기 =====================
+// job = { prelude, code, tests: [{ run, expect }] }.  테스트마다 코드를 처음부터 새로 실행해서 서로 영향을 안 줌.
+// emit({ type: 'test', i, pass, actual, error, syntax, logs }) · emit({ type: 'log', text }) · emit({ type: 'done' })
+// 보안 메모: new Function + eval은 일부러 쓴 것이에요. 이 페이지의 목적이 "내가 고친 코드를 내 브라우저에서 실행"이라서요.
+// 코드는 사용자 본인이 쓴 것이고, 인터넷으로 보내지 않으며, 가능하면 페이지와 떨어진 워커(일꾼)에서 돌려요.
+async function runSuite(job, emit) {
+  let make;
+  try {
+    make = new Function('console', job.prelude + '\n' + job.code + '\n;return function (__expr) { return eval(__expr); };');
+  } catch (err) {
+    const msg = (err && err.name ? err.name + ': ' + err.message : String(err));
+    job.tests.forEach((t, i) => emit({ type: 'test', i, pass: false, actual: null, error: msg, syntax: true, logs: [] }));
+    emit({ type: 'done' });
+    return;
+  }
+  for (let i = 0; i < job.tests.length; i++) {
+    const t = job.tests[i];
+    const logs = [];
+    let sent = false;
+    const say = mark => (...args) => {
+      const text = (mark ? mark + ' ' : '') + args.map(a => dojoFmt(a, false)).join(' ');
+      if (sent) emit({ type: 'log', text: '[테스트 ' + (i + 1) + ' 뒤에 늦게 찍힘] ' + text }); else logs.push(text);
+    };
+    const con = { log: say(''), info: say(''), debug: say(''), table: say(''), warn: say('⚠️'), error: say('❗') };
+    let actual, error = null;
+    try {
+      const ev = make(con);
+      actual = await ev(t.run);
+    } catch (err) {
+      error = (err && err.name ? err.name + ': ' + err.message : String(err));
+    }
+    await new Promise(r => setTimeout(r, 5));
+    const pass = !error && dojoSame(actual, t.expect);
+    sent = true;
+    emit({ type: 'test', i, pass, actual: error ? null : dojoFmt(actual, true), error, syntax: false, logs });
+  }
+  emit({ type: 'done' });
+}
+
+let workerURL = null;
+let runMode = 'worker';   // 'worker' = 따로 떨어진 일꾼(시간 초과 보호 있음) · 'inline' = 이 페이지 안 (보호 없음)
+function newWorker() {
+  if (!workerURL) {
+    const src = [dojoFmt, dojoSame, runSuite].map(f => f.toString()).join('\n') + `
+self.addEventListener('unhandledrejection', e => { e.preventDefault(); const r = e.reason;
+  self.postMessage({ type: 'log', text: '❗ 처리 안 된 Promise 에러: ' + (r && r.message ? r.message : String(r)) }); });
+self.onmessage = e => { runSuite(e.data, m => self.postMessage(m)); };`;
+    workerURL = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+  }
+  return new Worker(workerURL);
+}
+window.addEventListener('unhandledrejection', e => {
+  if (runMode !== 'inline' || !inlineLate) return;
+  e.preventDefault();
+  const r = e.reason;
+  inlineLate('❗ 처리 안 된 Promise 에러: ' + (r && r.message ? r.message : String(r)));
+});
+let inlineLate = null;
+
+// 코드 + 문제 → Promise<{ results, allPass, mode }>.  onTest(i, result) · onLate(text)는 화면을 바로바로 고치는 데 씀
+function runCode(ex, code, onTest, onLate) {
+  const job = { prelude: ex.prelude, code, tests: ex.tests.map(t => ({ run: t.run, expect: t.expect })) };
+  return new Promise(resolve => {
+    const results = ex.tests.map(() => null);
+    let done = false, timer = null, worker = null, heard = false;
+    const finish = mode => {
+      if (done) return;
+      done = true; clearTimeout(timer);
+      resolve({ results, allPass: results.every(r => r && r.pass), mode });
+      if (worker) { const w = worker; setTimeout(() => w.terminate(), 400); }
+    };
+    const handle = (m, mode) => {
+      heard = true;
+      if (m.type === 'test') { results[m.i] = m; if (onTest) onTest(m.i, m); arm(); }
+      else if (m.type === 'log') { if (onLate) onLate(m.text); }
+      else if (m.type === 'done') finish(mode);
+    };
+    const arm = () => {
+      clearTimeout(timer);
+      if (!worker) return;
+      timer = setTimeout(() => {
+        worker.terminate(); worker = null;
+        for (let i = 0; i < results.length; i++) {
+          if (results[i]) continue;
+          results[i] = { type: 'test', i, pass: false, timeout: true, actual: null, logs: [],
+            error: '⏱ ' + (TIME_LIMIT / 1000) + '초 안에 끝나지 않아서 멈췄어요 — 무한 반복일 수 있어요' };
+          if (onTest) onTest(i, results[i]);
+        }
+        finish('worker');
+      }, TIME_LIMIT);
+    };
+    const inline = () => {
+      runMode = 'inline';
+      worker = null;
+      inlineLate = onLate;
+      runSuite(job, m => handle(m, 'inline'));
+    };
+    if (runMode === 'inline' || typeof Worker === 'undefined') return inline();
+    try {
+      worker = newWorker();
+    } catch (e) { return inline(); }
+    worker.onmessage = e => handle(e.data, 'worker');
+    worker.onerror = e => {
+      if (heard) return;
+      e.preventDefault();
+      try { worker.terminate(); } catch (_) {}
+      inline();
+    };
+    worker.postMessage(job);
+    arm();
+  });
+}
+
+// ===================== 줄 비교 (정답 보기) =====================
+function lineDiff(a, b) {
+  const n = a.length, m = b.length;
+  const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
+    dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const out = [];
+  let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) { out.push({ t: ' ', s: a[i], ai: i }); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { out.push({ t: '-', s: a[i], ai: i }); i++; }
+    else { out.push({ t: '+', s: b[j], at: i }); j++; }
+  }
+  while (i < n) { out.push({ t: '-', s: a[i], ai: i }); i++; }
+  while (j < m) { out.push({ t: '+', s: b[j], at: i }); j++; }
+  return out;
+}
+// 고친 곳(버그 코드 기준 줄 번호). 지운 줄이 없으면 "이 줄 앞에 추가"한 줄 번호
+function bugLines(ex) {
+  const d = lineDiff(ex.bug.split('\n'), ex.fix.split('\n'));
+  const removed = d.filter(x => x.t === '-').map(x => x.ai + 1);
+  if (removed.length) return { lines: removed, insertOnly: false };
+  const added = d.filter(x => x.t === '+').map(x => x.at + 1);
+  return { lines: [...new Set(added)], insertOnly: true };
+}
+function diffHtml(ex) {
+  const d = lineDiff(ex.bug.split('\n'), ex.fix.split('\n'));
+  const keep = d.map((x, k) => x.t !== ' ' || [-1, 1].some(o => d[k + o] && d[k + o].t !== ' '));
+  let html = '', skipped = false;
+  d.forEach((x, k) => {
+    if (!keep[k]) { if (!skipped) html += '<div class="gap">  …</div>'; skipped = true; return; }
+    skipped = false;
+    const no = x.t === '+' ? '   ' : String(x.ai + 1).padStart(3, ' ');
+    const cls = x.t === '-' ? 'del' : x.t === '+' ? 'add' : '';
+    html += `<div class="${cls}">${x.t} ${no}  ${esc(x.s)}</div>`;
+  });
+  return html;
+}
+
+// ===================== 저장 (localStorage가 막혀도 동작) =====================
+const STORE_KEY = 'debug-dojo-v1';
+let canSave = true;
+function emptyState() {
+  return { v: 1, solved: {}, drafts: {}, predictions: {}, hints: {}, notes: {}, runs: {}, score: 0,
+    streak: { last: null, count: 0 }, today: null, myBugs: [], theme: 'auto' };
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    const s = raw ? JSON.parse(raw) : null;
+    if (s && typeof s === 'object') return Object.assign(emptyState(), s);
+  } catch (e) { canSave = false; }
+  return emptyState();
+}
+function saveState() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); canSave = true; }
+  catch (e) { canSave = false; }
+}
+let state = loadState();
+
+// 폰·PC 시간 기준 "YYYY-MM-DD" (toISOString은 UTC라 쓰지 않아요 — 22번 문제!)
+function localDay(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function dayBefore(day) {
+  const d = new Date(day + 'T12:00:00'); d.setDate(d.getDate() - 1); return localDay(d);
+}
+function currentStreak() {
+  const s = state.streak, today = localDay();
+  return s.last === today || s.last === dayBefore(today) ? s.count : 0;
+}
+function pointsFor(ex) {
+  const h = state.hints[ex.id] || 0;
+  let p = ex.level * 10 - Math.min(h, 2) * 3;
+  if (h >= 3) p = Math.ceil(p / 2);
+  return Math.max(p, 2);
+}
+function markSolved(ex) {
+  if (state.solved[ex.id]) return false;
+  const today = localDay();
+  const pts = pointsFor(ex);
+  state.solved[ex.id] = { at: today, points: pts, hints: state.hints[ex.id] || 0, runs: state.runs[ex.id] || 1 };
+  state.score += pts;
+  const s = state.streak;
+  if (s.last !== today) { s.count = s.last === dayBefore(today) ? s.count + 1 : 1; s.last = today; }
+  saveState();
+  return true;
+}
+function todayPick() {
+  const today = localDay();
+  if (state.today && state.today.date === today && byId(state.today.id)) return byId(state.today.id);
+  let ex = EXERCISES.find(e => !state.solved[e.id]);
+  if (!ex) {   // 다 풀었으면 복습: 날짜로 돌아가며 하나
+    const n = Number(today.replace(/-/g, '')) % EXERCISES.length;
+    ex = EXERCISES[n];
+  }
+  state.today = { date: today, id: ex.id };
+  saveState();
+  return ex;
+}
+
+// ===================== 화면 도우미 =====================
+const app = document.getElementById('app');
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+const srcText = s => `${s.repo}/${s.file}`;
+function setTab(name) {
+  document.querySelectorAll('nav.tabs a').forEach(a => {
+    if (a.dataset.tab === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  });
+}
+function saveBanner() {
+  return canSave ? '' : `<p class="notice small">이 브라우저에서는 기록 저장이 막혀 있어요. 풀이는 그대로 되지만 창을 닫으면 사라져요. <a href="#dex">내 도감</a> 아래 "진행 기록 옮기기"로 백업할 수 있어요.</p>`;
+}
+function itemHtml(ex) {
+  const done = state.solved[ex.id];
+  return `<a class="item ${done ? 'solved' : ''}" href="#ex/${ex.id}">
+    <span class="no" aria-hidden="true">${done ? '✓' : ex.no}</span>
+    <span class="t"><b>${ex.no}. ${esc(ex.title)}</b><span>${STARS(ex.level)} · ${esc(CATS[ex.cat])} · ${esc(ex.source.repo)}</span></span>
+    ${done ? '<span class="sr-only" style="position:absolute;left:-9999px">푼 문제</span>' : ''}
+  </a>`;
+}
+
+// ===================== 홈 =====================
+function homeView() {
+  setTab('home');
+  const solved = EXERCISES.filter(e => state.solved[e.id]).length;
+  const pick = todayPick();
+  const groups = [1, 2, 3].map(lv => {
+    const items = EXERCISES.filter(e => e.level === lv);
+    const label = lv === 1 ? '★ 한 줄만 고치면 돼요' : lv === 2 ? '★★ 읽고 원인을 찾아요' : '★★★ 흐름 전체를 봐요';
+    return `<h2>${label} <span class="muted small">(${items.filter(e => state.solved[e.id]).length}/${items.length})</span></h2>
+      <div class="list">${items.map(itemHtml).join('')}</div>`;
+  }).join('');
+  app.innerHTML = `
+    ${saveBanner()}
+    <h1>디버깅 도장</h1>
+    <p class="muted">내 진짜 코드(운동 앱 · 결산 · 근무표 · 런처)에서 꺼낸 버그 ${EXERCISES.length}개예요. 하루 10분, 한 문제씩 <b>① 예상 → ② 실행 → ③ 비교</b>.</p>
+    <div class="stats">
+      <div class="stat"><b>${solved}<small class="muted">/${EXERCISES.length}</small></b><span>푼 문제</span></div>
+      <div class="stat"><b>${esc(state.score)}</b><span>점수</span></div>
+      <div class="stat"><b>${esc(currentStreak())}일</b><span>연속</span></div>
+    </div>
+    <div class="card">
+      <p class="muted small" style="margin:0">오늘의 1문제</p>
+      <p style="margin:4px 0 10px"><b>${pick.no}. ${esc(pick.title)}</b><br><span class="muted small">${STARS(pick.level)} · ${esc(CATS[pick.cat])}${state.solved[pick.id] ? ' · 복습' : ''}</span></p>
+      <a class="btn primary" href="#today">오늘의 1문제 풀기</a>
+    </div>
+    <div class="card">
+      <h3>하루 10분 루틴</h3>
+      <ol class="small" style="padding-left:20px;margin:0">
+        <li><b>1분</b> 상황 읽기 · 테스트 목록 보기</li>
+        <li><b>2분</b> ① 예상: "무엇이 나올까?" "몇 번째 줄이 범인일까?" 적기</li>
+        <li><b>4분</b> ② 실행 → 한 번에 한 곳만 고치고 다시 실행 (막히면 힌트 1 → 2)</li>
+        <li><b>2분</b> ③ 비교: 예상과 무엇이 달랐는지, 내 말로 한 줄 → 도감에 저장</li>
+        <li><b>1분</b> (PC라면) F12를 열어 같은 코드를 콘솔에서 만져 보기</li>
+      </ol>
+      <p class="small muted">처음이라면 <a href="#steps">디버깅 5단계와 F12 쓰는 법</a>을 먼저 3분만 읽어 보세요.</p>
+    </div>
+    ${groups}
+  `;
+}
+
+// ===================== 문제 화면 =====================
+let current = null;   // { ex, running }
+function exView(id, isToday) {
+  const ex = byId(id);
+  if (!ex) { location.hash = '#home'; return; }
+  setTab(isToday ? 'today' : 'home');
+  current = { ex, running: false };
+  const code = state.drafts[id] != null ? state.drafts[id] : ex.bug;
+  const pred = state.predictions[id] || { text: '', line: '' };
+  const hints = state.hints[id] || 0;
+  const done = state.solved[id];
+  const prev = EXERCISES[ex.no - 2], next = EXERCISES[ex.no];
+  app.innerHTML = `
+    ${saveBanner()}
+    ${isToday ? `<p class="banner small">📅 오늘의 1문제 (${localDay()})${done ? ' — 이미 푼 문제라 복습이에요. 예상부터 다시 해 보세요.' : ''}</p>` : ''}
+    <p class="muted small" style="margin:0">문제 ${ex.no} / ${EXERCISES.length} ${done ? '· <span class="solvedmark">해결</span>' : ''}</p>
+    <h1>${esc(ex.title)}</h1>
+    <div class="chips">
+      <span class="chip level" title="난이도">${STARS(ex.level)}</span>
+      <span class="chip">${esc(CATS[ex.cat])}</span>
+      <span class="chip src" title="출처">📁 ${esc(srcText(ex.source))} · ${esc(ex.source.fn)}</span>
+    </div>
+    <p class="story">${esc(ex.story)}</p>
+
+    <section class="card step" aria-labelledby="h-predict">
+      <h3 id="h-predict"><span class="n">①</span> 예상하기 <span class="muted small">(실행 전에!)</span></h3>
+      <label class="f" for="pred-text">실행하면 어떤 결과가 나올까요? 어느 테스트가 왜 틀릴까요?</label>
+      <textarea class="plain" id="pred-text" placeholder="예: 테스트 2가 틀릴 것 같다. ○○가 □□로 나와서."></textarea>
+      <div class="row" style="margin-top:8px">
+        <label class="f" for="pred-line" style="margin:0">Q. 고칠 곳 찾기 — 몇 번째 줄?</label>
+        <input class="plain line" id="pred-line" type="number" inputmode="numeric" min="1" max="${ex.bug.split('\n').length}" placeholder="줄">
+      </div>
+    </section>
+
+    <section aria-labelledby="h-code">
+      <h2 id="h-code" style="margin-top:20px">코드 <span class="muted small">— 직접 고쳐 보세요</span></h2>
+      ${ex.prelude ? `<details><summary>테스트가 쓰는 준비 코드 보기 (고치지 않아도 돼요)</summary><pre class="prelude mono">${esc(ex.prelude)}</pre></details>` : ''}
+      <div class="editor">
+        <pre class="gutter mono" aria-hidden="true" id="gutter"></pre>
+        <textarea class="code" id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-label="고칠 코드 (Tab = 공백 2칸, Esc 뒤 Tab = 다음 칸으로)"></textarea>
+      </div>
+      <p class="kbd">Tab = 공백 2칸 · Esc 누른 뒤 Tab = 다음 칸으로 · Ctrl+Enter = 실행</p>
+      <div class="row">
+        <button class="primary grow" id="run" type="button">② 실행</button>
+        <button id="reset" type="button">처음 코드로</button>
+      </div>
+      <p class="small muted" id="pred-need" hidden>먼저 ① 예상하기 칸에 한 줄이라도 적어 주세요. 예상이 있어야 비교할 수 있어요.</p>
+    </section>
+
+    <section aria-labelledby="h-tests">
+      <h2 id="h-tests">테스트 <span class="muted small">${ex.tests.length}개</span></h2>
+      <p class="summary" id="summary" aria-live="polite"></p>
+      <ol class="tests" id="tests"></ol>
+      <details id="con-wrap"><summary>console.log 출력</summary><div class="console mono" id="console">아직 실행 전이에요. 코드에 console.log(값)을 넣고 실행하면 여기에 보여요.</div></details>
+    </section>
+
+    <section class="card step" id="compare" hidden aria-labelledby="h-compare">
+      <h3 id="h-compare"><span class="n">③</span> 비교하기</h3>
+      <div id="compare-body"></div>
+      <label class="f" for="note">이 버그를 내 말로 한 줄 (내 도감에 저장돼요)</label>
+      <textarea class="plain" id="note" placeholder="예: 경계값(딱 8회)에서 > 와 >= 가 갈린다. 비슷한 두 줄은 나란히 놓고 비교하기."></textarea>
+    </section>
+
+    <section aria-labelledby="h-hints">
+      <h2 id="h-hints">막히면 힌트 사다리</h2>
+      <div id="hints"></div>
+      <div class="row" id="hint-btns"></div>
+    </section>
+
+    <h2>Python으로 치면</h2>
+    <div class="py">${esc(ex.python)}</div>
+
+    <h2>이 버그가 실제로 일어났던 곳</h2>
+    <div class="real"><p class="k" style="margin:0 0 4px">${esc(REAL_KIND[ex.real.kind])}</p><p style="margin:0">${esc(ex.real.text)}</p>
+      <p class="small muted" style="margin:6px 0 0">출처: ${esc(srcText(ex.source))} · ${esc(ex.source.fn)} (짧게 줄이고 혼자 돌아가게 바꿨어요)</p></div>
+
+    <div class="pager">
+      ${prev ? `<a class="btn" href="#ex/${prev.id}">← ${prev.no}번</a>` : '<span></span>'}
+      ${next ? `<a class="btn" href="#ex/${next.id}">${next.no}번 →</a>` : '<a class="btn" href="#dex">내 도감 →</a>'}
+    </div>
+  `;
+
+  // 예상 칸
+  const predText = document.getElementById('pred-text'), predLine = document.getElementById('pred-line');
+  predText.value = pred.text || ''; predLine.value = pred.line || '';
+  const savePred = () => { state.predictions[id] = { text: predText.value, line: predLine.value }; saveState(); };
+  predText.addEventListener('input', savePred); predLine.addEventListener('input', savePred);
+
+  // 편집기
+  const ta = document.getElementById('code'), gutter = document.getElementById('gutter');
+  ta.value = code;
+  const fit = () => {
+    const n = ta.value.split('\n').length;
+    gutter.textContent = Array.from({ length: n }, (_, k) => k + 1).join('\n');
+    ta.style.height = (n * 21 + 24 + (ta.scrollWidth > ta.clientWidth ? 14 : 0)) + 'px';
+  };
+  fit();
+  let escPressed = false;
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { escPressed = true; return; }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doRun(); return; }
+    if (e.key === 'Tab' && !e.shiftKey && !escPressed) {
+      e.preventDefault();
+      const s = ta.selectionStart, en = ta.selectionEnd;
+      ta.setRangeText('  ', s, en, 'end');
+      ta.dispatchEvent(new Event('input'));
+    }
+    if (e.key !== 'Escape') escPressed = false;
+  });
+  ta.addEventListener('input', () => { fit(); state.drafts[id] = ta.value; saveState(); });
+  document.getElementById('reset').addEventListener('click', () => {
+    if (ta.value !== ex.bug && !tapConfirm(document.getElementById('reset'), '처음 버그 코드로 돌릴까요?')) return;
+    ta.value = ex.bug; delete state.drafts[id]; saveState(); fit();
+  });
+
+  // 테스트 미리보기
+  renderTests(ex, null);
+  document.getElementById('run').addEventListener('click', doRun);
+
+  // 비교 · 메모
+  const note = document.getElementById('note');
+  note.value = state.notes[id] || '';
+  note.addEventListener('input', () => { state.notes[id] = note.value; saveState(); });
+  if (done) showCompare(ex, null);
+
+  renderHints(ex);
+}
+
+function renderTests(ex, results) {
+  const ol = document.getElementById('tests');
+  ol.innerHTML = ex.tests.map((t, i) => {
+    const r = results && results[i];
+    const status = !results ? '' : !r ? 'running' : r.pass ? 'pass' : 'fail';
+    const icon = !results ? '◻️' : !r ? '⏳' : r.pass ? '✅' : '❌';
+    const actual = !r ? '' : r.error ? `<span>실제</span><code class="mono">${esc(r.error)}</code>` : `<span>실제</span><code class="mono">${esc(r.actual)}</code>`;
+    return `<li class="${status === 'running' ? '' : status}" id="test-${i}">
+      <div class="head"><span aria-hidden="true">${icon}</span><span>${i + 1}. ${esc(t.name)}</span><span class="sr-only" style="position:absolute;left:-9999px">${status === 'pass' ? '통과' : status === 'fail' ? '실패' : ''}</span></div>
+      <code class="call mono">${esc(t.run)}</code>
+      <div class="kv"><span>기대</span><code class="mono">${esc(dojoFmt(t.expect, true))}</code>${actual}</div>
+    </li>`;
+  }).join('');
+}
+
+async function doRun() {
+  if (!current || current.running) return;
+  const ex = current.ex;
+  const predText = document.getElementById('pred-text');
+  const need = document.getElementById('pred-need');
+  if (predText.value.trim().length < 2) {
+    need.hidden = false;
+    predText.focus();
+    return;
+  }
+  need.hidden = true;
+  current.running = true;
+  const btn = document.getElementById('run');
+  btn.disabled = true; btn.textContent = '실행 중…';
+  state.runs[ex.id] = (state.runs[ex.id] || 0) + 1; saveState();
+  const code = document.getElementById('code').value;
+  const results = ex.tests.map(() => null);
+  renderTests(ex, results);
+  const conBox = document.getElementById('console');
+  const late = [];
+  conBox.textContent = '';
+  const out = await runCode(ex, code, (i, r) => { results[i] = r; renderTests(ex, results); },
+    text => { late.push(text); conBox.textContent += text + '\n'; document.getElementById('con-wrap').open = true; });
+  if (!document.body.contains(btn)) return;   // 그사이 다른 화면으로 감
+  // 콘솔
+  const lines = [];
+  out.results.forEach((r, i) => { if (r && r.logs && r.logs.length) r.logs.forEach(l => lines.push(`[테스트 ${i + 1}] ${l}`)); });
+  conBox.textContent = (lines.length || late.length) ? lines.concat(late).join('\n') + '\n' : '(찍힌 게 없어요. 궁금한 값이 있으면 코드에 console.log(값)을 넣어 보세요.)';
+  if (lines.length || late.length) document.getElementById('con-wrap').open = true;
+  if (out.mode === 'inline') conBox.textContent += '\n(이 브라우저에서는 무한 반복 보호 없이 페이지 안에서 실행했어요)';
+  // 요약
+  const passN = out.results.filter(r => r && r.pass).length;
+  const sum = document.getElementById('summary');
+  const syntax = out.results.some(r => r && r.syntax);
+  const timeout = out.results.some(r => r && r.timeout);
+  let firstSolve = false;
+  if (out.allPass) {
+    firstSolve = markSolved(ex);
+    sum.className = 'summary ok';
+    sum.textContent = `🎉 ${passN}/${ex.tests.length} 모두 통과!` + (firstSolve ? ` +${state.solved[ex.id].points}점` : '');
+  } else {
+    sum.className = 'summary bad';
+    sum.textContent = syntax ? '문법 에러 — 코드가 한 줄도 실행되지 않았어요. 진짜 페이지라면 화면이 하얘졌을 거예요.'
+      : timeout ? `⏱ 시간 초과 — ${passN}/${ex.tests.length} 통과. 끝나지 않는 반복이 있어요.`
+      : `${passN}/${ex.tests.length} 통과 — ❌ 테스트의 "기대"와 "실제"를 나란히 보세요.`;
+  }
+  showCompare(ex, out);
+  btn.disabled = false; btn.textContent = '② 다시 실행';
+  current.running = false;
+  if (firstSolve) renderHints(ex);
+}
+
+function showCompare(ex, out) {
+  const box = document.getElementById('compare'), body = document.getElementById('compare-body');
+  if (!box) return;
+  box.hidden = false;
+  const pred = state.predictions[ex.id] || {};
+  const solved = !!state.solved[ex.id];
+  let html = `<p class="small"><b>내 예상:</b> ${pred.text ? esc(pred.text) : '<span class="muted">(비어 있음)</span>'}</p>`;
+  if (out) {
+    const failed = out.results.map((r, i) => (r && !r.pass ? i + 1 : null)).filter(Boolean);
+    html += `<p class="small"><b>실제:</b> ${failed.length ? `테스트 ${failed.join(', ')}번이 틀렸어요.` : '모두 통과했어요.'}</p>`;
+  }
+  if (solved || (state.hints[ex.id] || 0) >= 3) {
+    const bl = bugLines(ex);
+    const guess = Number(pred.line);
+    const hit = guess && (bl.lines.includes(guess) || (bl.insertOnly && bl.lines.some(l => l - 1 === guess)));
+    html += `<p class="small"><b>고칠 곳:</b> 정답은 ${bl.lines.join(', ')}번째 줄${bl.insertOnly ? ' 근처에 한 줄 추가' : ''} · 내 예상 ${guess ? guess + '번째 줄 ' + (hit ? '✅' : '❌') : '(안 적음)'}</p>`;
+  }
+  html += `<ul class="small" style="padding-left:20px;margin:6px 0">
+    <li>예상과 같았나요? 다르면 <b>어느 순간</b>부터 갈렸나요?</li>
+    <li>${solved ? '내가 바꾼 건 정확히 몇 군데였나요? 한 군데만 바꿨나요?' : '이번에 바꾼 건 한 군데뿐인가요? 결과가 어떻게 달라졌나요?'}</li>
+    <li>이 버그를 처음부터 막으려면 어떤 테스트(경계값)가 있었으면 좋았을까요?</li>
+  </ul>`;
+  body.innerHTML = html;
+}
+
+function renderHints(ex) {
+  const level = state.hints[ex.id] || 0;
+  const box = document.getElementById('hints'), btns = document.getElementById('hint-btns');
+  if (!box) return;
+  let html = '';
+  if (level >= 1) html += `<div class="hint"><b>힌트 1 · 어디를 볼까</b><br>${esc(ex.hints[0])}</div>`;
+  if (level >= 2) html += `<div class="hint"><b>힌트 2 · 무엇이 틀렸나</b><br>${esc(ex.hints[1])}</div>`;
+  if (level >= 3 || state.solved[ex.id]) {
+    html += `<div class="card"><h3>${level >= 3 ? '정답' : '정답 비교 (푼 문제라 열어 둬요)'}</h3>
+      <p class="small muted">빨간 줄(-)이 버그 코드, 초록 줄(+)이 고친 코드예요. 숫자는 버그 코드의 줄 번호.</p>
+      <div class="diff mono">${diffHtml(ex)}</div>
+      <p>${esc(ex.explain)}</p>
+      ${level >= 3 && !state.solved[ex.id] ? '<p class="small muted">정답을 복사하지 말고, 편집기에서 내 손으로 고친 뒤 ② 실행으로 확인해 보세요. (정답을 본 문제는 점수가 반이에요)</p>' : ''}
+    </div>`;
+  }
+  box.innerHTML = html;
+  const labels = ['힌트 1 · 어디를 볼까', '힌트 2 · 무엇이 틀렸나', '정답 보기'];
+  btns.innerHTML = level < 3 && !state.solved[ex.id] ? `<button type="button" id="next-hint">${labels[level]}</button>` : '';
+  const b = document.getElementById('next-hint');
+  if (b) b.addEventListener('click', () => {
+    if (level === 2 && !tapConfirm(b, '정답을 볼까요?')) return;
+    state.hints[ex.id] = level + 1; saveState(); renderHints(ex);
+    if (level + 1 >= 3) showCompare(ex, null);
+  });
+}
+
+// ===================== 디버깅 5단계 · F12 =====================
+function stepsView() {
+  setTab('steps');
+  app.innerHTML = `
+    <h1>디버깅 5단계</h1>
+    <p class="muted">버그를 만났을 때 Claude에게 바로 "고쳐줘" 하기 전에, 이 순서를 한 번 돌아 보세요. 도장의 문제들도 이 순서로 풀어요.</p>
+    <ol class="steps5">
+      <li><h3>재현 — 언제나 똑같이 틀리게</h3>
+        <p>"가끔 이상해요"로는 못 고쳐요. <b>어느 화면에서 · 무엇을 눌렀고 · 무엇을 기대했고 · 무엇이 나왔나 · F12 콘솔 마지막 줄</b>을 적어요.</p>
+        <p class="small muted">예: "오전에 가져온 오늘 메모만 작년이 된다, 오후에는 괜찮다" (<a href="#ex/parse-date">20번</a>). 조건을 찾으면 반은 푼 거예요. 도장에서는 테스트가 재현이에요.</p></li>
+      <li><h3>범위 좁히기 — 어느 파일, 어느 함수, 어느 줄</h3>
+        <p>틀린 값이 <b>처음 생기는 곳</b>을 찾아요. 중간중간 <code>console.log(값)</code>을 넣어 "여기까지는 맞다 / 여기서부터 틀리다"를 반씩 나눠 가며 좁혀요.</p>
+        <p class="small muted">예: 총 벌점이 NaN이면 곱하기 네 개를 하나씩 찍어 봐요 (<a href="#ex/penalty-nan">9번</a>).</p></li>
+      <li><h3>가설 — "X 때문에 Y가 된다" 한 문장</h3>
+        <p>고치기 전에 원인을 한 문장으로 말해요. 도장의 <b>① 예상하기</b> 칸이 바로 이것이에요. 틀려도 괜찮아요. 틀린 가설이 다음 가설을 좁혀 줘요.</p></li>
+      <li><h3>한 가지만 바꾸기</h3>
+        <p>한 번에 <b>한 곳만</b> 고치고 바로 실행해요. 세 군데를 한꺼번에 바꾸면 무엇이 고쳤는지(또는 새로 망가뜨렸는지) 몰라요.</p></li>
+      <li><h3>확인 — 고친 것 + 원래 되던 것</h3>
+        <p>틀리던 테스트만이 아니라 <b>원래 되던 테스트도 전부</b> 다시 통과하는지 봐요. 그리고 내 말로 한 줄 적어 <a href="#dex">도감</a>에 남겨요. 같은 버그를 두 번째 만날 때 시간이 반으로 줄어요.</p></li>
+    </ol>
+
+    <h2>F12 개발자 도구 — 사지방에서 쓸 수 있는 유일한 디버거</h2>
+    <p class="muted">설치 없이 크롬·엣지에 이미 들어 있어요. 폰에는 없으니 PC에서 써요.</p>
+    <div class="card">
+      <h3>여는 법</h3>
+      <p><kbd>F12</kbd> 또는 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> · 콘솔로 바로: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd> · 페이지에서 오른쪽 클릭 → <b>검사</b>.</p>
+      <p class="small muted">사지방 PC 정책으로 막혀 있으면 이 도장의 "console.log 출력" 칸을 대신 써요.</p>
+    </div>
+    <div class="card">
+      <h3>Console 탭 — 에러 읽기와 값 찍기</h3>
+      <ul style="padding-left:20px;margin:0">
+        <li><b>빨간 줄 = 에러.</b> 맨 오른쪽 <code>config.js:12</code> 같은 글자를 누르면 그 파일의 그 줄로 가요. 화면이 하얘지면 콘솔부터 (<a href="#ex/config-comma">1번</a>).</li>
+        <li>에러 문장 읽는 법: <code>TypeError: Cannot read properties of undefined (reading 'some')</code> = "undefined에서 some을 꺼내려 했다" → 그 줄에서 <code>.some</code> 앞에 있는 게 undefined (<a href="#ex/shadow-data">15번</a>).</li>
+        <li>콘솔 칸에 코드를 바로 칠 수 있어요. 붙여넣기가 막히면 안내대로 <code>allow pasting</code>을 먼저 쳐요.</li>
+        <li><code>console.log("여기", 값)</code> — 글자를 같이 찍으면 어디서 찍혔는지 헷갈리지 않아요. 목록은 <code>console.table(목록)</code>이 보기 좋아요.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Sources 탭 — 중단점으로 한 줄씩</h3>
+      <ol style="padding-left:20px;margin:0">
+        <li><kbd>Ctrl</kbd>+<kbd>P</kbd>로 파일 이름(예: <code>app.js</code>)을 쳐서 열어요.</li>
+        <li>궁금한 줄의 <b>줄 번호를 클릭</b> → 파란 표시 = 중단점. 앱에서 그 버튼을 다시 누르면 거기서 멈춰요.</li>
+        <li>멈춘 상태에서 변수에 마우스를 올리면 값이 보여요. 오른쪽 <b>Scope</b>에 지금 있는 변수가 다 나와요.</li>
+        <li><kbd>F10</kbd> 한 줄 넘기기 · <kbd>F11</kbd> 함수 안으로 · <kbd>Shift</kbd>+<kbd>F11</kbd> 함수 밖으로 · <kbd>F8</kbd> 다음 중단점까지 계속.</li>
+        <li>코드에 <code>debugger;</code> 한 줄을 넣어도 중단점이 돼요. <b>도장에서 해 보기:</b> F12를 연 채로 편집기에 <code>debugger;</code>를 넣고 ② 실행 → Sources에서 멈춰요(테스트는 따로 떨어진 일꾼에서 돌아서 왼쪽 <b>Threads</b>에 보여요).</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Application 탭 · Network 탭</h3>
+      <ul style="padding-left:20px;margin:0">
+        <li><b>Application → Local Storage</b>: 앱이 저장한 글자를 그대로 볼 수 있어요 (운동 앱은 <code>iwbm-data-v1</code>). 보기만 하고 지우지 마세요.</li>
+        <li><b>Network</b>: "동기화 실패"일 때 빨간 줄을 눌러 상태 번호를 봐요. 401·403 = 로그인·권한 문제, failed = 인터넷 문제.</li>
+        <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd>: 폰 크기로 화면 보기 (390px 폭 확인).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Python과 짝 맞추기</h3>
+      <table>
+        <thead><tr><th>Python (Colab)</th><th>JS (브라우저)</th></tr></thead>
+        <tbody>
+          <tr><td><code>print(x)</code></td><td><code>console.log(x)</code></td></tr>
+          <tr><td>빨간 Traceback 맨 아래 줄</td><td>Console의 빨간 줄 + 오른쪽 <code>파일:줄</code></td></tr>
+          <tr><td><code>breakpoint()</code> / pdb</td><td><code>debugger;</code> / 줄 번호 클릭</td></tr>
+          <tr><td>■ 셀 실행 중지</td><td>탭 닫기 (도장은 2초 뒤 자동으로 멈춤)</td></tr>
+          <tr><td><code>type(x)</code></td><td><code>typeof x</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><a class="btn primary" href="#today">오늘의 1문제로 연습하기</a></p>
+  `;
+}
+
+// ===================== 내 버그 도감 =====================
+function dexView() {
+  setTab('dex');
+  const solved = EXERCISES.filter(e => state.solved[e.id]);
+  const cats = Object.keys(CATS);
+  const met = cats.filter(c => solved.some(e => e.cat === c));
+  const sections = cats.map(c => {
+    const items = solved.filter(e => e.cat === c);
+    const total = EXERCISES.filter(e => e.cat === c).length;
+    if (!total) return '';
+    if (!items.length) return `<div class="dexcat"><h3>${esc(CATS[c])} <span class="muted small">— 아직 못 만났어요 (${total}문제)</span></h3></div>`;
+    return `<div class="dexcat"><h3>${esc(CATS[c])} <span class="muted small">${items.length}/${total}</span></h3>
+      ${items.map(e => `<div class="card dexitem">
+        <p style="margin:0"><b>${e.no}. ${esc(e.title)}</b></p>
+        <p class="small muted" style="margin:2px 0">${esc(srcText(e.source))} · ${esc(state.solved[e.id].at)} 해결 · ${esc(state.solved[e.id].points)}점</p>
+        <label class="f" for="dn-${e.id}">내 말로 한 줄</label>
+        <textarea class="plain" id="dn-${e.id}" data-note="${e.id}" placeholder="아직 안 적었어요"></textarea>
+        <p style="margin:6px 0 0"><a href="#ex/${e.id}">다시 보기</a></p>
+      </div>`).join('')}</div>`;
+  }).join('');
+  app.innerHTML = `
+    ${saveBanner()}
+    <h1>내 버그 도감</h1>
+    <p class="muted">푼 버그 ${solved.length}개 · 만난 종류 ${met.length}/${cats.length}. "에러가 안 났으니 맞다"가 아니라는 감각을 모으는 곳이에요.</p>
+    ${solved.length ? '' : '<div class="card"><p>아직 비어 있어요. <a href="#today">오늘의 1문제</a>를 풀면 여기에 쌓여요.</p></div>'}
+    ${sections}
+
+    <h2>직접 만난 진짜 버그 적기</h2>
+    <p class="small muted">내 앱에서 버그를 만나면 여기 적어 두세요. 나중에 도장 문제로 만들 재료가 돼요 (Study-07/README.md의 "새 문제 추가하기").</p>
+    <div class="card">
+      <label class="f" for="mb-where">어디서 (파일 · 화면)</label><input class="plain" id="mb-where" placeholder="예: app/import.js parseDate">
+      <label class="f" for="mb-what">증상 (무엇을 했더니 무엇이)</label><textarea class="plain" id="mb-what" placeholder="예: 오전에 오늘 메모를 가져오면 작년으로 들어감"></textarea>
+      <label class="f" for="mb-why">원인 · 고친 방법</label><textarea class="plain" id="mb-why" placeholder="예: Date를 시각까지 비교함 → 날짜 글자로 비교"></textarea>
+      <div class="row end" style="margin-top:8px"><button class="primary" id="mb-add" type="button">도감에 넣기</button></div>
+    </div>
+    <div id="mybugs"></div>
+
+    <h2>진행 기록 옮기기</h2>
+    <div class="card">
+      <p class="small">사지방 PC는 재시작하면 브라우저 기록이 지워질 수 있어요. 끝날 때 아래 글자를 복사해서 노션·메모에 붙여 두고, 다음에 붙여넣고 <b>불러오기</b>를 누르면 이어서 할 수 있어요.</p>
+      <textarea class="plain mono" id="backup" style="min-height:110px;font-size:13px" aria-label="진행 기록 글자"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="bk-copy" type="button">복사하기</button>
+        <button id="bk-load" type="button">불러오기</button>
+        <span class="small muted" id="bk-msg" aria-live="polite"></span>
+      </div>
+    </div>
+  `;
+  document.querySelectorAll('textarea[data-note]').forEach(t => {
+    t.value = state.notes[t.dataset.note] || '';
+    t.addEventListener('input', () => { state.notes[t.dataset.note] = t.value; saveState(); });
+  });
+  const renderMine = () => {
+    const box = document.getElementById('mybugs');
+    box.innerHTML = state.myBugs.map((b, k) => `<div class="card"><p style="margin:0"><b data-f="where"></b> <span class="small muted">${esc(b.at)}</span></p>
+      <p class="small" style="margin:4px 0" data-f="what"></p><p class="small muted" style="margin:0" data-f="why"></p>
+      <div class="row end"><button type="button" data-del="${k}">지우기</button></div></div>`).join('');
+    box.querySelectorAll('.card').forEach((card, k) => {
+      ['where', 'what', 'why'].forEach(f => { card.querySelector(`[data-f="${f}"]`).textContent = state.myBugs[k][f] || ''; });
+    });
+    box.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+      if (!tapConfirm(b, '지울까요?')) return;
+      state.myBugs.splice(Number(b.dataset.del), 1); saveState(); renderMine();
+    }));
+  };
+  renderMine();
+  document.getElementById('mb-add').addEventListener('click', () => {
+    const v = id => document.getElementById(id).value.trim();
+    if (!v('mb-where') && !v('mb-what')) return;
+    state.myBugs.unshift({ where: v('mb-where'), what: v('mb-what'), why: v('mb-why'), at: localDay() });
+    saveState();
+    ['mb-where', 'mb-what', 'mb-why'].forEach(id => { document.getElementById(id).value = ''; });
+    renderMine();
+  });
+  const bk = document.getElementById('backup'), msg = document.getElementById('bk-msg');
+  bk.value = JSON.stringify(state);
+  document.getElementById('bk-copy').addEventListener('click', async () => {
+    bk.select();
+    try { await navigator.clipboard.writeText(bk.value); msg.textContent = '복사했어요.'; }
+    catch (e) { try { document.execCommand('copy'); msg.textContent = '복사했어요.'; } catch (_) { msg.textContent = '글자를 직접 선택해서 Ctrl+C 해 주세요.'; } }
+  });
+  document.getElementById('bk-load').addEventListener('click', () => {
+    try {
+      const s = JSON.parse(bk.value);
+      if (!s || typeof s !== 'object' || typeof s.solved !== 'object') throw new Error('모양');
+      if (!tapConfirm(document.getElementById('bk-load'), '지금 기록을 바꿀까요?')) return;
+      state = Object.assign(emptyState(), s); saveState(); dexView(); applyTheme();
+      document.getElementById('bk-msg').textContent = '불러왔어요.';
+    } catch (e) { msg.textContent = '진행 기록 글자가 아니에요. 복사한 글자 전체를 붙여넣어 주세요.'; }
+  });
+}
+
+// ===================== 테마 =====================
+function applyTheme() {
+  const t = state.theme || 'auto';
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('theme').textContent = t === 'light' ? '☀️ 밝게' : t === 'dark' ? '🌙 어둡게' : '🌓 자동';
+}
+document.getElementById('theme').addEventListener('click', () => {
+  const order = ['auto', 'light', 'dark'];
+  state.theme = order[(order.indexOf(state.theme || 'auto') + 1) % 3];
+  saveState(); applyTheme();
+});
+
+// ===================== 주소(#)로 화면 고르기 =====================
+function route() {
+  const h = location.hash || '#home';
+  current = null;
+  if (h.startsWith('#ex/')) exView(decodeURIComponent(h.slice(4)), false);
+  else if (h === '#today') exView(todayPick().id, true);
+  else if (h === '#steps') stepsView();
+  else if (h === '#dex') dexView();
+  else homeView();
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+applyTheme();
+route();
+
+// 확인용 (verify.mjs가 씀): 문제마다 버그 코드/정답 코드를 실제 실행기로 돌려 봄
+window.dojo = {
+  exercises: EXERCISES,
+  get mode() { return runMode; },
+  async check(id, which) {
+    const ex = byId(id);
+    const out = await runCode(ex, which === 'fix' ? ex.fix : ex.bug);
+    return { id, which, allPass: out.allPass, mode: out.mode,
+      results: out.results.map(r => ({ pass: !!(r && r.pass), actual: r && r.actual, error: r && r.error, timeout: !!(r && r.timeout) })) };
+  },
+  bugLines: id => bugLines(byId(id)),
+};
+</script>
+</body>
+</html>
